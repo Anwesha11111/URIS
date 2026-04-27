@@ -1,0 +1,142 @@
+// prisma/schema.prisma
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  INTERN
+  ADMIN
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // bcrypt hash only — never plain text
+  role      Role     @default(INTERN)
+  createdAt DateTime @default(now())
+  intern    Intern?
+}
+
+model Intern {
+  id                String            @id @default(uuid())
+  userId            String?           @unique
+  user              User?             @relation(fields: [userId], references: [id])
+  overrideScore     Float?
+  createdAt         DateTime          @default(now())
+  availabilitySlots AvailabilitySlot[]
+  tasks             Task[]
+  credibility       CredibilityScore?
+  capacityScore     CapacityScore?
+  reviews           Review[]
+  scoreHistory      ScoreHistory[]
+}
+
+model AvailabilitySlot {
+  id                String   @id @default(uuid())
+  internId          String
+  intern            Intern   @relation(fields: [internId], references: [id])
+  weekStart         DateTime @db.Date
+  weekEnd           DateTime @db.Date
+  maxFreeBlockHours Decimal
+  busyBlocks        Json
+  submittedAt       DateTime @default(now()) @updatedAt
+
+  @@unique([internId, weekStart])
+}
+
+model Task {
+  id            String    @id @default(uuid())
+  planeTaskId   String    @unique
+  internId      String
+  title         String
+  complexity    Float
+  progressPct   Int       @default(0)
+  status        String    @default("active")
+  hasBlocker    Boolean   @default(false)
+  blockerType   String?
+  skills        String[]
+  deadline      DateTime?
+  lastUpdatedAt DateTime
+  createdAt     DateTime  @default(now())
+
+  intern        Intern    @relation(fields: [internId], references: [id])
+}
+
+model CredibilityScore {
+  id                 String   @id @default(uuid())
+  internId           String   @unique
+  updateFrequency    Float
+  deadlineAdherence  Float
+  throughputAccuracy Float
+  score              Float
+  computedAt         DateTime @default(now())
+
+  intern             Intern   @relation(fields: [internId], references: [id])
+}
+
+model CapacityScore {
+  id            String   @id @default(uuid())
+  internId      String   @unique
+  baseCapacity  Float
+  tli           Float
+  credibility   Float
+  finalCapacity Float
+  capacityLabel String
+  updatedAt     DateTime @default(now())
+
+  intern        Intern   @relation(fields: [internId], references: [id])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  internId   String
+  intern     Intern   @relation(fields: [internId], references: [id])
+  quality    Float
+  timeliness Float
+  initiative Float
+  complexity Float
+  createdAt  DateTime @default(now())
+}
+
+model Alert {
+  id        String   @id @default(uuid())
+  internId  String
+  type      String
+  taskId    String?
+  message   String
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ScoreHistory {
+  id        String   @id @default(uuid())
+  internId  String
+  intern    Intern   @relation(fields: [internId], references: [id])
+  score     Float
+  type      String   // "performance" | "credibility" | "capacity"
+  createdAt DateTime @default(now())
+}
+
+model SyncLog {
+  id        String   @id @default(uuid())
+  internId  String?
+  filename  String
+  status    String   @default("SUCCESS") // "SUCCESS" | "FAILED"
+  error     String?
+  createdAt DateTime @default(now())
+}
