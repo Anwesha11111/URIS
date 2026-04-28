@@ -1,6 +1,38 @@
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const HH_MM    = /^\d{2}:\d{2}$/;
 
+// RFC-5322 simplified — catches the vast majority of invalid emails without
+// being so strict it rejects valid ones.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const PASSWORD_MIN_LENGTH = 6;
+
+/**
+ * Validates auth input fields (register + login).
+ *
+ * @param {{ email?: unknown, password?: unknown }} fields
+ * @returns {string[]} Array of human-readable error messages (empty = valid)
+ */
+function validateAuth({ email, password } = {}) {
+  const errors = [];
+
+  // ── Email ──────────────────────────────────────────────────────────────────
+  if (!email || typeof email !== 'string' || email.trim() === '') {
+    errors.push('Email is required.');
+  } else if (!EMAIL_RE.test(email.trim())) {
+    errors.push('Email must be a valid email address.');
+  }
+
+  // ── Password ───────────────────────────────────────────────────────────────
+  if (!password || typeof password !== 'string' || password.trim() === '') {
+    errors.push('Password is required.');
+  } else if (password.length < PASSWORD_MIN_LENGTH) {
+    errors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`);
+  }
+
+  return errors;
+}
+
 function validateAvailability(data) {
   const errors = [];
   const { internId, weekStart, weekEnd, busyBlocks, maxFreeBlockHours } = data || {};
@@ -69,4 +101,4 @@ function validateAvailability(data) {
   return errors;
 }
 
-module.exports = { validateAvailability };
+module.exports = { validateAvailability, validateAuth };

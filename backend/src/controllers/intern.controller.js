@@ -3,27 +3,26 @@ const { computePerformanceIndex } = require('../services/performanceEngine');
 
 async function getInternDashboard(req, res, next) {
   try {
-    const internId = req.user.id;
-
-    console.log('[INFO] Intern dashboard fetched:', internId);
-
-    const [intern, assignedTasks] = await Promise.all([
-      prisma.intern.findUnique({
-        where:   { id: internId },
-        include: { capacityScore: true, credibility: true, reviews: true },
-      }),
-      prisma.task.findMany({
-        where:  { internId, status: 'active' },
-        select: { id: true, title: true, status: true, complexity: true, progressPct: true },
-      }),
-    ]);
+    const intern = await prisma.intern.findUnique({
+      where:   { userId: req.user.id },
+      include: { capacityScore: true, credibility: true, reviews: true },
+    });
 
     if (!intern) {
       return res.status(404).json({ success: false, message: 'Intern not found' });
     }
 
+    const internId = intern.id;
+
+    console.log('[INFO] Intern dashboard fetched:', internId);
+
+    const assignedTasks = await prisma.task.findMany({
+      where:  { internId, status: 'active' },
+      select: { id: true, title: true, status: true, complexity: true, progressPct: true },
+    });
+
     const { performanceIndex } = computePerformanceIndex(intern.reviews);
-    const capacityScore  = intern.capacityScore?.finalCapacity ?? 0;
+    const capacityScore  = Math.round((intern.capacityScore?.finalCapacity ?? 0) * 100);
     const credibility    = intern.credibility?.score           ?? 0;
 
     return res.status(200).json({

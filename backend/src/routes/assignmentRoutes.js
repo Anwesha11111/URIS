@@ -1,9 +1,10 @@
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const { getShortlist, assignTask } = require('../controllers/assignment.controller');
-const { verifyToken, checkRole } = require('../middleware/auth.middleware');
+const { verifyToken, requireRole } = require('../middleware/auth.middleware');
+const { ROLES } = require('../constants/roles');
 
-router.post('/shortlist', verifyToken, checkRole('ADMIN'), getShortlist);
-router.post('/assign',    verifyToken, checkRole('ADMIN'), assignTask);
+router.post('/shortlist', verifyToken, requireRole(ROLES.ADMIN), getShortlist);
+router.post('/assign',    verifyToken, requireRole(ROLES.ADMIN), assignTask);
 
 module.exports = router;

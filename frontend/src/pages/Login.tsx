@@ -5,28 +5,29 @@ import { Eye, EyeOff, Diamond } from 'lucide-react'
 import Starfield from '../components/Starfield'
 import { authAPI } from '../api/endpoints'
 import { useAuthStore } from '../store/authStore'
+import { extractErrorMessage } from '../services/error'
 
 export default function Login() {
-  const [role, setRole] = useState<'intern' | 'lead'>('intern')
+  const [role, setRole] = useState<'intern' | 'admin'>('intern')
   const [showPw, setShowPw] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const setAuth = useAuthStore(s => s.setAuth)
+  const login = useAuthStore(s => s.login)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     setLoading(true)
     setError('')
     try {
       const res = await authAPI.login(email, password)
-      const { token, user } = res.data.data
-      setAuth(token, user)
+      const { token, user } = res.data.data as { token: string; user: { id: string; name: string; email: string; role: string } }
+      login(token, user as Parameters<typeof login>[1])
       navigate(user.role === 'intern' ? '/availability' : '/dashboard')
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid credentials. Please try again.')
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, 'Invalid credentials. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -59,7 +60,7 @@ export default function Login() {
         <div className="glass-card rounded-sm p-8">
           {/* Role tabs */}
           <div className="flex mb-8 rounded-sm overflow-hidden" style={{ border: '1px solid rgba(201,168,76,0.15)' }}>
-            {(['intern', 'lead'] as const).map(r => (
+            {(['intern', 'admin'] as const).map(r => (
               <button key={r} onClick={() => setRole(r)}
                 className="flex-1 py-2.5 nav-label text-[0.65rem] transition-all duration-300"
                 style={{
@@ -67,7 +68,7 @@ export default function Login() {
                   color: role === r ? '#c9a84c' : 'rgba(184,212,240,0.35)',
                   borderBottom: role === r ? '1px solid #c9a84c' : '1px solid transparent',
                 }}>
-                {r === 'intern' ? 'INTERN ACCESS' : 'LEAD / ADMIN'}
+                {r === 'intern' ? 'INTERN ACCESS' : 'ADMIN'}
               </button>
             ))}
           </div>

@@ -1,10 +1,11 @@
 const { getAssignmentShortlist } = require('../services/assignmentEngine');
-const { MOCK_INTERNS } = require('../data/mockInterns');
 const prisma = require('../utils/prisma');
+const { logAction } = require('../utils/auditLogger');
+const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
 
 const MIN_CAPACITY_THRESHOLD = parseInt(process.env.MIN_CAPACITY_THRESHOLD) || 40;
 
-function getShortlist(req, res, next) {
+async function getShortlist(req, res, next) {
   try {
     const { task } = req.body;
 
@@ -12,7 +13,15 @@ function getShortlist(req, res, next) {
       return res.status(400).json({ success: false, message: 'Missing required field: task.requiredSkills', data: null });
     }
 
-    const rankedInterns = getAssignmentShortlist(task, MOCK_INTERNS);
+    const dbInterns = await prisma.intern.findMany({
+      include: {
+        capacityScore: true,
+        credibility:   true,
+        tasks:         { where: { status: 'active' } },
+      },
+    });
+
+    const rankedInterns = getAssignmentShortlist(task, dbInterns);
 
     return res.status(200).json({
       success: true,
@@ -63,6 +72,12 @@ async function assignTask(req, res, next) {
     });
 
     console.log('[INFO] Task assigned:', taskId, '→', internId);
+
+    void logAction(req.user?.id ?? null, AUDIT_ACTIONS.ASSIGN_TASK, AUDIT_ENTITIES.TASK, taskId, {
+      taskId,
+      internId,
+      previousInternId: task.internId ?? null,
+    });
 
     return res.status(200).json({ success: true, message: 'Task assigned successfully' });
   } catch (err) {

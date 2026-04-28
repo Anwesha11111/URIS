@@ -1,3 +1,4 @@
+const prisma = require('../utils/prisma');
 const { findAvailability } = require('../services/availability.service');
 const { processInternCapacity } = require('../services/processInternCapacity');
 const { uploadToNextcloud } = require('../services/storage.service');
@@ -39,7 +40,12 @@ async function submitAvailability(req, res, next) {
       return res.status(400).json({ success: false, message: `weekStatusToggle must be one of: ${VALID_WEEK_STATUSES.join(', ')} (or a recognized synonym)`, data: null });
     }
 
-    const internId = req.user.id;
+    const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
+    if (!intern) {
+      return res.status(404).json({ success: false, message: 'Intern not found' });
+    }
+    const internId = intern.id;
+
     const { availability, TLI, capacityScore, capacityLabel } = await processInternCapacity({
       busyBlocks,
       maxFreeBlockHours,

@@ -1,8 +1,12 @@
 const prisma = require('../utils/prisma');
 
+/**
+ * Generate blocker escalation alerts for tasks that have been blocked
+ * for more than 48 hours. Escalates to critical at 96 hours.
+ */
 async function generateBlockerAlerts() {
   const blockedTasks = await prisma.task.findMany({
-    where: { hasBlocker: true, status: { not: 'completed' } }
+    where: { hasBlocker: true, status: { not: 'completed' } },
   });
 
   let created = 0;
@@ -12,17 +16,18 @@ async function generateBlockerAlerts() {
     if (hoursBlocked < 48) continue;
 
     const existing = await prisma.alert.findFirst({
-      where: { taskId: task.id, type: 'blocker_escalation', resolved: false }
+      where: { taskId: task.id, type: 'blocker_escalation', resolved: false },
     });
     if (existing) continue;
 
     const isEscalated = hoursBlocked >= 96;
-    const message = isEscalated
+    const severity    = isEscalated ? 'critical' : 'warning';
+    const message     = isEscalated
       ? `ESCALATED: Task "${task.title}" has been blocked for ${Math.round(hoursBlocked)} hours. Lead attention required.`
       : `Task "${task.title}" has been blocked for ${Math.round(hoursBlocked)} hours. Blocking party notified.`;
 
     await prisma.alert.create({
-      data: { internId: task.internId, type: 'blocker_escalation', taskId: task.id, message }
+      data: { internId: task.internId, type: 'blocker_escalation', taskId: task.id, message, severity },
     });
     created++;
   }
@@ -30,35 +35,48 @@ async function generateBlockerAlerts() {
   return created;
 }
 
+/**
+ * Generate a reassignment alert when an intern's capacity drops below threshold.
+ */
 async function generateReassignmentAlerts(internId, finalCapacity) {
   if (finalCapacity >= 0.2) return;
 
   const existing = await prisma.alert.findFirst({
-    where: { internId, type: 'reassignment', resolved: false }
+    where: { internId, type: 'reassignment', resolved: false },
   });
   if (existing) return;
 
   await prisma.alert.create({
     data: {
       internId,
-      type: 'reassignment',
-      message: `Intern ${internId} has a final capacity score of ${Math.round(finalCapacity * 100)}. Consider reassigning active tasks.`
-    }
+      type:     'reassignment',
+      severity: 'warning',
+      message:  `Intern ${internId} has a final capacity score of ${Math.round(finalCapacity * 100)}. Consider reassigning active tasks.`,
+    },
   });
 }
 
+/**
+ * Fetch all unresolved alerts, ordered newest first.
+ * Includes severity so the frontend can filter by critical/warning.
+ */
 async function getAllActiveAlerts() {
   return prisma.alert.findMany({
-    where: { resolved: false },
-    orderBy: { createdAt: 'desc' }
+    where:   { resolved: false },
+    orderBy: { createdAt: 'desc' },
   });
 }
 
 async function resolveAlert(alertId) {
   return prisma.alert.update({
     where: { id: alertId },
-    data: { resolved: true }
+    data:  { resolved: true },
   });
 }
 
-module.exports = { generateBlockerAlerts, generateReassignmentAlerts, getAllActiveAlerts, resolveAlert };
+module.exports = {
+  generateBlockerAlerts,
+  generateReassignmentAlerts,
+  getAllActiveAlerts,
+  resolveAlert,
+};

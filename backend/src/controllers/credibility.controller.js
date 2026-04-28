@@ -1,5 +1,6 @@
 const { computeCredibilityScore } = require('../services/credibilityService');
 const { saveScoreHistory } = require('../services/scoreHistory.service');
+const prisma = require('../utils/prisma');
 
 async function getCredibility(req, res) {
   const { internId } = req.query;
@@ -20,7 +21,11 @@ async function getCredibility(req, res) {
 
 async function getMyCredibility(req, res, next) {
   try {
-    const internId = req.user.id;
+    const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
+    if (!intern) {
+      return res.status(404).json({ success: false, message: 'Intern not found' });
+    }
+    const internId = intern.id;
 
     console.log('[INFO] Credibility fetched for:', internId);
 
