@@ -84,7 +84,7 @@ async function getAdminOverview(req, res, next) {
     const mappedAlerts = alerts.map((task, idx) => ({
       type: ['stale', 'blocker', 'credit', 'avail'][idx % 4],
       message: `Task "${task.title}" — Assigned to intern`,
-      severity: (idx % 2 === 0 ? 'critical' : 'warning') as 'critical' | 'warning',
+      severity: (idx % 2 === 0 ? 'critical' : 'warning'),
     }));
 
     console.log('[INFO] Admin overview fetched');
