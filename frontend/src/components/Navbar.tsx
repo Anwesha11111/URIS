@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Menu, X, Diamond } from 'lucide-react'
 import { useState } from 'react'
-import { useAuthStore } from '../store/authStore'
+import { useAuthStore, selectToken, selectUser, selectIsAdmin } from '../store/authStore'
 
 const navLinks = [
   { label: 'Dashboard',    to: '/dashboard' },
@@ -13,12 +13,15 @@ const navLinks = [
 ]
 
 export default function Navbar() {
-  const loc = useLocation()
-  const { token, user, clearAuth, isAdmin } = useAuthStore()
+  const loc     = useLocation()
+  const token   = useAuthStore(selectToken)
+  const user    = useAuthStore(selectUser)
+  const isAdmin = useAuthStore(selectIsAdmin)
+  const logout  = useAuthStore(s => s.logout)
   const [open, setOpen] = useState(false)
   const nav = useNavigate()
 
-  const handleSignOut = () => { clearAuth(); nav('/login') }
+  const handleSignOut = (): void => { logout(); nav('/login') }
 
   return (
     <>
@@ -38,7 +41,7 @@ export default function Navbar() {
         {/* Center links */}
         {token && (
           <div className="hidden md:flex items-center gap-7">
-            {navLinks.filter(l => l.to !== '/review' && l.to !== '/team' || isAdmin()).map(l => (
+            {navLinks.filter(l => l.to !== '/review' && l.to !== '/team' || isAdmin).map(l => (
               <Link key={l.to} to={l.to} style={{ textDecoration: 'none' }}>
                 <span className="nav-label text-[0.62rem] transition-colors duration-200"
                   style={{ color: loc.pathname === l.to ? '#c9a84c' : 'rgba(184,212,240,0.45)',
@@ -47,7 +50,7 @@ export default function Navbar() {
                 </span>
               </Link>
             ))}
-            {isAdmin() && (
+            {isAdmin && (
               <Link to="/admin" style={{ textDecoration: 'none' }}>
                 <span className="nav-label text-[0.62rem] transition-colors duration-200"
                   style={{ color: loc.pathname === '/admin' ? '#c9a84c' : 'rgba(184,212,240,0.45)',
@@ -94,18 +97,29 @@ export default function Navbar() {
       {open && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
           className="fixed top-[49px] left-0 right-0 z-40 glass-card md:hidden">
-          {navLinks.map(l => (
-            <Link key={l.to} to={l.to} onClick={() => setOpen(false)}
+          {navLinks
+            .filter(l => (l.to !== '/review' && l.to !== '/team') || isAdmin)
+            .map(l => (
+              <Link key={l.to} to={l.to} onClick={() => setOpen(false)}
+                className="block nav-label text-[0.68rem] px-6 py-3"
+                style={{ color: loc.pathname === l.to ? '#c9a84c' : 'rgba(184,212,240,0.5)', borderBottom: '1px solid rgba(201,168,76,0.08)', textDecoration: 'none' }}>
+                {l.label}
+              </Link>
+            ))}
+          {isAdmin && (
+            <Link to="/admin" onClick={() => setOpen(false)}
               className="block nav-label text-[0.68rem] px-6 py-3"
-              style={{ color: loc.pathname === l.to ? '#c9a84c' : 'rgba(184,212,240,0.5)', borderBottom: '1px solid rgba(201,168,76,0.08)', textDecoration: 'none' }}>
-              {l.label}
+              style={{ color: loc.pathname === '/admin' ? '#c9a84c' : 'rgba(184,212,240,0.5)', borderBottom: '1px solid rgba(201,168,76,0.08)', textDecoration: 'none' }}>
+              Admin
             </Link>
-          ))}
-          {token && <button onClick={() => { handleSignOut(); setOpen(false) }}
-            className="block nav-label text-[0.68rem] px-6 py-3 w-full text-left"
-            style={{ color: 'rgba(248,113,113,0.6)', borderTop: '1px solid rgba(201,168,76,0.08)' }}>
-            SIGN OUT
-          </button>}
+          )}
+          {token && (
+            <button onClick={() => { handleSignOut(); setOpen(false) }}
+              className="block nav-label text-[0.68rem] px-6 py-3 w-full text-left"
+              style={{ color: 'rgba(248,113,113,0.6)', borderTop: '1px solid rgba(201,168,76,0.08)' }}>
+              SIGN OUT
+            </button>
+          )}
         </motion.div>
       )}
     </>

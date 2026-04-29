@@ -1,6 +1,8 @@
 const { syncTasksFromPlane, detectAndMarkStaleTasks, getTasksOverviewForAllInterns } = require('../services/taskService');
 const { generateBlockerAlerts } = require('../services/alertService');
 const prisma = require('../utils/prisma');
+const { logAction } = require('../utils/auditLogger');
+const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
 
 async function getTasksOverview(req, res) {
   try {
@@ -32,7 +34,13 @@ async function getTasks(req, res, next) {
     if (status) filter.status = status.toLowerCase();
 
     // Interns only see their own tasks
-    if (!isAdmin) filter.internId = req.user.id;
+    if (!isAdmin) {
+      const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
+      if (!intern) {
+        return res.status(404).json({ success: false, message: 'Intern not found' });
+      }
+      filter.internId = intern.id;
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -59,8 +67,6 @@ async function getTasks(req, res, next) {
   }
 }
 
-module.exports = { getTasksOverview, getTasks };
-
 async function createTask(req, res, next) {
   try {
     const { title, complexity, internId, planeTaskId, skills = [], deadline } = req.body;
@@ -86,14 +92,21 @@ async function createTask(req, res, next) {
         internId,
         planeTaskId,
         skills,
-        status: 'active',
-        progressPct: 0,
+        status:        'active',
+        progressPct:   0,
         lastUpdatedAt: new Date(),
         ...(deadline ? { deadline: new Date(deadline) } : {}),
       },
     });
 
     console.log('[INFO] Task created:', task.id);
+
+    void logAction(req.user?.id ?? null, AUDIT_ACTIONS.CREATE_TASK, AUDIT_ENTITIES.TASK, task.id, {
+      title,
+      internId,
+      complexity,
+      planeTaskId,
+    });
 
     return res.status(201).json({ success: true, message: 'Task created', data: task });
   } catch (err) {

@@ -1,4 +1,11 @@
-import api from './client'
+/**
+ * Legacy endpoint wrappers — kept for backward compatibility.
+ * New code should import directly from the services layer:
+ *   import { getAdminOverview } from '../services/dashboard.service'
+ *   import { getAllTasks }       from '../services/tasks.service'
+ *   etc.
+ */
+import api from '../services/api'
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 export const authAPI = {
@@ -11,11 +18,8 @@ export const authAPI = {
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
 export const dashboardAPI = {
-  getInternDashboard: () =>
-    api.get('/intern/dashboard'),
-
-  getAdminOverview: () =>
-    api.get('/admin/overview'),
+  getInternDashboard: () => api.get('/intern/dashboard'),
+  getAdminOverview:   () => api.get('/admin/overview'),
 }
 
 // ─── AVAILABILITY ────────────────────────────────────────────────────────────
@@ -23,10 +27,14 @@ export const availabilityAPI = {
   submit: (data: {
     weekStatus: string
     busyBlocks: Array<{ day: string; reason: string; severity: string }>
-    maxFreeBlockHours: number   // 1–6 (backend validates this)
+    maxFreeBlockHours: number
     isExamWeek: boolean
     note?: string
-  }) => api.post('/availability/submit', data),
+  }) => api.post('/availability/submit', {
+    busyBlocks:        data.busyBlocks,
+    maxFreeBlockHours: data.maxFreeBlockHours,
+    weekStatusToggle:  data.weekStatus,
+  }),
 
   get: () => api.get('/availability/get'),
 }
@@ -37,61 +45,40 @@ export const performanceAPI = {
     api.get(`/performance/get/${internId}`),
 
   submitReview: (data: {
-    internId: string
-    taskId: string
-    quality: number       // 1–5
-    timeliness: number    // 1–5
-    initiative: number    // 1–5
-    note?: string
+    internId: string; taskId: string
+    quality: number; timeliness: number; initiative: number; note?: string
   }) => api.post('/review/submit', data),
-  // Formula on backend: 0.5*quality + 0.3*timeliness + 0.2*initiative
 }
 
 // ─── CREDIBILITY ─────────────────────────────────────────────────────────────
 export const credibilityAPI = {
-  getMine: () =>
-    api.get('/credibility/mine'),
-
-  getByInternId: (internId: string) =>
-    api.get(`/credibility/get?internId=${internId}`),
+  getMine:          ()           => api.get('/credibility/mine'),
+  getByInternId:    (id: string) => api.get(`/credibility/get?internId=${id}`),
 }
 
 // ─── TASKS ───────────────────────────────────────────────────────────────────
 export const tasksAPI = {
-  getAll: () =>
-    api.get('/tasks'),
+  getAll: () => api.get('/tasks'),
 
   create: (data: {
-    title: string
-    internId: string
-    planeTaskId?: string
-    complexity: number    // 0–1 (backend validates strictly)
-    status: string
+    title: string; internId: string; planeTaskId?: string
+    complexity: number; status: string
   }) => api.post('/tasks/create', data),
 
-  updateStatus: (data: {
-    taskId: string
-    status: string
-    progress: number
-  }) => api.post('/admin/task/status', data),
+  updateStatus: (data: { taskId: string; status: string; progress: number }) =>
+    api.post('/admin/task/status', data),
 }
 
 // ─── ASSIGNMENT ──────────────────────────────────────────────────────────────
 export const assignmentAPI = {
-  assignTask: (data: {
-    internId: string
-    taskId: string
-  }) => api.post('/assign/assign-task', data),
+  assignTask: (data: { internId: string; taskId: string }) =>
+    api.post('/assign/assign-task', data),
 }
 
 // ─── ADMIN ───────────────────────────────────────────────────────────────────
 export const adminAPI = {
-  overrideScore: (data: {
-    internId: string
-    score: number
-    reason?: string
-  }) => api.post('/admin/override-score', data),
+  overrideScore: (data: { internId: string; score: number; reason?: string }) =>
+    api.post('/admin/override-score', { internId: data.internId, overrideScore: data.score, reason: data.reason }),
 
-  getOverview: () =>
-    api.get('/admin/overview'),
+  getOverview: () => api.get('/admin/overview'),
 }

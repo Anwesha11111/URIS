@@ -5,27 +5,28 @@ import { Diamond } from 'lucide-react'
 import Starfield from '../components/Starfield'
 import { authAPI } from '../api/endpoints'
 import { useAuthStore } from '../store/authStore'
+import { extractErrorMessage } from '../services/error'
 
 export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'intern' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const setAuth = useAuthStore(s => s.setAuth)
+  const login = useAuthStore(s => s.login)
 
   const update = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     setLoading(true)
     setError('')
     try {
       const res = await authAPI.register(form)
-      const { token, user } = res.data
-      setAuth(token, user)
+      const { token, user } = res.data.data as { token: string; user: Parameters<typeof login>[1] }
+      login(token, user)
       navigate(user.role === 'intern' ? '/availability' : '/dashboard')
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.')
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, 'Registration failed. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -68,7 +69,7 @@ export default function Register() {
             <div>
               <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">ROLE</label>
               <div className="grid grid-cols-2 gap-3">
-                {(['intern', 'lead'] as const).map(r => (
+                {(['intern', 'admin'] as const).map(r => (
                   <button key={r} type="button" onClick={() => update('role', r)}
                     className="py-3 nav-label text-[0.65rem] rounded-sm transition-all duration-300"
                     style={{
@@ -76,7 +77,7 @@ export default function Register() {
                       border: `1px solid ${form.role === r ? 'rgba(201,168,76,0.4)' : 'rgba(201,168,76,0.1)'}`,
                       color: form.role === r ? '#c9a84c' : 'rgba(184,212,240,0.35)',
                     }}>
-                    {r.toUpperCase()}
+                    {r === 'intern' ? 'INTERN' : 'ADMIN'}
                   </button>
                 ))}
               </div>

@@ -1,0 +1,299 @@
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { ClipboardList, TrendingUp, Star, AlertTriangle, Loader2 } from 'lucide-react'
+import Sidebar from '../components/Sidebar'
+import Starfield from '../components/Starfield'
+import { getInternDashboard, type InternDashboard } from '../services/dashboard.service'
+import { useAuthStore, selectUser } from '../store/authStore'
+import { extractErrorMessage } from '../services/error'
+import ActivitySummaryCard from '../components/ActivitySummaryCard'
+import AnomalyAlertPanel  from '../components/AnomalyAlertPanel'
+import { useTeamStore, selectActiveTeam } from '../store/teamStore'
+import { getTeamContribution, type TeamContribution } from '../services/team.service'
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function statusPct(s: string): number {
+  if (s === 'backlog' || s === 'not_started') return 0
+  if (s === 'in_progress_early') return 25
+  if (s === 'in_progress_mid')   return 50
+  if (s === 'under_review')      return 75
+  if (s === 'completed')         return 100
+  return 0
+}
+
+function ScoreRing({ val, label, color }: { val: number; label: string; color: string }) {
+  const r    = 28
+  const circ = 2 * Math.PI * r
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative w-20 h-20">
+        <svg viewBox="0 0 64 64" className="w-20 h-20 -rotate-90">
+          <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3.5" />
+          <motion.circle cx="32" cy="32" r={r} fill="none" stroke={color} strokeWidth="3.5"
+            strokeDasharray={circ}
+            initial={{ strokeDashoffset: circ }}
+            animate={{ strokeDashoffset: circ * (1 - val / 100) }}
+            transition={{ duration: 1.4, ease: 'easeOut' }}
+            strokeLinecap="round" />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center font-display font-black text-lg"
+          style={{ color }}>{val}</span>
+      </div>
+      <span className="nav-label text-[0.55rem] text-ice/40">{label}</span>
+    </div>
+  )
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export default function InternDashboard() {
+  const user       = useAuthStore(selectUser)
+  const activeTeam = useTeamStore(selectActiveTeam)
+
+  const [data, setData]                   = useState<InternDashboard | null>(null)
+  const [loading, setLoading]             = useState(true)
+  const [error, setError]                 = useState('')
+  const [teamStats, setTeamStats]         = useState<TeamContribution | null>(null)
+  const [teamStatsLoading, setTeamStatsLoading] = useState(false)
+
+  useEffect(() => {
+    async function load(): Promise<void> {
+      try {
+        const result = await getInternDashboard()
+        setData(result)
+      } catch (err) {
+        setError(extractErrorMessage(err, 'Failed to load your dashboard. Please try again.'))
+      } finally {
+        setLoading(false)
+      }
+    }
+    void load()
+  }, [])
+
+  // Reload team-specific contribution whenever active team changes
+  useEffect(() => {
+    if (!activeTeam) { setTeamStats(null); return }
+    async function loadTeamStats(): Promise<void> {
+      setTeamStatsLoading(true)
+      try {
+        const stats = await getTeamContribution(activeTeam.teamId)
+        setTeamStats(stats)
+      } catch {
+        setTeamStats(null)
+      } finally {
+        setTeamStatsLoading(false)
+      }
+    }
+    void loadTeamStats()
+  }, [activeTeam])
+
+  return (
+    <div className="min-h-screen bg-navy-950 text-frost">
+      <Starfield />
+      <Sidebar />
+
+      <main className="ml-52 pt-14 min-h-screen relative z-10">
+        <div className="px-8 py-8">
+
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">INTERN PORTAL</p>
+            <h1 className="font-display font-black text-3xl md:text-4xl text-ice-gradient">
+              Welcome, {user?.name ?? 'Intern'}
+            </h1>
+            <div className="gold-rule w-16 mt-2" />
+          </motion.div>
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 size={28} className="text-gold animate-spin" />
+            </div>
+          )}
+
+          {/* Error */}
+          {!loading && error && (
+            <div className="glass-card rounded-sm p-10 text-center max-w-md mx-auto">
+              <AlertTriangle size={28} className="text-red-400 mx-auto mb-3" />
+              <p className="font-body text-sm text-ice/50">{error}</p>
+            </div>
+          )}
+
+          {/* Content */}
+          {!loading && !error && data && (
+            <>
+              {/* Score rings */}
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="glass-card rounded-sm p-8 mb-6">                <p className="nav-label text-[0.55rem] text-gold/40 mb-6">YOUR PERFORMANCE METRICS</p>
+                <div className="flex items-center justify-around flex-wrap gap-6">
+                  <ScoreRing
+                    val={Math.round(data.capacityScore)}
+                    label="CAPACITY SCORE"
+                    color={data.capacityScore > 70 ? '#4ade80' : data.capacityScore > 40 ? '#f59e0b' : '#f87171'}
+                  />
+                  <ScoreRing
+                    val={Math.round((data.performanceIndex / 5) * 100)}
+                    label="PERFORMANCE INDEX"
+                    color="#c9a84c"
+                  />
+                  <ScoreRing
+                    val={Math.round(data.credibility)}
+                    label="CREDIBILITY"
+                    color={data.credibility > 70 ? '#4ade80' : data.credibility > 40 ? '#f59e0b' : '#f87171'}
+                  />
+                </div>
+
+                {/* Raw performance score */}
+                <div className="mt-6 pt-5 flex items-center justify-center gap-2"
+                  style={{ borderTop: '1px solid rgba(201,168,76,0.1)' }}>
+                  <Star size={13} className="text-gold/60" />
+                  <span className="nav-label text-[0.6rem] text-ice/40">PERFORMANCE SCORE</span>
+                  <span className="font-display font-black text-xl text-gold ml-2">
+                    {data.performanceIndex.toFixed(2)}
+                    <span className="font-body font-normal text-sm text-ice/30">/5</span>
+                  </span>
+                </div>
+              </motion.div>
+
+              {/* Team contribution — only shown when a team is selected */}
+              {activeTeam && (
+                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }} className="glass-card rounded-sm p-6 mb-6"
+                  style={{ border: '1px solid rgba(201,168,76,0.15)' }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="nav-label text-[0.55rem] text-gold/40 mb-0.5">TEAM CONTRIBUTION</p>
+                      <h2 className="font-display text-lg text-frost">{activeTeam.teamName}</h2>
+                    </div>
+                    <span className="nav-label text-[0.5rem] px-2 py-0.5 rounded-sm"
+                      style={{ background: 'rgba(201,168,76,0.1)', color: '#c9a84c' }}>
+                      {activeTeam.role.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {teamStatsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 size={16} className="text-gold animate-spin" />
+                    </div>
+                  ) : teamStats ? (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <p className="font-display font-black text-2xl text-signal">
+                          {teamStats.tasksCompleted}
+                        </p>
+                        <p className="nav-label text-[0.5rem] text-ice/40 mt-0.5">COMPLETED</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-display font-black text-2xl text-gold">
+                          {teamStats.tasksActive}
+                        </p>
+                        <p className="nav-label text-[0.5rem] text-ice/40 mt-0.5">ACTIVE</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-display font-black text-2xl text-ice/60">
+                          {teamStats.latestScore !== null ? teamStats.latestScore.toFixed(1) : '—'}
+                        </p>
+                        <p className="nav-label text-[0.5rem] text-ice/40 mt-0.5">LATEST SCORE</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="font-body text-sm text-ice/30 text-center py-2">
+                      No contribution data for this team yet.
+                    </p>
+                  )}
+
+                  <p className="nav-label text-[0.45rem] text-ice/20 text-center mt-4">
+                    GLOBAL PERFORMANCE SHOWN ABOVE · TEAM CONTRIBUTION SHOWN HERE
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Anomaly alerts — only renders when alerts exist */}
+              <AnomalyAlertPanel />
+
+              {/* Activity summary — 7-day window */}
+              <ActivitySummaryCard />
+
+              {/* Assigned tasks */}
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }} className="glass-card rounded-sm">
+                <div className="flex items-center justify-between px-6 py-4"
+                  style={{ borderBottom: '1px solid rgba(201,168,76,0.1)' }}>
+                  <div>
+                    <p className="nav-label text-[0.55rem] text-gold/40 mb-0.5">ACTIVE WORKLOAD</p>
+                    <h2 className="font-display text-lg text-frost">Your Tasks</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ClipboardList size={14} className="text-gold/40" />
+                    <span className="nav-label text-[0.55rem] text-ice/30">
+                      {data.assignedTasks.length} TASK{data.assignedTasks.length !== 1 ? 'S' : ''}
+                    </span>
+                  </div>
+                </div>
+
+                {data.assignedTasks.length === 0 ? (
+                  <div className="p-10 text-center">
+                    <TrendingUp size={24} className="text-gold/20 mx-auto mb-3" />
+                    <p className="font-body text-sm text-ice/30">No active tasks assigned.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gold/5">
+                    {data.assignedTasks.map((task, i) => {
+                      const pct = task.progressPct ?? statusPct(task.status)
+                      return (
+                        <motion.div key={task.id}
+                          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.3 + i * 0.07 }}
+                          className="flex items-center gap-4 px-6 py-4">
+
+                          {/* Radial progress */}
+                          <div className="relative flex-shrink-0 w-10 h-10">
+                            <svg viewBox="0 0 40 40" className="w-10 h-10 -rotate-90">
+                              <circle cx="20" cy="20" r="16" fill="none"
+                                stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
+                              <motion.circle cx="20" cy="20" r="16" fill="none"
+                                stroke={pct === 100 ? '#4ade80' : '#c9a84c'} strokeWidth="2.5"
+                                strokeDasharray={`${2 * Math.PI * 16}`}
+                                initial={{ strokeDashoffset: 2 * Math.PI * 16 }}
+                                animate={{ strokeDashoffset: 2 * Math.PI * 16 * (1 - pct / 100) }}
+                                transition={{ duration: 1, delay: 0.4 + i * 0.07 }}
+                                strokeLinecap="round" />
+                            </svg>
+                            <span className="absolute inset-0 flex items-center justify-center
+                              font-ui font-bold text-[0.5rem] text-ice/60">{pct}%</span>
+                          </div>
+
+                          {/* Task info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-body text-sm text-frost/85 truncate">{task.title}</p>
+                            <p className="nav-label text-[0.5rem] text-ice/30 mt-0.5">
+                              {task.status.replace(/_/g, ' ')}
+                            </p>
+                          </div>
+
+                          {/* Complexity dots */}
+                          <div className="flex gap-0.5 flex-shrink-0">
+                            {[0.2, 0.4, 0.6, 0.8, 1.0].map(n => (
+                              <div key={n} className="w-2 h-2 rounded-sm"
+                                style={{
+                                  background: n <= task.complexity
+                                    ? 'rgba(201,168,76,0.7)'
+                                    : 'rgba(255,255,255,0.06)',
+                                }} />
+                            ))}
+                          </div>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}

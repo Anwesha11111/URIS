@@ -15,6 +15,9 @@ const adminRoutes        = require('./src/routes/admin.routes');
 const scoreRoutes        = require('./src/routes/score.routes');
 const internRoutes       = require('./src/routes/intern.routes');
 const nextcloudRoutes    = require('./src/routes/nextcloud.routes');
+const auditLogRoutes     = require('./src/routes/auditLog.routes');
+const activityRoutes     = require('./src/routes/activity.routes');
+const teamRoutes         = require('./src/routes/team.routes');
 
 const { errorHandler } = require('./src/middleware/error.middleware');
 
@@ -35,6 +38,9 @@ app.use('/performance',  performanceRoutes);
 app.use('/admin',        adminRoutes);
 app.use('/score',        scoreRoutes);
 app.use('/intern',       internRoutes);
+app.use('/audit-logs',   auditLogRoutes);
+app.use('/activity',     activityRoutes);
+app.use('/teams',        teamRoutes);
 app.use('/',             nextcloudRoutes);
 app.use(errorHandler);
 

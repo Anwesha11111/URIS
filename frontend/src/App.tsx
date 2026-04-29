@@ -1,38 +1,53 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
-import { useAuthStore } from './store/authStore'
-import Landing from './pages/Landing'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
-import Availability from './pages/Availability'
-import Tasks from './pages/Tasks'
-import Review from './pages/Review'
-import Team from './pages/Team'
-import Alerts from './pages/Alerts'
+import ProtectedRoute from './routes/ProtectedRoute'
+import SessionGuard  from './components/SessionGuard'
+import Landing       from './pages/Landing'
+import Login         from './pages/Login'
+import Register      from './pages/Register'
+import Dashboard     from './pages/Dashboard'
+import Availability  from './pages/Availability'
+import Tasks         from './pages/Tasks'
+import Review        from './pages/Review'
+import Team          from './pages/Team'
+import Alerts        from './pages/Alerts'
 import AdminOverview from './pages/AdminOverview'
-
-function PrivateRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
-  const { token, isAdmin } = useAuthStore()
-  if (!token) return <Navigate to="/login" replace />
-  if (adminOnly && !isAdmin()) return <Navigate to="/dashboard" replace />
-  return <>{children}</>
-}
+import AuditLogs     from './features/admin/AuditLogs'
 
 export default function App() {
   return (
     <BrowserRouter>
+      {/* SessionGuard must be inside BrowserRouter so useNavigate works.
+          It is a no-op when the user is not authenticated. */}
+      <SessionGuard />
+
       <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
+        {/* Public routes */}
+        <Route path="/"         element={<Landing />} />
+        <Route path="/login"    element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/availability" element={<PrivateRoute><Availability /></PrivateRoute>} />
-        <Route path="/tasks" element={<PrivateRoute><Tasks /></PrivateRoute>} />
-        <Route path="/review" element={<PrivateRoute adminOnly><Review /></PrivateRoute>} />
-        <Route path="/team" element={<PrivateRoute adminOnly><Team /></PrivateRoute>} />
-        <Route path="/alerts" element={<PrivateRoute adminOnly><Alerts /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute adminOnly><AdminOverview /></PrivateRoute>} />
+
+        {/* Protected — any authenticated user */}
+        <Route path="/dashboard"
+          element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/availability"
+          element={<ProtectedRoute><Availability /></ProtectedRoute>} />
+        <Route path="/tasks"
+          element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+
+        {/* Protected — admin only */}
+        <Route path="/review"
+          element={<ProtectedRoute adminOnly><Review /></ProtectedRoute>} />
+        <Route path="/team"
+          element={<ProtectedRoute adminOnly><Team /></ProtectedRoute>} />
+        <Route path="/alerts"
+          element={<ProtectedRoute adminOnly><Alerts /></ProtectedRoute>} />
+        <Route path="/admin"
+          element={<ProtectedRoute adminOnly><AdminOverview /></ProtectedRoute>} />
+        <Route path="/audit-logs"
+          element={<ProtectedRoute adminOnly><AuditLogs /></ProtectedRoute>} />
+
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

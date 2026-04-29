@@ -3,23 +3,23 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Plus, Trash2, Clock } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
-import { availabilityAPI } from '../api/endpoints'
+import { submitAvailability, type BusyBlock } from '../services/availability.service'
+import { extractErrorMessage } from '../services/error'
 
-const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-const REASONS = ['Exam','Revision','Academic Project','Personal','Sprint','Other']
-type BusyBlock = { day: string; reason: string; severity: 'full' | 'partial' }
+const DAYS    = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const REASONS = ['Exam', 'Revision', 'Academic Project', 'Personal', 'Sprint', 'Other']
 
 export default function Availability() {
-  const [weekStatus, setWeekStatus] = useState<'generally_free'|'heavy_week'>('generally_free')
-  const [maxFreeBlockHours, setMaxFreeBlockHours] = useState<number>(3) // 1–6 per backend
-  const [busyBlocks, setBusyBlocks] = useState<BusyBlock[]>([])
-  const [note, setNote] = useState('')
-  const [isExamWeek, setIsExamWeek] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [weekStatus, setWeekStatus]           = useState<'generally_free' | 'heavy_week'>('generally_free')
+  const [maxFreeBlockHours, setMaxFreeBlockHours] = useState<number>(3)
+  const [busyBlocks, setBusyBlocks]           = useState<BusyBlock[]>([])
+  const [note, setNote]                       = useState('')
+  const [isExamWeek, setIsExamWeek]           = useState(false)
+  const [submitted, setSubmitted]             = useState(false)
+  const [loading, setLoading]                 = useState(false)
+  const [error, setError]                     = useState('')
 
-  const addBlock = () => setBusyBlocks(b => [...b, { day: 'Monday', reason: 'Exam', severity: 'partial' }])
+  const addBlock    = () => setBusyBlocks(b => [...b, { day: 'Monday', reason: 'Exam', severity: 'partial' }])
   const removeBlock = (i: number) => setBusyBlocks(b => b.filter((_, idx) => idx !== i))
   const updateBlock = (i: number, field: keyof BusyBlock, val: string) =>
     setBusyBlocks(b => b.map((bl, idx) => idx === i ? { ...bl, [field]: val } : bl))
@@ -29,10 +29,10 @@ export default function Availability() {
     setLoading(true)
     setError('')
     try {
-      await availabilityAPI.submit({ weekStatus, busyBlocks, maxFreeBlockHours, isExamWeek, note })
+      await submitAvailability({ weekStatus, busyBlocks, maxFreeBlockHours, isExamWeek, note })
       setSubmitted(true)
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Submission failed. Please try again.')
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, 'Submission failed. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -63,14 +63,16 @@ export default function Availability() {
                   <Check size={24} className="text-signal" />
                 </motion.div>
                 <h2 className="font-display text-2xl text-frost mb-2">Availability Submitted</h2>
-                <p className="font-body text-sm text-ice/40 mb-6">Your declaration has been received and processed by the middleware.</p>
+                <p className="font-body text-sm text-ice/40 mb-6">
+                  Your declaration has been received and processed by the middleware.
+                </p>
                 <div className="glass-card rounded-sm p-4 text-left mb-6">
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      ['Week Status', weekStatus === 'generally_free' ? 'Generally Free' : 'Heavy Week'],
+                      ['Week Status',    weekStatus === 'generally_free' ? 'Generally Free' : 'Heavy Week'],
                       ['Max Free Block', `${maxFreeBlockHours} hour${maxFreeBlockHours !== 1 ? 's' : ''}`],
-                      ['Busy Blocks', `${busyBlocks.length} declared`],
-                      ['Exam Week', isExamWeek ? 'Yes — −30 applied' : 'No'],
+                      ['Busy Blocks',    `${busyBlocks.length} declared`],
+                      ['Exam Week',      isExamWeek ? 'Yes — −30 applied' : 'No'],
                     ].map(([k, v]) => (
                       <div key={k}>
                         <p className="nav-label text-[0.5rem] text-gold/40">{k}</p>
@@ -128,13 +130,13 @@ export default function Availability() {
                   </div>
                 </motion.div>
 
-                {/* Max free block — 1 to 6 per backend validation */}
+                {/* Max free block */}
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }} className="glass-card rounded-sm p-6">
                   <p className="nav-label text-[0.6rem] text-gold/60 mb-1">MAX CONTINUOUS FREE BLOCK</p>
                   <p className="font-body text-xs text-ice/30 mb-4">Hours of uninterrupted availability</p>
                   <div className="grid grid-cols-6 gap-2">
-                    {[1,2,3,4,5,6].map(h => (
+                    {[1, 2, 3, 4, 5, 6].map(h => (
                       <motion.button key={h} type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                         onClick={() => setMaxFreeBlockHours(h)}
                         className="py-3 rounded-sm flex flex-col items-center gap-0.5 transition-all duration-300"
@@ -181,7 +183,7 @@ export default function Availability() {
                               className="uris-input col-span-4 text-sm">
                               {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                             </select>
-                            <select value={block.severity} onChange={e => updateBlock(i, 'severity', e.target.value as 'full'|'partial')}
+                            <select value={block.severity} onChange={e => updateBlock(i, 'severity', e.target.value as 'full' | 'partial')}
                               className="uris-input col-span-3 text-sm">
                               <option value="partial">Partial</option>
                               <option value="full">Full Day</option>
@@ -200,7 +202,9 @@ export default function Availability() {
                 {/* Note */}
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }} className="glass-card rounded-sm p-6">
-                  <p className="nav-label text-[0.6rem] text-gold/60 mb-3">OPTIONAL NOTE <span className="text-ice/25">(140 CHARS MAX)</span></p>
+                  <p className="nav-label text-[0.6rem] text-gold/60 mb-3">
+                    OPTIONAL NOTE <span className="text-ice/25">(140 CHARS MAX)</span>
+                  </p>
                   <textarea className="uris-input resize-none" rows={2} maxLength={140}
                     placeholder="Any additional context for this week..."
                     value={note} onChange={e => setNote(e.target.value)} />
@@ -218,8 +222,9 @@ export default function Availability() {
                 <motion.button type="submit" disabled={loading}
                   whileHover={!loading ? { scale: 1.02, boxShadow: '0 12px 32px rgba(201,168,76,0.25)' } : {}}
                   whileTap={!loading ? { scale: 0.98 } : {}}
-                  className="btn-gold w-full py-4 rounded-sm text-sm disabled:opacity-50"
+                  className="btn-gold w-full py-4 rounded-sm text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+                  {loading && <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
                   {loading ? 'SUBMITTING...' : 'SUBMIT WEEKLY AVAILABILITY'}
                 </motion.button>
               </motion.form>

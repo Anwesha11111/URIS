@@ -24,12 +24,13 @@ enum Role {
 // ---------------------------------------------------------------------------
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   // bcrypt hash only — never plain text
-  role      Role     @default(INTERN)
-  createdAt DateTime @default(now())
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String     // bcrypt hash only — never plain text
+  role      Role       @default(INTERN)
+  createdAt DateTime   @default(now())
   intern    Intern?
+  teams     UserTeam[]
 }
 
 model Intern {
@@ -119,8 +120,13 @@ model Alert {
   type      String
   taskId    String?
   message   String
+  severity  String   @default("warning")  // "warning" | "critical"
   resolved  Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([internId])
+  @@index([severity])
+  @@index([resolved])
 }
 
 model ScoreHistory {
@@ -139,4 +145,67 @@ model SyncLog {
   status    String   @default("SUCCESS") // "SUCCESS" | "FAILED"
   error     String?
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Multi-Team Support
+// ---------------------------------------------------------------------------
+
+model Team {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  members     UserTeam[]
+}
+
+model UserTeam {
+  id       String    @id @default(uuid())
+  userId   String
+  teamId   String
+  role     String    @default("member")  // "member" | "lead"
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?                     // null = currently active member
+
+  user     User      @relation(fields: [userId], references: [id])
+  team     Team      @relation(fields: [teamId], references: [id])
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([leftAt])
+}
+
+// ---------------------------------------------------------------------------
+// Activity Tracking
+// ---------------------------------------------------------------------------
+
+model Activity {
+  id        String   @id @default(uuid())
+  userId    String                        // always set — activity is user-specific
+  type      String                        // ACTIVITY_TYPES constant: LOGIN, LOGOUT, TASK_WORK, IDLE
+  duration  Int?                          // seconds; null for point-in-time events (LOGIN/LOGOUT)
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([timestamp])
+}
+
+// ---------------------------------------------------------------------------
+// Audit Log
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?                      // null for system-generated events
+  action    String                       // e.g. "LOGIN", "CREATE_TASK"
+  entity    String                       // e.g. "USER", "TASK", "SCORE"
+  entityId  String?                      // id of the affected record
+  metadata  Json?                        // arbitrary extra context
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
 }
