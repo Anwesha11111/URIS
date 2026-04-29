@@ -94,7 +94,11 @@ async function getAdminOverview(req, res, next) {
           user:          { select: { email: true } },
           capacityScore: true,
           credibility:   true,
-          tasks:         { where: { status: 'active' }, select: { complexity: true, progressPct: true } },
+          reviews:       { select: { quality: true, timeliness: true, initiative: true } },
+          // Fetch ALL tasks to compute completion % and real task count
+          tasks: {
+            select: { status: true, complexity: true, progressPct: true },
+          },
         },
       }),
       prisma.alert.findMany({
@@ -105,19 +109,45 @@ async function getAdminOverview(req, res, next) {
     ]);
 
     const interns = allInterns.map(i => {
-      const tli = i.tasks.reduce(
+      const activeTasks    = i.tasks.filter(t => t.status === 'active');
+      const completedTasks = i.tasks.filter(t => t.status === 'completed');
+      const totalTasks     = i.tasks.length;
+
+      // Task Load Index — sum of (complexity × remaining work) for active tasks
+      const tli = activeTasks.reduce(
         (sum, t) => sum + t.complexity * (1 - t.progressPct / 100),
         0
       );
+
+      // Review Performance Index — average of (quality + timeliness + initiative) / 3
+      // Scaled to 0–100 from a 0–5 rating scale
+      const rpi = i.reviews.length > 0
+        ? parseFloat(
+            (
+              i.reviews.reduce((sum, r) => sum + (r.quality + r.timeliness + r.initiative) / 3, 0)
+              / i.reviews.length
+              * 20  // convert 0–5 → 0–100
+            ).toFixed(1)
+          )
+        : 0;
+
+      // Task completion percentage
+      const completionPct = totalTasks > 0
+        ? Math.round((completedTasks.length / totalTasks) * 100)
+        : 0;
+
       return {
         id:               i.id,
         name:             i.user?.email?.split('@')[0] ?? i.id,
         capacityScore:    Math.round((i.capacityScore?.finalCapacity ?? 0) * 100),
         tli:              parseFloat(tli.toFixed(2)),
-        rpi:              0,
+        rpi,
         credibilityScore: Math.round(i.credibility?.score ?? 0),
         availability:     i.capacityScore?.capacityLabel ?? 'Unknown',
-        taskCount:        i.tasks.length,
+        taskCount:        totalTasks,
+        activeTasks:      activeTasks.length,
+        completedTasks:   completedTasks.length,
+        completionPct,
       };
     });
 

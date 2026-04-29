@@ -84,7 +84,19 @@ async function getAvailability(req, res, next) {
   try {
     const { internId, weekStart } = req.params;
     const result = await findAvailability(internId, weekStart);
-    if (!result) return res.status(404).json({ success: false, message: 'Availability record not found', data: null });
+    if (!result) {
+      return res.status(200).json({
+        success: true,
+        message: 'No availability record found for this week.',
+        data: {
+          internId,
+          weekStart,
+          availability: 'UNKNOWN',
+          maxFreeBlockHours: null,
+          busyBlocks: [],
+        },
+      });
+    }
     return res.status(200).json({ success: true, message: 'Availability retrieved', data: result });
   } catch (err) {
     next(err);

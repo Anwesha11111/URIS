@@ -56,9 +56,13 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const isAuthenticated = useAuthStore(selectIsAuthenticated)
   const user            = useAuthStore(selectUser)
+  const token           = useAuthStore(s => s.token)
 
   // Not logged in → send to login
-  if (!isAuthenticated) {
+  // Check both isAuthenticated and token directly to handle the Zustand
+  // persist rehydration race: login() sets token synchronously but
+  // isAuthenticated may lag one render cycle on initial hydration.
+  if (!isAuthenticated && !token) {
     return <Navigate to="/login" replace />
   }
 
