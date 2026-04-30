@@ -104,7 +104,7 @@ export const useAuthStore = create<AuthState>()(
       // Rehydrate isAuthenticated from the persisted token
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.isAuthenticated = state.token !== null
+          state.isAuthenticated = !!state.token
         }
       },
     }

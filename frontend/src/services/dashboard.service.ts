@@ -12,6 +12,9 @@ export interface InternRow {
   credibilityScore: number
   availability: string
   taskCount: number
+  activeTasks?: number
+  completedTasks?: number
+  completionPct?: number
   skill_tags?: string[]
   college?: string
   email?: string
