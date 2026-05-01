@@ -1,4 +1,6 @@
 const { getAssignmentShortlist } = require('../services/assignmentEngine');
+const { validateTaskAssignment }  = require('../services/businessRules');
+const { ok, validationError, businessError } = require('../utils/respond');
 const prisma = require('../utils/prisma');
 const { logAction } = require('../utils/auditLogger');
 const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
@@ -10,7 +12,7 @@ async function getShortlist(req, res, next) {
     const { task } = req.body;
 
     if (!task || !Array.isArray(task.requiredSkills)) {
-      return res.status(400).json({ success: false, message: 'Missing required field: task.requiredSkills', data: null });
+      return validationError(res, 'Missing required field: task.requiredSkills');
     }
 
     const dbInterns = await prisma.intern.findMany({
@@ -23,11 +25,7 @@ async function getShortlist(req, res, next) {
 
     const rankedInterns = getAssignmentShortlist(task, dbInterns);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Shortlist generated',
-      data: rankedInterns,
-    });
+    return ok(res, rankedInterns, 'Shortlist generated');
   } catch (err) {
     next(err);
   }
@@ -37,22 +35,13 @@ async function assignTask(req, res, next) {
   try {
     const { internId, taskId } = req.body;
 
-    if (!internId || !taskId) {
-      return res.status(400).json({ success: false, message: 'internId and taskId are required' });
+    // Business-level rules: intern exists, task exists, no duplicate assignment, task not completed
+    const biz = await validateTaskAssignment({ internId, taskId });
+    if (!biz.ok) {
+      return res.status(biz.status).json({ success: false, message: biz.message, data: null });
     }
 
-    // Ensure intern exists to avoid FK constraint errors
-    await prisma.intern.upsert({
-      where:  { id: internId },
-      update: {},
-      create: { id: internId },
-    });
-
-    // Check task exists
-    const task = await prisma.task.findUnique({ where: { id: taskId } });
-    if (!task) {
-      return res.status(404).json({ success: false, message: 'Task not found' });
-    }
+    const { task } = biz;   // reuse the task fetched during validation
 
     // Capacity check
     const capacityRecord = await prisma.capacityScore.findUnique({ where: { internId } });
@@ -63,6 +52,7 @@ async function assignTask(req, res, next) {
       return res.status(400).json({
         success: false,
         message: 'Intern not eligible for assignment due to low capacity',
+        data:    null,
       });
     }
 
@@ -79,7 +69,7 @@ async function assignTask(req, res, next) {
       previousInternId: task.internId ?? null,
     });
 
-    return res.status(200).json({ success: true, message: 'Task assigned successfully' });
+    return res.status(200).json({ success: true, message: 'Task assigned successfully', data: null });
   } catch (err) {
     next(err);
   }

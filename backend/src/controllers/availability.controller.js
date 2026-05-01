@@ -3,6 +3,8 @@ const { findAvailability } = require('../services/availability.service');
 const { processInternCapacity } = require('../services/processInternCapacity');
 const { uploadToNextcloud } = require('../services/storage.service');
 const { saveScoreHistory } = require('../services/scoreHistory.service');
+const { validateAvailabilitySubmission } = require('../services/businessRules');
+const { ok, validationError, businessError, notFound, forbidden, authError } = require('../utils/respond');
 
 const VALID_WEEK_STATUSES = ['normal', 'busy', 'exam', 'free'];
 
@@ -22,27 +24,25 @@ function normalizeWeekStatus(value) {
 
 async function submitAvailability(req, res, next) {
   try {
-    const { busyBlocks, maxFreeBlockHours, weekStatusToggle } = req.body;
+    const { busyBlocks, maxFreeBlockHours, weekStatusToggle, weekStart, weekEnd } = req.body;
 
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ success: false, message: 'Unauthorized - user missing', data: null });
+      return authError(res, 'Unauthorized - user missing');
     }
 
-    if (!busyBlocks || !Array.isArray(busyBlocks)) {
-      return res.status(400).json({ success: false, message: 'busyBlocks must be an array', data: null });
-    }
-    if (typeof maxFreeBlockHours !== 'number' || maxFreeBlockHours < 1 || maxFreeBlockHours > 6) {
-      return res.status(400).json({ success: false, message: 'maxFreeBlockHours must be a number between 1 and 6', data: null });
+    const biz = validateAvailabilitySubmission({ maxFreeBlockHours, weekStart, weekEnd, busyBlocks });
+    if (!biz.ok) {
+      return businessError(res, biz.status, biz.message);
     }
 
     const normalizedStatus = normalizeWeekStatus(weekStatusToggle);
     if (!normalizedStatus) {
-      return res.status(400).json({ success: false, message: `weekStatusToggle must be one of: ${VALID_WEEK_STATUSES.join(', ')} (or a recognized synonym)`, data: null });
+      return validationError(res, `weekStatusToggle must be one of: ${VALID_WEEK_STATUSES.join(', ')} (or a recognized synonym)`);
     }
 
     const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
     if (!intern) {
-      return res.status(404).json({ success: false, message: 'Intern not found' });
+      return notFound(res, 'Intern not found');
     }
     const internId = intern.id;
 
@@ -70,11 +70,7 @@ async function submitAvailability(req, res, next) {
 
     await saveScoreHistory(internId, capacityScore, 'capacity');
 
-    return res.status(200).json({
-      success: true,
-      message: 'Availability processed',
-      data: { availability, TLI, capacityScore, capacityLabel },
-    });
+    return ok(res, { availability, TLI, capacityScore, capacityLabel }, 'Availability processed');
   } catch (err) {
     next(err);
   }
@@ -86,44 +82,22 @@ async function getAvailability(req, res, next) {
     
     // Authorization check: Interns can only access their own data
     if (req.user.role === 'INTERN') {
-      const intern = await prisma.intern.findUnique({ 
-        where: { userId: req.user.id } 
-      });
-      
+      const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
+
       if (!intern) {
-        return res.status(404).json({
-          success: false,
-          message: 'Intern record not found',
-          data: null,
-        });
+        return notFound(res, 'Intern record not found');
       }
-      
-      // Verify the intern is requesting their own data
+
       if (intern.id !== parseInt(internId, 10)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied. You can only view your own availability.',
-          data: null,
-        });
+        return forbidden(res, 'Access denied. You can only view your own availability.');
       }
     }
-    // Admins can access any intern's availability (no additional check needed)
-    
+
     const result = await findAvailability(internId, weekStart);
     if (!result) {
-      return res.status(200).json({
-        success: true,
-        message: 'No availability record found for this week.',
-        data: {
-          internId,
-          weekStart,
-          availability: 'UNKNOWN',
-          maxFreeBlockHours: null,
-          busyBlocks: [],
-        },
-      });
+      return ok(res, { internId, weekStart, availability: 'UNKNOWN', maxFreeBlockHours: null, busyBlocks: [] }, 'No availability record found for this week.');
     }
-    return res.status(200).json({ success: true, message: 'Availability retrieved', data: result });
+    return ok(res, result, 'Availability retrieved');
   } catch (err) {
     next(err);
   }

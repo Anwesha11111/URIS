@@ -1,5 +1,6 @@
 const jwt   = require('jsonwebtoken');
 const { ROLES, VALID_ROLES } = require('../constants/roles');
+const { authError, forbidden } = require('../utils/respond');
 
 /**
  * verifyToken
@@ -17,11 +18,7 @@ function verifyToken(req, res, next) {
     : null;
 
   if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Access denied. No token provided.',
-      data:    null,
-    });
+    return authError(res, 'Access denied. No token provided.');
   }
 
   try {
@@ -29,15 +26,11 @@ function verifyToken(req, res, next) {
     req.user = {
       id:    decoded.id,
       email: decoded.email,
-      role:  decoded.role,   // uppercase Prisma enum value e.g. 'ADMIN'
+      role:  decoded.role,
     };
     next();
   } catch {
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid or expired token.',
-      data:    null,
-    });
+    return authError(res, 'Invalid or expired token.');
   }
 }
 
@@ -78,11 +71,7 @@ function requireRole(...roles) {
 
   return (req, res, next) => {
     if (!req.user || !allowed.has(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Insufficient permissions.',
-        data:    null,
-      });
+      return forbidden(res, 'Access denied. Insufficient permissions.');
     }
     next();
   };

@@ -2,6 +2,7 @@ const prisma = require('../utils/prisma');
 const { computePerformanceIndex } = require('../services/performanceEngine');
 const { uploadToNextcloud } = require('../services/storage.service');
 const { saveScoreHistory } = require('../services/scoreHistory.service');
+const { ok, notFound, forbidden } = require('../utils/respond');
 
 async function getPerformance(req, res, next) {
   try {
@@ -11,10 +12,10 @@ async function getPerformance(req, res, next) {
     if (req.user.role !== 'ADMIN') {
       const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
       if (!intern) {
-        return res.status(404).json({ success: false, message: 'Intern not found', data: null });
+        return notFound(res, 'Intern not found');
       }
       if (intern.id !== internId) {
-        return res.status(403).json({ success: false, message: 'Access denied. You can only view your own performance data.', data: null });
+        return forbidden(res, 'Access denied. You can only view your own performance data.');
       }
     }
 
@@ -53,11 +54,7 @@ async function getPerformance(req, res, next) {
 
     await saveScoreHistory(internId, performanceIndex, 'performance');
 
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Performance retrieved', 
-      data: { performanceIndex, reviewCount, isOverridden, source } 
-    });
+    return ok(res, { performanceIndex, reviewCount, isOverridden, source }, 'Performance retrieved');
   } catch (err) {
     next(err);
   }

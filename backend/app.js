@@ -19,6 +19,7 @@ const auditLogRoutes     = require('./src/routes/auditLog.routes');
 const activityRoutes     = require('./src/routes/activity.routes');
 const teamRoutes         = require('./src/routes/team.routes');
 
+const healthRoutes       = require('./src/routes/health.routes');
 const { errorHandler } = require('./src/middleware/error.middleware');
 
 const app = express();
@@ -44,6 +45,7 @@ app.use('/intern',       internRoutes);
 app.use('/audit-logs',   auditLogRoutes);
 app.use('/activity',     activityRoutes);
 app.use('/teams',        teamRoutes);
+app.use('/health',       healthRoutes);
 app.use('/',             nextcloudRoutes);
 app.use(errorHandler);
 

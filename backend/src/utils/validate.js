@@ -101,4 +101,214 @@ function validateAvailability(data) {
   return errors;
 }
 
-module.exports = { validateAvailability, validateAuth };
+// ── UUID ───────────────────────────────────────────────────────────────────────
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUUID(value) {
+  return typeof value === 'string' && UUID_RE.test(value);
+}
+
+// ── ISO date (YYYY-MM-DD) ──────────────────────────────────────────────────────
+function isISODate(value) {
+  return typeof value === 'string' && ISO_DATE.test(value) && !isNaN(Date.parse(value));
+}
+
+// ── Task creation ──────────────────────────────────────────────────────────────
+const VALID_TASK_SKILLS = [
+  'Frontend', 'Backend', 'Testing', 'Documentation',
+  'AI/ML', 'Research', 'Design', 'DevOps',
+];
+
+function validateCreateTask(data) {
+  const errors = [];
+  const { title, complexity, internId, planeTaskId, skills, deadline } = data || {};
+
+  if (!title || typeof title !== 'string' || title.trim() === '')
+    errors.push('title is required and must be a non-empty string');
+  else if (title.trim().length > 255)
+    errors.push('title must not exceed 255 characters');
+
+  if (!internId)
+    errors.push('internId is required');
+  else if (!isUUID(internId))
+    errors.push('internId must be a valid UUID');
+
+  if (!planeTaskId || typeof planeTaskId !== 'string' || planeTaskId.trim() === '')
+    errors.push('planeTaskId is required and must be a non-empty string');
+
+  if (typeof complexity !== 'number' || complexity < 1 || complexity > 5)
+    errors.push('complexity must be a number between 1 and 5');
+
+  if (skills !== undefined) {
+    if (!Array.isArray(skills))
+      errors.push('skills must be an array');
+    else {
+      skills.forEach((s, i) => {
+        if (typeof s !== 'string')
+          errors.push(`skills[${i}] must be a string`);
+      });
+    }
+  }
+
+  if (deadline !== undefined && deadline !== null) {
+    if (!isISODate(deadline))
+      errors.push('deadline must be a valid date in YYYY-MM-DD format');
+  }
+
+  return errors;
+}
+
+// ── Task status update ─────────────────────────────────────────────────────────
+const VALID_TASK_STATUSES = [
+  'backlog', 'in_progress_early', 'in_progress_mid',
+  'under_review', 'completed', 'active', 'paused',
+];
+
+function validateUpdateTaskStatus(data) {
+  const errors = [];
+  const { taskId, status, progress } = data || {};
+
+  if (!taskId)
+    errors.push('taskId is required');
+  else if (!isUUID(taskId))
+    errors.push('taskId must be a valid UUID');
+
+  if (!status || !VALID_TASK_STATUSES.includes(status))
+    errors.push(`status must be one of: ${VALID_TASK_STATUSES.join(', ')}`);
+
+  if (progress !== undefined) {
+    if (typeof progress !== 'number' || !Number.isInteger(progress) || progress < 0 || progress > 100)
+      errors.push('progress must be an integer between 0 and 100');
+  }
+
+  return errors;
+}
+
+// ── Review submission ──────────────────────────────────────────────────────────
+function validateSubmitReview(data) {
+  const errors = [];
+  const { internId, quality, timeliness, initiative, complexity } = data || {};
+
+  if (!internId)
+    errors.push('internId is required');
+  else if (!isUUID(internId))
+    errors.push('internId must be a valid UUID');
+
+  const inRange = (val, min, max) => typeof val === 'number' && val >= min && val <= max;
+
+  if (!inRange(quality, 1, 5))     errors.push('quality must be a number between 1 and 5');
+  if (!inRange(timeliness, 1, 5))  errors.push('timeliness must be a number between 1 and 5');
+  if (!inRange(initiative, 1, 5))  errors.push('initiative must be a number between 1 and 5');
+  if (!inRange(complexity, 1, 3))  errors.push('complexity must be a number between 1 and 3');
+
+  return errors;
+}
+
+// ── Assignment ─────────────────────────────────────────────────────────────────
+function validateAssignTask(data) {
+  const errors = [];
+  const { internId, taskId } = data || {};
+
+  if (!internId)
+    errors.push('internId is required');
+  else if (!isUUID(internId))
+    errors.push('internId must be a valid UUID');
+
+  if (!taskId)
+    errors.push('taskId is required');
+  else if (!isUUID(taskId))
+    errors.push('taskId must be a valid UUID');
+
+  return errors;
+}
+
+function validateGetShortlist(data) {
+  const errors = [];
+  const { task } = data || {};
+
+  if (!task || typeof task !== 'object')
+    errors.push('task object is required');
+  else {
+    if (!Array.isArray(task.requiredSkills))
+      errors.push('task.requiredSkills must be an array');
+    else {
+      if (task.requiredSkills.length > 20)
+        errors.push('task.requiredSkills must not exceed 20 items');
+      task.requiredSkills.forEach((s, i) => {
+        if (typeof s !== 'string')
+          errors.push(`task.requiredSkills[${i}] must be a string`);
+      });
+    }
+    if (task.topN !== undefined) {
+      if (typeof task.topN !== 'number' || task.topN < 1 || task.topN > 50)
+        errors.push('task.topN must be a number between 1 and 50');
+    }
+  }
+
+  return errors;
+}
+
+// ── Demo pipeline ──────────────────────────────────────────────────────────────
+const VALID_WEEK_STATUSES_DEMO = [
+  'normal', 'busy', 'exam', 'free',
+  'generally_free', 'light_week', 'heavy_week', 'exam_week', 'regular',
+];
+
+function validateRunDemo(data) {
+  const errors = [];
+  const { busyBlocks, maxFreeBlockHours, weekStatusToggle, task } = data || {};
+
+  if (!Array.isArray(busyBlocks))
+    errors.push('busyBlocks must be an array');
+
+  if (typeof maxFreeBlockHours !== 'number' || maxFreeBlockHours < 1 || maxFreeBlockHours > 6)
+    errors.push('maxFreeBlockHours must be a number between 1 and 6');
+
+  if (!weekStatusToggle || !VALID_WEEK_STATUSES_DEMO.includes(weekStatusToggle))
+    errors.push(`weekStatusToggle must be one of: ${VALID_WEEK_STATUSES_DEMO.join(', ')}`);
+
+  if (!task || typeof task !== 'object')
+    errors.push('task object is required');
+  else if (!Array.isArray(task.requiredSkills))
+    errors.push('task.requiredSkills must be an array');
+
+  return errors;
+}
+
+// ── Pagination ─────────────────────────────────────────────────────────────────
+const VALID_TASK_STATUS_FILTER = [
+  'active', 'completed', 'stale', 'paused',
+  'backlog', 'in_progress_early', 'in_progress_mid', 'under_review',
+];
+
+function validatePagination({ page, limit, status } = {}) {
+  const errors = [];
+
+  const p = parseInt(page);
+  const l = parseInt(limit);
+
+  if (page !== undefined && (isNaN(p) || p < 1))
+    errors.push('page must be a positive integer');
+
+  if (limit !== undefined && (isNaN(l) || l < 1 || l > 100))
+    errors.push('limit must be an integer between 1 and 100');
+
+  if (status !== undefined && !VALID_TASK_STATUS_FILTER.includes(status.toLowerCase()))
+    errors.push(`status must be one of: ${VALID_TASK_STATUS_FILTER.join(', ')}`);
+
+  return errors;
+}
+
+module.exports = {
+  validateAvailability,
+  validateAuth,
+  validateCreateTask,
+  validateUpdateTaskStatus,
+  validateSubmitReview,
+  validateAssignTask,
+  validateGetShortlist,
+  validateRunDemo,
+  validatePagination,
+  isUUID,
+  isISODate,
+};

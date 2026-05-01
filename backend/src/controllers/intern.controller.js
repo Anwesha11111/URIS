@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const { computePerformanceIndex } = require('../services/performanceEngine');
+const { ok, notFound } = require('../utils/respond');
 
 async function getInternDashboard(req, res, next) {
   try {
@@ -9,11 +10,10 @@ async function getInternDashboard(req, res, next) {
     });
 
     if (!intern) {
-      return res.status(404).json({ success: false, message: 'Intern not found' });
+      return notFound(res, 'Intern not found');
     }
 
     const internId = intern.id;
-
     console.log('[INFO] Intern dashboard fetched:', internId);
 
     const assignedTasks = await prisma.task.findMany({
@@ -22,18 +22,10 @@ async function getInternDashboard(req, res, next) {
     });
 
     const { performanceIndex } = computePerformanceIndex(intern.reviews);
-    const capacityScore  = Math.round((intern.capacityScore?.finalCapacity ?? 0) * 100);
-    const credibility    = intern.credibility?.score           ?? 0;
+    const capacityScore = Math.round((intern.capacityScore?.finalCapacity ?? 0) * 100);
+    const credibility   = intern.credibility?.score ?? 0;
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        capacityScore,
-        performanceIndex,
-        credibility,
-        assignedTasks,
-      },
-    });
+    return ok(res, { capacityScore, performanceIndex, credibility, assignedTasks });
   } catch (err) {
     next(err);
   }

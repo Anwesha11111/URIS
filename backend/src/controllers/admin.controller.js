@@ -1,6 +1,8 @@
 const prisma = require('../utils/prisma');
 const { logAction } = require('../utils/auditLogger');
 const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
+const { validateUpdateTaskStatus, isUUID } = require('../utils/validate');
+const { ok, validationError, notFound } = require('../utils/respond');
 
 const VALID_TASK_STATUSES = [
   'backlog',
@@ -17,10 +19,13 @@ async function overrideScore(req, res, next) {
     const { internId, overrideScore } = req.body;
 
     if (!internId) {
-      return res.status(400).json({ success: false, message: 'internId is required', data: null });
+      return validationError(res, 'internId is required');
+    }
+    if (!isUUID(internId)) {
+      return validationError(res, 'internId must be a valid UUID');
     }
     if (typeof overrideScore !== 'number' || overrideScore < 0 || overrideScore > 100) {
-      return res.status(400).json({ success: false, message: 'overrideScore must be a number between 0 and 100', data: null });
+      return validationError(res, 'overrideScore must be a number between 0 and 100');
     }
 
     const intern = await prisma.intern.findUnique({ where: { id: internId }, select: { overrideScore: true } });
@@ -38,7 +43,7 @@ async function overrideScore(req, res, next) {
       reason:   req.body.reason ?? null,
     });
 
-    return res.status(200).json({ success: true, message: 'Score overridden successfully', data: null });
+    return ok(res, null, 'Score overridden successfully');
   } catch (err) {
     next(err);
   }
@@ -48,16 +53,14 @@ async function updateTaskStatus(req, res, next) {
   try {
     const { taskId, status, progress } = req.body;
 
-    if (!taskId) {
-      return res.status(400).json({ success: false, message: 'taskId is required', data: null });
-    }
-    if (!VALID_TASK_STATUSES.includes(status)) {
-      return res.status(400).json({ success: false, message: `status must be one of: ${VALID_TASK_STATUSES.join(', ')}`, data: null });
+    const errors = validateUpdateTaskStatus({ taskId, status, progress });
+    if (errors.length > 0) {
+      return validationError(res, errors[0]);
     }
 
     const existingTask = await prisma.task.findUnique({ where: { id: taskId } });
     if (!existingTask) {
-      return res.status(404).json({ success: false, message: 'Task not found', data: null });
+      return notFound(res, 'Task not found');
     }
 
     await prisma.task.update({
@@ -75,7 +78,7 @@ async function updateTaskStatus(req, res, next) {
       ...(typeof progress === 'number' ? { progressPct: progress } : {}),
     });
 
-    return res.status(200).json({ success: true, message: `Task status updated to ${status}`, data: null });
+    return ok(res, null, `Task status updated to ${status}`);
   } catch (err) {
     next(err);
   }
@@ -151,10 +154,7 @@ async function getAdminOverview(req, res, next) {
       };
     });
 
-    return res.status(200).json({
-      success: true,
-      data: { totalInterns, activeTasks, openAlerts, completedLast30, interns, alerts },
-    });
+    return ok(res, { totalInterns, activeTasks, openAlerts, completedLast30, interns, alerts });
   } catch (err) {
     next(err);
   }
