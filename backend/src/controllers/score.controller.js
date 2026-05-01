@@ -3,13 +3,18 @@ const { ok, notFound, forbidden } = require('../utils/respond');
 
 async function getScoreHistory(req, res, next) {
   try {
-    const { internId } = req.params;
+    // Parse to integer — req.params values are always strings, intern.id is an integer
+    const internId = parseInt(req.params.internId, 10);
+    if (isNaN(internId)) {
+      return forbidden(res, 'Invalid internId');
+    }
 
     if (req.user.role !== 'ADMIN') {
       const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
       if (!intern) {
         return notFound(res, 'Intern not found');
       }
+      // Both sides are now integers — comparison is type-safe
       if (intern.id !== internId) {
         return forbidden(res, 'Access denied');
       }

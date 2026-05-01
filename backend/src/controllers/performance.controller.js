@@ -6,23 +6,30 @@ const { ok, notFound, forbidden } = require('../utils/respond');
 
 async function getPerformance(req, res, next) {
   try {
-    const { internId } = req.params;
+    const isAdmin = req.user.role === 'ADMIN';
 
-    // Authorization: interns can only view their own performance data
-    if (req.user.role !== 'ADMIN') {
+    let internId;
+
+    if (isAdmin) {
+      // Admin path: internId comes from the route param, must be a valid integer
+      internId = parseInt(req.params.internId, 10);
+      if (isNaN(internId)) {
+        return forbidden(res, 'Invalid internId');
+      }
+    } else {
+      // Intern self-service path (/mine): resolve internId from the JWT owner
+      // No route param is present — the intern can only ever see their own data
       const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
       if (!intern) {
-        return notFound(res, 'Intern not found');
+        return notFound(res, 'Intern record not found');
       }
-      if (intern.id !== internId) {
-        return forbidden(res, 'Access denied. You can only view your own performance data.');
-      }
+      internId = intern.id;
     }
 
     const reviews = await prisma.review.findMany({ where: { internId } });
     const { performanceIndex: computedIndex, totalReviews: reviewCount } = computePerformanceIndex(reviews);
 
-    // Respect admin override if set
+    // Respect admin override if set — use parsed integer for the lookup
     const intern = await prisma.intern.findUnique({ where: { id: internId }, select: { overrideScore: true } });
     
     let performanceIndex;

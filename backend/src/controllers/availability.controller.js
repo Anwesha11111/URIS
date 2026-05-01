@@ -1,6 +1,7 @@
 const prisma = require('../utils/prisma');
 const { findAvailability } = require('../services/availability.service');
 const { processInternCapacity } = require('../services/processInternCapacity');
+const { computeCredibilityScore } = require('../services/credibilityService');
 const { uploadToNextcloud } = require('../services/storage.service');
 const { saveScoreHistory } = require('../services/scoreHistory.service');
 const { validateAvailabilitySubmission } = require('../services/businessRules');
@@ -24,7 +25,7 @@ function normalizeWeekStatus(value) {
 
 async function submitAvailability(req, res, next) {
   try {
-    const { busyBlocks, maxFreeBlockHours, weekStatusToggle, weekStart, weekEnd } = req.body;
+    const { busyBlocks, maxFreeBlockHours, weekStatusToggle, weekStart, weekEnd, isExamWeek } = req.body;
 
     if (!req.user || !req.user.id) {
       return authError(res, 'Unauthorized - user missing');
@@ -40,20 +41,37 @@ async function submitAvailability(req, res, next) {
       return validationError(res, `weekStatusToggle must be one of: ${VALID_WEEK_STATUSES.join(', ')} (or a recognized synonym)`);
     }
 
+    // isExamWeek is an explicit boolean flag from the client (design §12.2).
+    // When true it overrides the weekStatusToggle to 'exam' so the full −30
+    // exam penalty is always applied regardless of what toggle value was sent.
+    // This is the server-side derivation path — the client does not need to
+    // know the internal 'exam' toggle value; they just set isExamWeek: true.
+    const resolvedWeekStatus = isExamWeek ? 'exam' : normalizedStatus;
+
     const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
     if (!intern) {
       return notFound(res, 'Intern not found');
     }
     const internId = intern.id;
 
+    // Fetch live credibility score — scoreOut100 is the 0–100 integer the capacity
+    // engine expects. Fall back to neutral 50 if the service fails so availability
+    // submission is never blocked by a credibility computation error.
+    let credibilityScore = 50; // neutral default
+    try {
+      const credResult = await computeCredibilityScore(internId);
+      credibilityScore = credResult.scoreOut100; // 0–100 integer
+    } catch (credErr) {
+      console.warn('[availability] Credibility fetch failed — using neutral default 50:', credErr.message);
+    }
+
     const { availability, TLI, capacityScore, capacityLabel } = await processInternCapacity({
       busyBlocks,
       maxFreeBlockHours,
-      weekStatusToggle: normalizedStatus,
+      weekStatusToggle: resolvedWeekStatus,
       tasks: [],
-      examFlag: false,
       internId,
-      credibilityScore: 75,
+      credibilityScore,
     });
 
     try {
