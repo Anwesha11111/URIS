@@ -82,10 +82,10 @@ export default function Alerts() {
     <div className="min-h-screen bg-navy-950 text-frost">
       <Starfield />
       <Sidebar />
-      <main className="ml-52 pt-14 min-h-screen relative z-10">
-        <div className="px-8 py-8">
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="px-4 md:px-8 py-8">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-end justify-between mb-8">
+            className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-8">
             <div>
               <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">SIGNAL MONITORING</p>
               <h1 className="font-display font-black text-3xl text-ice-gradient">System Alerts</h1>
@@ -115,7 +115,7 @@ export default function Alerts() {
           {!loading && !error && (
             <>
               {/* Count pills */}
-              <div className="flex gap-3 mb-6">
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 mb-6">
                 {[
                   { key: 'all',      label: 'All Active', val: counts.critical + counts.warning, c: '#c9a84c' },
                   { key: 'critical', label: 'Critical',   val: counts.critical,                  c: '#f87171' },

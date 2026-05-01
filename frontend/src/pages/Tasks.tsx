@@ -77,17 +77,17 @@ export default function Tasks() {
     <div className="min-h-screen bg-navy-950 text-frost">
       <Starfield />
       <Sidebar />
-      <main className="ml-52 pt-14 min-h-screen relative z-10">
-        <div className="px-8 py-8">
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="px-4 md:px-8 py-8">
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-end justify-between mb-8">
+            className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 mb-8">
             <div>
               <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">TASK INTELLIGENCE</p>
               <h1 className="font-display font-black text-3xl text-ice-gradient">Task Monitor</h1>
               <div className="gold-rule w-14 mt-2" />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {(['all', 'stale', 'blocked'] as const).map(f => (
                 <motion.button key={f} whileTap={{ scale: 0.96 }} onClick={() => setFilter(f)}
                   className="nav-label text-[0.6rem] px-3 py-1.5 rounded-sm transition-all duration-200"
@@ -125,7 +125,7 @@ export default function Tasks() {
           {!loading && !error && (
             <>
               {/* Summary pills */}
-              <div className="flex gap-4 mb-6">
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 md:gap-4 mb-6">
                 {[
                   { label: 'Total',     val: tasks.length,                                              c: '#c9a84c' },
                   { label: 'Stale',     val: tasks.filter(t => t.isStale).length,                      c: '#f59e0b' },
@@ -190,7 +190,7 @@ export default function Tasks() {
                           <p className="font-body text-sm text-frost/85 truncate">{task.title}</p>
                         </div>
 
-                        <div className="flex-shrink-0 text-right hidden sm:block">
+                        <div className="flex-shrink-0 text-right hidden lg:block">
                           <p className="nav-label text-[0.55rem] text-ice/40">{(task.assignee ?? '').split(' ')[0]}</p>
                           <p className="nav-label text-[0.5rem]" style={{ color: isOverdue ? '#f87171' : 'rgba(184,212,240,0.3)' }}>
                             {isOverdue ? 'OVERDUE' : task.deadline ?? '—'}
@@ -257,6 +257,13 @@ export default function Tasks() {
               </div>
             </>
           )}
+
+          {/* STEMONEF BRANDING */}
+          <div className="mt-12 py-8 flex flex-col items-center gap-4 opacity-40">
+            <div className="h-[1px] w-12 bg-gold/20" />
+            <span className="font-display font-black text-xs tracking-[0.4em] text-ice-gradient">STEMONEF</span>
+            <p className="nav-label text-[0.45rem] tracking-[0.6em] text-ice/30 uppercase">Intelligence Design System</p>
+          </div>
         </div>
       </main>
 

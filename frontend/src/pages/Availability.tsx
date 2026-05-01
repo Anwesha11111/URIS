@@ -42,8 +42,8 @@ export default function Availability() {
     <div className="min-h-screen bg-navy-950 text-frost">
       <Starfield />
       <Sidebar />
-      <main className="ml-52 pt-14 min-h-screen relative z-10">
-        <div className="max-w-2xl mx-auto px-8 py-8">
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="max-w-2xl mx-auto px-4 md:px-8 py-8">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
             <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">WEEKLY SUBMISSION</p>
             <h1 className="font-display font-black text-3xl text-ice-gradient">Availability Declaration</h1>
@@ -174,24 +174,35 @@ export default function Availability() {
                         {busyBlocks.map((block, i) => (
                           <motion.div key={i} initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                            className="grid grid-cols-12 gap-2 items-center">
-                            <select value={block.day} onChange={e => updateBlock(i, 'day', e.target.value)}
-                              className="uris-input col-span-4 text-sm">
-                              {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-                            </select>
-                            <select value={block.reason} onChange={e => updateBlock(i, 'reason', e.target.value)}
-                              className="uris-input col-span-4 text-sm">
-                              {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                            <select value={block.severity} onChange={e => updateBlock(i, 'severity', e.target.value as 'full' | 'partial')}
-                              className="uris-input col-span-3 text-sm">
-                              <option value="partial">Partial</option>
-                              <option value="full">Full Day</option>
-                            </select>
-                            <motion.button type="button" whileHover={{ scale: 1.1 }} onClick={() => removeBlock(i)}
-                              className="col-span-1 flex justify-center text-red-400/50 hover:text-red-400 transition-colors">
-                              <Trash2 size={13} />
-                            </motion.button>
+                            className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:gap-2 items-start sm:items-center p-3 sm:p-0 rounded-sm sm:rounded-none bg-ice/5 sm:bg-transparent">
+                            <div className="w-full sm:col-span-4">
+                              <label className="nav-label text-[0.5rem] text-ice/30 sm:hidden block mb-1">DAY</label>
+                              <select value={block.day} onChange={e => updateBlock(i, 'day', e.target.value)}
+                                className="uris-input text-sm">
+                                {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                              </select>
+                            </div>
+                            <div className="w-full sm:col-span-4">
+                              <label className="nav-label text-[0.5rem] text-ice/30 sm:hidden block mb-1">REASON</label>
+                              <select value={block.reason} onChange={e => updateBlock(i, 'reason', e.target.value)}
+                                className="uris-input text-sm">
+                                {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                              </select>
+                            </div>
+                            <div className="w-full sm:col-span-3">
+                              <label className="nav-label text-[0.5rem] text-ice/30 sm:hidden block mb-1">SEVERITY</label>
+                              <select value={block.severity} onChange={e => updateBlock(i, 'severity', e.target.value as 'full' | 'partial')}
+                                className="uris-input text-sm">
+                                <option value="partial">Partial</option>
+                                <option value="full">Full Day</option>
+                              </select>
+                            </div>
+                            <div className="w-full sm:col-span-1 flex justify-end sm:justify-center">
+                              <motion.button type="button" whileHover={{ scale: 1.1 }} onClick={() => removeBlock(i)}
+                                className="p-2 sm:p-0 text-red-400/50 hover:text-red-400 transition-colors">
+                                <Trash2 size={13} />
+                              </motion.button>
+                            </div>
                           </motion.div>
                         ))}
                       </div>

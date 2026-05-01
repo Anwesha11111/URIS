@@ -92,9 +92,8 @@ export default function InternDashboard() {
     <div className="min-h-screen bg-navy-950 text-frost">
       <Starfield />
       <Sidebar />
-
-      <main className="ml-52 pt-14 min-h-screen relative z-10">
-        <div className="px-8 py-8">
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="px-4 md:px-8 py-8">
 
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
@@ -127,7 +126,7 @@ export default function InternDashboard() {
               <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
                 className="glass-card rounded-sm p-8 mb-6">                <p className="nav-label text-[0.55rem] text-gold/40 mb-6">YOUR PERFORMANCE METRICS</p>
-                <div className="flex items-center justify-around flex-wrap gap-6">
+                <div className="flex items-center justify-around flex-wrap gap-8">
                   <ScoreRing
                     val={Math.round(data.capacityScore)}
                     label="CAPACITY SCORE"
@@ -178,7 +177,7 @@ export default function InternDashboard() {
                       <Loader2 size={16} className="text-gold animate-spin" />
                     </div>
                   ) : teamStats ? (
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="text-center">
                         <p className="font-display font-black text-2xl text-signal">
                           {teamStats.tasksCompleted}
@@ -290,6 +289,13 @@ export default function InternDashboard() {
                   </div>
                 )}
               </motion.div>
+              
+              {/* STEMONEF BRANDING */}
+              <div className="mt-12 py-8 flex flex-col items-center gap-4 opacity-40">
+                <div className="h-[1px] w-12 bg-gold/20" />
+                <span className="font-display font-black text-xs tracking-[0.4em] text-ice-gradient">STEMONEF</span>
+                <p className="nav-label text-[0.45rem] tracking-[0.6em] text-ice/30 uppercase">Intelligence Design System</p>
+              </div>
             </>
           )}
         </div>
