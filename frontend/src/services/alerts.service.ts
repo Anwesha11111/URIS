@@ -17,10 +17,12 @@ export type AlertType =
   | 'credibility'
   | 'availability'
   | 'capacity'
+  | 'low_capacity'
+  | 'overload'
   | 'overreliance'
   | 'reassignment'
-  | 'low_performance'   // anomaly: score dropped >20%
-  | 'spike'             // anomaly: score spiked >30%
+  | 'low_performance'
+  | 'spike'
 
 export type AlertSeverity = 'critical' | 'warning' | 'info'
 

@@ -4,7 +4,7 @@ const { getShortlist, assignTask } = require('../controllers/assignment.controll
 const { verifyToken, requireRole } = require('../middleware/auth.middleware');
 const { ROLES } = require('../constants/roles');
 
-router.post('/shortlist', verifyToken, requireRole(ROLES.ADMIN), getShortlist);
-router.post('/assign',    verifyToken, requireRole(ROLES.ADMIN), assignTask);
+router.post('/shortlist',   verifyToken, requireRole(ROLES.ADMIN), getShortlist);
+router.post('/assign-task', verifyToken, requireRole(ROLES.ADMIN), assignTask);
 
 module.exports = router;

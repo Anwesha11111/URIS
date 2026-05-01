@@ -27,7 +27,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/availability', availabilityRoutes);
-app.use('/assignment',   assignmentRoutes);
+app.use('/assign',       assignmentRoutes);
 app.use('/demo',         demoRoutes);
 app.use('/auth',         authRoutes);
 app.use('/tasks',        taskRoutes);
