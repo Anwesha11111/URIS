@@ -12,7 +12,8 @@ async function getCredibility(req, res) {
 
   try {
     const result = await computeCredibilityScore(internId);
-    await saveScoreHistory(internId, result.score, 'credibility');
+    // Save the 0–100 integer to score history for consistency with the capacity pipeline
+    await saveScoreHistory(internId, result.scoreOut100, 'credibility');
     return ok(res, result, 'Credibility score computed.');
   } catch (err) {
     console.error('[credibilityController] getCredibility error:', err.message);
@@ -36,7 +37,8 @@ async function getMyCredibility(req, res, next) {
     console.log('[INFO] Credibility fetched for:', internId);
 
     const result = await computeCredibilityScore(internId);
-    await saveScoreHistory(internId, result.score, 'credibility');
+    // Save the 0–100 integer to score history for consistency with the capacity pipeline
+    await saveScoreHistory(internId, result.scoreOut100, 'credibility');
 
     const factors = [];
     if (result.signals.updateFrequency < 0.5)   factors.push('late updates');

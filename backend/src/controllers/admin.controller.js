@@ -94,13 +94,17 @@ async function getAdminOverview(req, res, next) {
       prisma.intern.findMany({
         take:    10,
         include: {
-          user:          { select: { email: true } },
-          capacityScore: true,
-          credibility:   true,
-          reviews:       { select: { quality: true, timeliness: true, initiative: true } },
-          // Fetch ALL tasks to compute completion % and real task count
+          user:        { select: { email: true } },
+          credibility: true,
+          reviews:     { select: { quality: true, timeliness: true, initiative: true } },
           tasks: {
             select: { status: true, complexity: true, progressPct: true },
+          },
+          // Fetch the most recent capacity score written by the new pipeline
+          scoreHistory: {
+            where:   { type: 'capacity' },
+            orderBy: { createdAt: 'desc' },
+            take:    1,
           },
         },
       }),
@@ -112,12 +116,12 @@ async function getAdminOverview(req, res, next) {
     ]);
 
     const interns = allInterns.map(i => {
-      const activeTasks    = i.tasks.filter(t => t.status === 'active');
-      const completedTasks = i.tasks.filter(t => t.status === 'completed');
-      const totalTasks     = i.tasks.length;
+      const activeTasksList = i.tasks.filter(t => t.status === 'active');
+      const completedTasks  = i.tasks.filter(t => t.status === 'completed');
+      const totalTasks      = i.tasks.length;
 
       // Task Load Index — sum of (complexity × remaining work) for active tasks
-      const tli = activeTasks.reduce(
+      const tli = activeTasksList.reduce(
         (sum, t) => sum + t.complexity * (1 - t.progressPct / 100),
         0
       );
@@ -139,17 +143,29 @@ async function getAdminOverview(req, res, next) {
         ? Math.round((completedTasks.length / totalTasks) * 100)
         : 0;
 
+      // Capacity score — read from ScoreHistory (integer 0–100) written by the
+      // new capacityEngine pipeline via saveScoreHistory.
+      // Falls back to 0 if no capacity score has been computed yet.
+      const latestCapacity = i.scoreHistory[0];
+      const capacityScore  = latestCapacity ? Math.round(latestCapacity.score) : 0;
+
+      // Credibility score — CredibilityScore.score is a 0–1 float; multiply by
+      // 100 to get the 0–100 integer the frontend expects.
+      const credibilityScore = i.credibility
+        ? Math.round(i.credibility.score * 100)
+        : 0;
+
       return {
-        id:               i.id,
-        name:             i.user?.email?.split('@')[0] ?? i.id,
-        capacityScore:    Math.round((i.capacityScore?.finalCapacity ?? 0) * 100),
-        tli:              parseFloat(tli.toFixed(2)),
+        id:            i.id,
+        name:          i.user?.email?.split('@')[0] ?? i.id,
+        capacityScore,
+        tli:           parseFloat(tli.toFixed(2)),
         rpi,
-        credibilityScore: Math.round(i.credibility?.score ?? 0),
-        availability:     i.capacityScore?.capacityLabel ?? 'Unknown',
-        taskCount:        totalTasks,
-        activeTasks:      activeTasks.length,
-        completedTasks:   completedTasks.length,
+        credibilityScore,
+        availability:  latestCapacity ? null : 'Unknown', // label not stored in ScoreHistory
+        taskCount:     totalTasks,
+        activeTasks:   activeTasksList.length,
+        completedTasks: completedTasks.length,
         completionPct,
       };
     });

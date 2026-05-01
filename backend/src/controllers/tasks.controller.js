@@ -41,12 +41,21 @@ async function getTasks(req, res, next) {
     // Status filter — case-insensitive, stored lowercase in DB
     if (status) filter.status = status.toLowerCase();
 
-    // Interns only see their own tasks
     if (!isAdmin) {
+      // Resolve the intern record for this authenticated user.
+      // If no intern record exists (e.g. user registered but onboarding incomplete),
+      // return an empty list — never 404, which would leak existence information.
       const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
       if (!intern) {
-        return notFound(res, 'Intern not found');
+        return res.status(200).json({
+          success: true,
+          data:    [],
+          meta:    { total: 0, page: parseInt(page), limit: parseInt(limit) },
+        });
       }
+      // Scope the query strictly to this intern's own tasks.
+      // This filter is always set before the DB query runs — no path exists
+      // where a non-admin can receive another intern's tasks.
       filter.internId = intern.id;
     }
 
