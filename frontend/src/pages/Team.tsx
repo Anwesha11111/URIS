@@ -63,8 +63,8 @@ export default function Team() {
     <div className="min-h-screen bg-navy-950 text-frost">
       <Starfield />
       <Sidebar />
-      <main className="ml-52 pt-14 min-h-screen relative z-10">
-        <div className="px-8 py-8">
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="px-4 md:px-8 py-8">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
             <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">COHORT OVERVIEW</p>
             <h1 className="font-display font-black text-3xl text-ice-gradient">Team Intelligence</h1>
@@ -168,6 +168,13 @@ export default function Team() {
               ))}
             </div>
           )}
+
+          {/* STEMONEF BRANDING */}
+          <div className="mt-12 py-8 flex flex-col items-center gap-4 opacity-40">
+            <div className="h-[1px] w-12 bg-gold/20" />
+            <span className="font-display font-black text-xs tracking-[0.4em] text-ice-gradient">STEMONEF</span>
+            <p className="nav-label text-[0.45rem] tracking-[0.6em] text-ice/30 uppercase">Intelligence Design System</p>
+          </div>
         </div>
       </main>
     </div>

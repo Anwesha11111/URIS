@@ -5,9 +5,9 @@ import Starfield from '../components/Starfield'
 import Navbar from '../components/Navbar'
 
 const features = [
-  { icon: BarChart3, tag: 'SCORING ENGINE',       title: 'CapacityScore',      desc: 'Five-signal composite: availability, task load, exam flags, rolling performance index, and credibility — recalculated every sync cycle.' },
-  { icon: Shield,    tag: 'BEHAVIORAL ANALYSIS',  title: 'Credibility System',  desc: 'Cross-references declared availability against actual login activity, throughput, deadline behavior, and blocker timing patterns.' },
-  { icon: Zap,       tag: 'ASSIGNMENT ENGINE',    title: 'ASL Triad',           desc: 'Availability → Skill → Load filter ranks eligible interns into a shortlist with soft reservation and auto-expiry at 12 hours.' },
+  { icon: BarChart3, tag: 'SCORING ENGINE', title: 'CapacityScore', desc: 'Multidimensional composite: availability, task load, exam flags, rolling performance index, and credibility — recalculated every sync cycle.' },
+  { icon: Shield, tag: 'BEHAVIORAL ANALYSIS', title: 'Credibility System', desc: 'Cross-references declared availability against actual login activity, throughput, deadline behavior, and blocker timing patterns.' },
+  { icon: Zap, tag: 'ASSIGNMENT ENGINE', title: 'ASL Triad', desc: 'Availability → Skill → Load filter ranks eligible interns into a shortlist with soft reservation and automatic expiration.' },
 ]
 
 export default function Landing() {
@@ -98,7 +98,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} style={{ textAlign: 'center', marginBottom: '4rem' }}>
             <p className="nav-label" style={{ fontSize: '0.58rem', color: 'rgba(201,168,76,0.45)', letterSpacing: '0.45em', marginBottom: 12 }}>INTELLIGENCE ARCHITECTURE</p>
-            <h2 className="font-display font-black text-ice-gradient" style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>Three Layers. One Truth.</h2>
+            <h2 className="font-display font-black text-ice-gradient" style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}>Layered Intelligence. Unified Truth.</h2>
             <div className="gold-rule" style={{ width: 80, margin: '1.2rem auto 0' }} />
           </motion.div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
@@ -121,22 +121,24 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* METRICS */}
-      <section style={{ position: 'relative', zIndex: 10, padding: '4rem 1.5rem', borderTop: '1px solid rgba(201,168,76,0.08)', borderBottom: '1px solid rgba(201,168,76,0.08)' }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '2rem', textAlign: 'center' }}>
-          {[{ val: '5', label: 'Scoring Signals' }, { val: '4', label: 'Credibility Factors' }, { val: '100+', label: 'Intern Capacity' }, { val: '15m', label: 'Sync Interval' }].map((m, i) => (
-            <motion.div key={m.label} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-              <p className="font-display font-black" style={{ fontSize: '3.2rem', color: '#c9a84c', lineHeight: 1 }}>{m.val}</p>
-              <p className="nav-label" style={{ fontSize: '0.58rem', color: 'rgba(184,212,240,0.35)', marginTop: 6 }}>{m.label}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
       {/* FOOTER */}
-      <footer style={{ position: 'relative', zIndex: 10, padding: '2.5rem', textAlign: 'center' }}>
+      <footer style={{ position: 'relative', zIndex: 10, padding: '4rem 2.5rem', textAlign: 'center', borderTop: '1px solid rgba(201,168,76,0.08)' }}>
+        <div style={{ marginBottom: '2.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div style={{ height: 1, width: 40, background: 'rgba(201,168,76,0.3)' }} />
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="font-display font-black text-ice-gradient"
+            style={{ fontSize: '1.2rem', letterSpacing: '0.4em' }}
+          >
+            STEMONEF
+          </motion.div>
+          <p className="nav-label" style={{ fontSize: '0.45rem', color: 'rgba(184,212,240,0.25)', letterSpacing: '0.6em' }}>ADVANCED ANALYTICS · DESIGN SYSTEMS</p>
+        </div>
+
         <p className="nav-label" style={{ fontSize: '0.5rem', color: 'rgba(184,212,240,0.18)', letterSpacing: '0.4em' }}>
-          URIS V3 · MIDDLEWARE-DRIVEN UNIFIED ARCHITECTURE · APRIL 2026
+          URIS -BY STEMONEF· MIDDLEWARE-DRIVEN UNIFIED ARCHITECTURE · 2026
         </p>
       </footer>
     </div>

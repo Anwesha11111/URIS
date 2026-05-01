@@ -28,7 +28,7 @@ export default function Sidebar() {
       initial={{ x: -56, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.45, delay: 0.15 }}
-      className="fixed left-0 top-[49px] bottom-0 z-40 w-[200px] flex flex-col justify-between py-5"
+      className="fixed left-0 top-[49px] bottom-0 z-40 w-[200px] hidden md:flex flex-col justify-between py-5"
       style={{ background: 'rgba(7,8,15,0.9)', borderRight: '1px solid rgba(201,168,76,0.09)', backdropFilter: 'blur(16px)' }}
     >
       <div>

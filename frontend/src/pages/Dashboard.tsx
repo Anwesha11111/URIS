@@ -77,8 +77,8 @@ function AdminCommandDashboard() {
       <div className="min-h-screen bg-navy-950 text-frost">
         <Starfield />
         <Sidebar />
-        <main className="ml-52 pt-14 min-h-screen relative z-10">
-          <div className="px-8 py-8"><LoadingSkeleton /></div>
+        <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+          <div className="px-4 md:px-8 py-8"><LoadingSkeleton /></div>
         </main>
       </div>
     )
@@ -89,8 +89,8 @@ function AdminCommandDashboard() {
       <div className="min-h-screen bg-navy-950 text-frost">
         <Starfield />
         <Sidebar />
-        <main className="ml-52 pt-14 min-h-screen relative z-10 flex items-center justify-center">
-          <div className="glass-card rounded-sm p-10 text-center max-w-md">
+        <main className="md:ml-52 pt-14 min-h-screen relative z-10 flex items-center justify-center">
+          <div className="glass-card rounded-sm p-6 md:p-10 text-center max-w-md mx-4">
             <AlertTriangle size={32} className="text-red-400 mx-auto mb-4" />
             <p className="font-display text-xl text-frost mb-2">Dashboard Unavailable</p>
             <p className="font-body text-sm text-ice/40">{error || 'No data returned from server.'}</p>
@@ -112,11 +112,11 @@ function AdminCommandDashboard() {
       <Starfield />
       <Sidebar />
 
-      <main className="ml-52 pt-14 min-h-screen relative z-10">
-        <div className="px-8 py-8">
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="px-4 md:px-8 py-8">
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-end justify-between mb-8">
+            className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-8">
             <div>
               <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">OPERATIONS CENTRE</p>
               <h1 className="font-display font-black text-3xl md:text-4xl text-ice-gradient">Command Dashboard</h1>
@@ -129,16 +129,16 @@ function AdminCommandDashboard() {
           </motion.div>
 
           {/* Stat cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {stats.map((s, i) => (
               <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08 }} whileHover={{ y: -3, borderColor: 'rgba(201,168,76,0.3)' }}
-                className="glass-card p-5 rounded-sm">
+                className="glass-card p-4 md:p-5 rounded-sm">
                 <div className="flex items-center justify-between mb-3">
                   <p className="nav-label text-[0.55rem] text-ice/40">{s.label}</p>
                   <s.icon size={13} style={{ color: s.color }} />
                 </div>
-                <p className="font-display font-black text-3xl mb-1" style={{ color: s.color }}>{s.val}</p>
+                <p className="font-display font-black text-2xl md:text-3xl mb-1" style={{ color: s.color }}>{s.val}</p>
                 <p className="font-body text-xs text-ice/30">{s.sub}</p>
               </motion.div>
             ))}
@@ -265,7 +265,7 @@ function AdminCommandDashboard() {
                 </div>
                 <Clock size={13} className="text-gold/40" />
               </div>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
                 {days.map((day, di) => (
                   <div key={day}>
                     <p className="nav-label text-[0.55rem] text-ice/40 text-center mb-2">{day}</p>
@@ -299,6 +299,12 @@ function AdminCommandDashboard() {
               </div>
             </motion.div>
           )}
+          {/* STEMONEF BRANDING */}
+          <div className="mt-12 py-8 flex flex-col items-center gap-4 opacity-40">
+            <div className="h-[1px] w-12 bg-gold/20" />
+            <span className="font-display font-black text-xs tracking-[0.4em] text-ice-gradient">STEMONEF</span>
+            <p className="nav-label text-[0.45rem] tracking-[0.6em] text-ice/30 uppercase">Intelligence Design System</p>
+          </div>
         </div>
       </main>
     </div>

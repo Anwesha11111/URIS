@@ -103,8 +103,8 @@ export default function Review() {
     <div className="min-h-screen bg-navy-950 text-frost">
       <Starfield />
       <Sidebar />
-      <main className="ml-52 pt-14 min-h-screen relative z-10">
-        <div className="max-w-2xl mx-auto px-8 py-8">
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="max-w-2xl mx-auto px-4 md:px-8 py-8">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
             <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">PERFORMANCE SYSTEM</p>
             <h1 className="font-display font-black text-3xl text-ice-gradient">Task Review</h1>
@@ -138,7 +138,7 @@ export default function Review() {
                       transition={{ duration: 1, delay: 0.3 }}
                       style={{ height: '100%', background: 'linear-gradient(90deg, #c9a84c88, #c9a84c)', borderRadius: 2 }} />
                   </div>
-                  <div className="grid grid-cols-3 gap-3 mt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                     {DIMS.map(d => (
                       <div key={d.key} className="text-center">
                         <p className="nav-label text-[0.5rem] text-gold/40">{d.label.toUpperCase()}</p>
@@ -226,11 +226,11 @@ export default function Review() {
                       </div>
                       <span className="nav-label text-[0.55rem] text-gold/30">WEIGHT {(dim.weight * 100).toFixed(0)}%</span>
                     </div>
-                    <div className="flex gap-3 mt-4">
+                    <div className="flex flex-wrap gap-2 sm:gap-3 mt-4">
                       {([1, 2, 3, 4, 5] as const).map(n => (
                         <motion.button key={n} type="button" whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
                           onClick={() => setRating(dim.key, n)}
-                          className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-sm transition-all duration-200"
+                          className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-sm transition-all duration-200 min-w-[3rem]"
                           style={{
                             background: ratings[dim.key] >= n ? 'rgba(201,168,76,0.12)' : 'rgba(13,15,28,0.6)',
                             border: `1px solid ${ratings[dim.key] >= n ? 'rgba(201,168,76,0.4)' : 'rgba(201,168,76,0.08)'}`,
