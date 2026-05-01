@@ -17,13 +17,47 @@ async function getShortlist(req, res, next) {
 
     const dbInterns = await prisma.intern.findMany({
       include: {
-        capacityScore: true,
-        credibility:   true,
-        tasks:         { where: { status: 'active' } },
+        credibility: true,
+        tasks:       { where: { status: 'active' } },
+        // Fetch the most recent capacity score from the new pipeline
+        scoreHistory: {
+          where:   { type: 'capacity' },
+          orderBy: { createdAt: 'desc' },
+          take:    1,
+        },
       },
     });
 
-    const rankedInterns = getAssignmentShortlist(task, dbInterns);
+    // Map DB records to the shape assignmentEngine expects.
+    // capacityScore and credibilityScore must both be 0–100 integers.
+    const interns = dbInterns.map(i => {
+      // Latest capacity score from ScoreHistory (integer 0–100)
+      const capacityScore = i.scoreHistory[0]
+        ? Math.round(i.scoreHistory[0].score)
+        : 0;
+
+      // CredibilityScore.score is a 0–1 float — convert to 0–100
+      const credibilityScore = i.credibility
+        ? Math.round(i.credibility.score * 100)
+        : 0;
+
+      // Task Load Index — sum of (complexity × remaining work) for active tasks
+      const TLI = i.tasks.reduce(
+        (sum, t) => sum + t.complexity * (1 - t.progressPct / 100),
+        0
+      );
+
+      return {
+        id:                 i.id,
+        capacityScore,
+        credibilityScore,
+        TLI:                parseFloat(TLI.toFixed(2)),
+        availabilityStatus: capacityScore >= 30 ? 'available' : 'unavailable',
+        skillTags:          i.tasks.flatMap(t => t.skills ?? []),
+      };
+    });
+
+    const rankedInterns = getAssignmentShortlist(task, interns);
 
     return ok(res, rankedInterns, 'Shortlist generated');
   } catch (err) {
@@ -43,9 +77,12 @@ async function assignTask(req, res, next) {
 
     const { task } = biz;   // reuse the task fetched during validation
 
-    // Capacity check
-    const capacityRecord = await prisma.capacityScore.findUnique({ where: { internId } });
-    const capacityScore  = (capacityRecord?.finalCapacity ?? 0) * 100;
+    // Capacity check — read from ScoreHistory (integer 0–100, written by new pipeline)
+    const latestCapacity = await prisma.scoreHistory.findFirst({
+      where:   { internId, type: 'capacity' },
+      orderBy: { createdAt: 'desc' },
+    });
+    const capacityScore = latestCapacity ? Math.round(latestCapacity.score) : 0;
 
     if (capacityScore < MIN_CAPACITY_THRESHOLD) {
       console.log('[INFO] Assignment blocked (low capacity):', internId);
