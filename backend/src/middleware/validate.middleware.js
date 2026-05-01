@@ -41,11 +41,14 @@ function validate(schema) {
       return validationError(res, error.details[0].message);
     }
 
-    // Replace req fields with validated + stripped values so controllers
-    // always receive clean, coerced data (e.g. strings → numbers where defined)
-    req.body   = value.body   ?? req.body;
-    req.params = value.params ?? req.params;
-    req.query  = value.query  ?? req.query;
+    // Mutate the existing req objects in-place rather than replacing them.
+    // Express 5 made req.query (and req.params) read-only getters — direct
+    // assignment throws "Cannot set property query of #<IncomingMessage>".
+    // Object.assign copies the validated + coerced keys onto the existing
+    // object without triggering the setter restriction.
+    if (value.body)   Object.assign(req.body,   value.body);
+    if (value.params) Object.assign(req.params, value.params);
+    if (value.query)  Object.assign(req.query,  value.query);
 
     next();
   };
