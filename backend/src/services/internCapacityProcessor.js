@@ -23,7 +23,8 @@ function processInternCapacity({
   const { capacityScore, capacityLabel } = calculateCapacityScore({
     availabilityScore: availability.availabilityScore,
     tli: TLI,
-    examFlag,
+    weekStatusToggle,   // preferred: drives exam/heavy-load penalty
+    examFlag,           // legacy fallback when weekStatusToggle is absent
     performanceIndex,
     credibilityScore,
   });
