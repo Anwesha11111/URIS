@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { uploadToNextcloud } = require('../services/storage.service');
+const { verifyToken, requireRole } = require('../middleware/auth.middleware');
+const { ROLES } = require('../constants/roles');
 
-// Test route for Nextcloud integration
-router.get('/test-nextcloud', async (req, res) => {
+// Test route for Nextcloud integration — admin only
+router.get('/test-nextcloud', verifyToken, requireRole(ROLES.ADMIN), async (req, res) => {
   try {
     const sampleData = {
       test: true,

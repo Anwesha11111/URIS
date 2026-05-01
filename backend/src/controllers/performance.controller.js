@@ -7,6 +7,17 @@ async function getPerformance(req, res, next) {
   try {
     const { internId } = req.params;
 
+    // Authorization: interns can only view their own performance data
+    if (req.user.role !== 'ADMIN') {
+      const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
+      if (!intern) {
+        return res.status(404).json({ success: false, message: 'Intern not found', data: null });
+      }
+      if (intern.id !== internId) {
+        return res.status(403).json({ success: false, message: 'Access denied. You can only view your own performance data.', data: null });
+      }
+    }
+
     const reviews = await prisma.review.findMany({ where: { internId } });
     const { performanceIndex: computedIndex, totalReviews: reviewCount } = computePerformanceIndex(reviews);
 
