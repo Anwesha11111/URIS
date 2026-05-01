@@ -5,6 +5,6 @@ const { submitAvailability, getAvailability } = require('../controllers/availabi
 const { verifyToken } = require('../middleware/auth.middleware');
 
 router.post('/submit', verifyToken, submitAvailability);
-router.get('/:internId/:weekStart', getAvailability);
+router.get('/:internId/:weekStart', verifyToken, getAvailability);
 
 module.exports = router;

@@ -83,6 +83,32 @@ async function submitAvailability(req, res, next) {
 async function getAvailability(req, res, next) {
   try {
     const { internId, weekStart } = req.params;
+    
+    // Authorization check: Interns can only access their own data
+    if (req.user.role === 'INTERN') {
+      const intern = await prisma.intern.findUnique({ 
+        where: { userId: req.user.id } 
+      });
+      
+      if (!intern) {
+        return res.status(404).json({
+          success: false,
+          message: 'Intern record not found',
+          data: null,
+        });
+      }
+      
+      // Verify the intern is requesting their own data
+      if (intern.id !== parseInt(internId, 10)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view your own availability.',
+          data: null,
+        });
+      }
+    }
+    // Admins can access any intern's availability (no additional check needed)
+    
     const result = await findAvailability(internId, weekStart);
     if (!result) {
       return res.status(200).json({

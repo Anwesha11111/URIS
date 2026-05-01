@@ -234,7 +234,7 @@ function AdminCommandDashboard() {
                   data.alerts.map((a, i) => {
                     const c = a.severity === 'critical' ? '#f87171' : '#f59e0b'
                     return (
-                      <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                      <motion.div key={a.id ?? i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 + i * 0.08 }} whileHover={{ x: 2 }}
                         className="flex gap-3 p-3 rounded-sm cursor-pointer"
                         style={{ background: `${c}08`, border: `1px solid ${c}22` }}>
