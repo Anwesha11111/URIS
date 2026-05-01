@@ -77,18 +77,29 @@ async function assignTask(req, res, next) {
 
     const { task } = biz;   // reuse the task fetched during validation
 
-    // Capacity check — read from ScoreHistory (integer 0–100, written by new pipeline)
+    // Capacity check — read from ScoreHistory (integer 0–100, written by new pipeline).
+    // If no capacity history exists the intern has not yet submitted availability —
+    // block assignment with a specific message rather than silently treating score as 0.
     const latestCapacity = await prisma.scoreHistory.findFirst({
       where:   { internId, type: 'capacity' },
       orderBy: { createdAt: 'desc' },
     });
-    const capacityScore = latestCapacity ? Math.round(latestCapacity.score) : 0;
+
+    if (!latestCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: 'Intern has not submitted availability yet. Capacity score is unavailable.',
+        data:    null,
+      });
+    }
+
+    const capacityScore = Math.round(latestCapacity.score);
 
     if (capacityScore < MIN_CAPACITY_THRESHOLD) {
       console.log('[INFO] Assignment blocked (low capacity):', internId);
       return res.status(400).json({
         success: false,
-        message: 'Intern not eligible for assignment due to low capacity',
+        message: `Intern not eligible for assignment — capacity score ${capacityScore} is below threshold ${MIN_CAPACITY_THRESHOLD}.`,
         data:    null,
       });
     }

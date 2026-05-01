@@ -149,6 +149,15 @@ async function getAdminOverview(req, res, next) {
       const latestCapacity = i.scoreHistory[0];
       const capacityScore  = latestCapacity ? Math.round(latestCapacity.score) : 0;
 
+      // Derive the human-readable availability label from the numeric score.
+      // Mirrors the label thresholds in capacityEngine.js so the dashboard
+      // stays consistent without needing to store the label separately.
+      let availability;
+      if (!latestCapacity)        availability = 'No data';
+      else if (capacityScore >= 70) availability = 'High availability and low workload';
+      else if (capacityScore >= 40) availability = 'Moderate availability';
+      else                          availability = 'High workload or low availability';
+
       // Credibility score — CredibilityScore.score is a 0–1 float; multiply by
       // 100 to get the 0–100 integer the frontend expects.
       const credibilityScore = i.credibility
@@ -162,7 +171,7 @@ async function getAdminOverview(req, res, next) {
         tli:           parseFloat(tli.toFixed(2)),
         rpi,
         credibilityScore,
-        availability:  latestCapacity ? null : 'Unknown', // label not stored in ScoreHistory
+        availability,
         taskCount:     totalTasks,
         activeTasks:   activeTasksList.length,
         completedTasks: completedTasks.length,
