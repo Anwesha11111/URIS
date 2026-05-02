@@ -102,12 +102,12 @@ export default function AuditLogs() {
       <Starfield />
       <Sidebar />
 
-      <main className="ml-52 pt-14 min-h-screen relative z-10">
-        <div className="px-8 py-8">
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="px-4 md:px-8 py-8">
 
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-end justify-between mb-8">
+            className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
               <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">ADMIN · TRACEABILITY</p>
               <h1 className="font-display font-black text-3xl text-ice-gradient">Audit Logs</h1>

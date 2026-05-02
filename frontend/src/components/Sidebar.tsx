@@ -5,14 +5,14 @@ import { useAuthStore, selectUser, selectIsAdmin } from '../store/authStore'
 import TeamSwitcher from './TeamSwitcher'
 
 const allItems = [
-  { icon: LayoutDashboard, label: 'Overview',    to: '/dashboard',    adminOnly: false },
-  { icon: CalendarDays,    label: 'Availability', to: '/availability', adminOnly: false },
-  { icon: ClipboardList,   label: 'Tasks',        to: '/tasks',        adminOnly: false },
-  { icon: Star,            label: 'Reviews',      to: '/review',       adminOnly: true  },
-  { icon: Users,           label: 'Team',         to: '/team',         adminOnly: true  },
-  { icon: Bell,            label: 'Alerts',       to: '/alerts',       adminOnly: true  },
-  { icon: ShieldCheck,     label: 'Admin',        to: '/admin',        adminOnly: true  },
-  { icon: ScrollText,      label: 'Audit Logs',   to: '/audit-logs',   adminOnly: true  },
+  { icon: LayoutDashboard, label: 'Overview',    to: '/dashboard',    adminOnly: false, internOnly: false },
+  { icon: CalendarDays,    label: 'Availability', to: '/availability', adminOnly: false, internOnly: true  },
+  { icon: ClipboardList,   label: 'Tasks',        to: '/tasks',        adminOnly: false, internOnly: false },
+  { icon: Star,            label: 'Reviews',      to: '/review',       adminOnly: true,  internOnly: false },
+  { icon: Users,           label: 'Team',         to: '/team',         adminOnly: true,  internOnly: false },
+  { icon: Bell,            label: 'Alerts',       to: '/alerts',       adminOnly: true,  internOnly: false },
+  { icon: ShieldCheck,     label: 'Admin',        to: '/admin',        adminOnly: true,  internOnly: false },
+  { icon: ScrollText,      label: 'Audit Logs',   to: '/audit-logs',   adminOnly: true,  internOnly: false },
 ]
 
 export default function Sidebar() {
@@ -21,7 +21,11 @@ export default function Sidebar() {
   const isAdmin = useAuthStore(selectIsAdmin)
   const logout  = useAuthStore(s => s.logout)
   const nav     = useNavigate()
-  const items   = allItems.filter(i => !i.adminOnly || isAdmin)
+  const items   = allItems.filter(i => {
+    if (i.adminOnly && !isAdmin) return false
+    if (i.internOnly && isAdmin) return false
+    return true
+  })
 
   return (
     <motion.aside

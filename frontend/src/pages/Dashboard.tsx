@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { BarChart3, Users, AlertTriangle, CheckCircle2, TrendingUp, Clock, ChevronRight } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
@@ -9,8 +10,17 @@ import { useAuthStore, selectIsAdmin } from '../store/authStore'
 import InternDashboard from './InternDashboard'
 
 function BandDot({ score }: { score: number }) {
+  const isNegative = score < 0
   const c = score > 70 ? '#4ade80' : score > 40 ? '#f59e0b' : '#f87171'
-  return <span className="status-dot" style={{ background: c, boxShadow: `0 0 5px ${c}55` }} />
+  return (
+    <span className={`status-dot ${isNegative ? 'animate-pulse' : ''}`}
+      style={{
+        background: isNegative ? '#ff4d4d' : c,
+        boxShadow: `0 0 ${isNegative ? '8px' : '5px'} ${isNegative ? '#ff4d4d88' : c + '55'}`,
+        border: isNegative ? '1px solid rgba(255,255,255,0.2)' : 'none'
+      }}
+    />
+  )
 }
 
 function ScoreBar({ val }: { val: number }) {
@@ -117,12 +127,27 @@ function AdminCommandDashboard() {
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-8">
-            <div>
-              <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">OPERATIONS CENTRE</p>
-              <h1 className="font-display font-black text-3xl md:text-4xl text-ice-gradient">Command Dashboard</h1>
+            <div className="flex-1">
+              <div className="flex items-center justify-between sm:justify-start gap-4 mb-1">
+                <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra">OPERATIONS CENTRE</p>
+                <div className="signal-badge sm:hidden">
+                  <span className="w-1.5 h-1.5 rounded-full bg-signal animate-pulse-slow" />
+                  <span className="nav-label text-[0.6rem] text-ice/50">LIVE</span>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <h1 className="font-display font-black text-3xl md:text-4xl text-ice-gradient">Command Dashboard</h1>
+                <Link to="/tasks" className="w-full sm:w-auto">
+                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                    className="btn-gold px-4 py-1.5 text-[0.65rem] rounded-sm flex items-center justify-center gap-2">
+                    <TrendingUp size={12} />
+                    NEW TASK
+                  </motion.button>
+                </Link>
+              </div>
               <div className="gold-rule w-16 mt-2" />
             </div>
-            <div className="signal-badge">
+            <div className="signal-badge hidden sm:flex">
               <span className="w-1.5 h-1.5 rounded-full bg-signal animate-pulse-slow" />
               <span className="nav-label text-[0.6rem] text-ice/50">LIVE · 15m SYNC</span>
             </div>
@@ -193,12 +218,15 @@ function AdminCommandDashboard() {
                               {intern.availability}
                             </span>
                           </td>
-                          <td className="text-center min-w-[80px]">
-                            <span className="font-mono text-sm"
-                              style={{ color: intern.capacityScore > 70 ? '#4ade80' : intern.capacityScore > 40 ? '#f59e0b' : '#f87171' }}>
-                              {intern.capacityScore}
-                            </span>
-                            <ScoreBar val={intern.capacityScore} />
+                          <td className="text-center min-w-[100px]">
+                            <div className="flex flex-col items-center">
+                              <span className={`font-mono text-sm px-2 py-0.5 rounded-sm ${intern.capacityScore < 0 ? 'bg-red-500/20 text-red-400 font-bold' : ''}`}
+                                style={{ color: intern.capacityScore > 70 ? '#4ade80' : intern.capacityScore > 40 ? '#f59e0b' : intern.capacityScore < 0 ? '#ff4d4d' : '#f87171' }}>
+                                {intern.capacityScore}
+                                {intern.capacityScore === -30 && <span className="text-[0.5rem] block leading-none mt-0.5">EXAM WEEK</span>}
+                              </span>
+                              <ScoreBar val={Math.max(0, intern.capacityScore)} />
+                            </div>
                           </td>
                           <td className="text-center font-mono text-sm"
                             style={{ color: intern.tli <= 6 ? '#4ade80' : intern.tli <= 12 ? '#f59e0b' : '#f87171' }}>
@@ -245,11 +273,11 @@ function AdminCommandDashboard() {
                     )
                   })
                 )}
-                <button className="w-full flex items-center justify-between px-3 py-2 mt-2 rounded-sm text-gold/50 hover:text-gold transition-colors"
-                  style={{ borderTop: '1px solid rgba(201,168,76,0.1)' }}>
+                <Link to="/alerts" className="w-full flex items-center justify-between px-3 py-2 mt-2 rounded-sm text-gold/50 hover:text-gold transition-colors"
+                  style={{ borderTop: '1px solid rgba(201,168,76,0.1)', textDecoration: 'none' }}>
                   <span className="nav-label text-[0.6rem]">VIEW ALL ALERTS</span>
                   <ChevronRight size={12} />
-                </button>
+                </Link>
               </div>
             </motion.div>
           </div>

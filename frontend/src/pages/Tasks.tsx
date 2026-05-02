@@ -7,6 +7,8 @@ import { getAllTasks, createTask, type Task } from '../services/tasks.service'
 import { useAuthStore } from '../store/authStore'
 import { extractErrorMessage } from '../services/error'
 
+import { getAdminOverview, type InternRow } from '../services/dashboard.service'
+
 const SKILL_COLORS: Record<string, string> = {
   Frontend: '#b8d4f0', Backend: '#c9a84c', DevOps: '#4ade80',
   Testing: '#a78bfa', Documentation: '#f87171', 'AI/ML': '#fb923c', Research: '#34d399',
@@ -24,6 +26,7 @@ function statusPct(s: string): number {
 
 export default function Tasks() {
   const [tasks, setTasks]     = useState<Task[]>([])
+  const [interns, setInterns] = useState<InternRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -34,20 +37,26 @@ export default function Tasks() {
   const [createError, setCreateError] = useState('')
   const isAdmin = useAuthStore(s => s.isAdmin())
 
-  const fetchTasks = async (): Promise<void> => {
+  const fetchData = async (): Promise<void> => {
     setLoading(true)
     try {
-      const data = await getAllTasks()
-      setTasks(data)
+      const [tasksData, overviewData] = await Promise.all([
+        getAllTasks(),
+        isAdmin ? getAdminOverview() : Promise.resolve({ interns: [] })
+      ])
+      setTasks(tasksData)
+      if (isAdmin && 'interns' in overviewData) {
+        setInterns(overviewData.interns)
+      }
       setError('')
     } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to load tasks.'))
+      setError(extractErrorMessage(err, 'Failed to load task data.'))
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { void fetchTasks() }, [])
+  useEffect(() => { void fetchData() }, [isAdmin])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,10 +65,11 @@ export default function Tasks() {
     try {
       const complexity = parseFloat(newTask.complexity)
       if (complexity < 0 || complexity > 1) throw new Error('Complexity must be between 0 and 1')
+      if (!newTask.internId) throw new Error('Please select an intern')
       await createTask({ ...newTask, complexity })
       setShowCreate(false)
       setNewTask({ title: '', internId: '', complexity: '0.5', status: 'backlog', planeTaskId: '' })
-      await fetchTasks()
+      await fetchData()
     } catch (err: unknown) {
       setCreateError(extractErrorMessage(err, 'Failed to create task.'))
     } finally {
@@ -291,9 +301,14 @@ export default function Tasks() {
                     value={newTask.title} onChange={e => setNewTask(f => ({ ...f, title: e.target.value }))} required />
                 </div>
                 <div>
-                  <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">INTERN ID</label>
-                  <input className="uris-input" placeholder="Intern's user ID"
-                    value={newTask.internId} onChange={e => setNewTask(f => ({ ...f, internId: e.target.value }))} required />
+                  <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">ASSIGN TO INTERN</label>
+                  <select className="uris-input" value={newTask.internId}
+                    onChange={e => setNewTask(f => ({ ...f, internId: e.target.value }))} required>
+                    <option value="">Choose an intern...</option>
+                    {interns.map(i => (
+                      <option key={i.id} value={i.id}>{i.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">COMPLEXITY (0–1)</label>

@@ -5,11 +5,11 @@ import { useState } from 'react'
 import { useAuthStore, selectToken, selectUser, selectIsAdmin } from '../store/authStore'
 
 const navLinks = [
-  { label: 'Dashboard',    to: '/dashboard' },
-  { label: 'Availability', to: '/availability' },
-  { label: 'Tasks',        to: '/tasks' },
-  { label: 'Review',       to: '/review' },
-  { label: 'Team',         to: '/team' },
+  { label: 'Dashboard',    to: '/dashboard',    internOnly: false },
+  { label: 'Availability', to: '/availability', internOnly: true  },
+  { label: 'Tasks',        to: '/tasks',        internOnly: false },
+  { label: 'Review',       to: '/review',       internOnly: false },
+  { label: 'Team',         to: '/team',         internOnly: false },
 ]
 
 export default function Navbar() {
@@ -34,14 +34,22 @@ export default function Navbar() {
       >
         {/* Logo */}
         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="font-display font-black text-lg text-ice-gradient" style={{ letterSpacing: '0.12em' }}>URIS</span>
-          <span className="nav-label text-[0.52rem]" style={{ color: 'rgba(201,168,76,0.45)' }}>INTELLIGENCE</span>
+          <div className="flex flex-col">
+            <span className="font-display font-black text-lg text-ice-gradient leading-none" style={{ letterSpacing: '0.12em' }}>URIS</span>
+            <span className="nav-label text-[0.4rem] tracking-[0.3em] text-gold/40 mt-1">BY STEMONEF</span>
+          </div>
+          <div className="h-6 w-[1px] bg-gold/10 mx-1 hidden sm:block" />
+          <span className="nav-label text-[0.52rem] hidden sm:block" style={{ color: 'rgba(201,168,76,0.35)' }}>SIGNAL INTELLIGENCE</span>
         </Link>
 
         {/* Center links */}
         {token && (
           <div className="hidden md:flex items-center gap-7">
-            {navLinks.filter(l => l.to !== '/review' && l.to !== '/team' || isAdmin).map(l => (
+            {navLinks.filter(l => {
+              if (l.internOnly && isAdmin) return false
+              if ((l.to === '/review' || l.to === '/team') && !isAdmin) return false
+              return true
+            }).map(l => (
               <Link key={l.to} to={l.to} style={{ textDecoration: 'none' }}>
                 <span className="nav-label text-[0.62rem] transition-colors duration-200"
                   style={{ color: loc.pathname === l.to ? '#c9a84c' : 'rgba(184,212,240,0.45)',
@@ -98,7 +106,11 @@ export default function Navbar() {
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
           className="fixed top-[49px] left-0 right-0 z-40 glass-card md:hidden">
           {navLinks
-            .filter(l => (l.to !== '/review' && l.to !== '/team') || isAdmin)
+            .filter(l => {
+              if (l.internOnly && isAdmin) return false
+              if ((l.to === '/review' || l.to === '/team') && !isAdmin) return false
+              return true
+            })
             .map(l => (
               <Link key={l.to} to={l.to} onClick={() => setOpen(false)}
                 className="block nav-label text-[0.68rem] px-6 py-3"

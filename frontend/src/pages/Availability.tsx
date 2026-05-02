@@ -1,15 +1,72 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Plus, Trash2, Clock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { submitAvailability, type BusyBlock } from '../services/availability.service'
 import { extractErrorMessage } from '../services/error'
+import { useAuthStore } from '../store/authStore'
 
 const DAYS    = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const REASONS = ['Exam', 'Revision', 'Academic Project', 'Personal', 'Sprint', 'Other']
 
+function CountdownTimer() {
+  const [timeLeft, setTimeLeft] = useState<{ d: number, h: number, m: number, s: number } | null>(null)
+
+  useEffect(() => {
+    const calc = () => {
+      const now = new Date()
+      const deadline = new Date()
+      const daysUntilMonday = (1 + 7 - now.getDay()) % 7
+      deadline.setDate(now.getDate() + (daysUntilMonday === 0 && now.getHours() >= 11 ? 7 : daysUntilMonday))
+      deadline.setHours(11, 0, 0, 0)
+
+      const diff = deadline.getTime() - now.getTime()
+      if (diff <= 0) return { d: 0, h: 0, m: 0, s: 0 }
+      
+      return {
+        d: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        h: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        m: Math.floor((diff / (1000 * 60)) % 60),
+        s: Math.floor((diff / 1000) % 60)
+      }
+    }
+
+    const timer = setInterval(() => setTimeLeft(calc()), 1000)
+    setTimeLeft(calc())
+    return () => clearInterval(timer)
+  }, [])
+
+  if (!timeLeft) return null
+
+  return (
+    <div className="flex gap-3 mt-4">
+      {[
+        { v: timeLeft.d, l: 'D' },
+        { v: timeLeft.h, l: 'H' },
+        { v: timeLeft.m, l: 'M' },
+        { v: timeLeft.s, l: 'S' },
+      ].map(t => (
+        <div key={t.l} className="flex flex-col items-center">
+          <div className="glass-card px-3 py-1.5 rounded-sm border-gold/20 min-w-[40px]">
+            <span className="font-display font-black text-lg text-gold">{String(t.v).padStart(2, '0')}</span>
+          </div>
+          <span className="nav-label text-[0.45rem] text-ice/30 mt-1">{t.l}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Availability() {
+  const isAdmin = useAuthStore(s => s.role === 'admin')
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isAdmin) navigate('/dashboard')
+  }, [isAdmin, navigate])
+
   const [weekStatus, setWeekStatus]           = useState<'generally_free' | 'heavy_week'>('generally_free')
   const [maxFreeBlockHours, setMaxFreeBlockHours] = useState<number>(3)
   const [busyBlocks, setBusyBlocks]           = useState<BusyBlock[]>([])
@@ -39,7 +96,7 @@ export default function Availability() {
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 text-frost">
+    <div className="min-h-screen bg-navy-950 text-frost relative overflow-hidden">
       <Starfield />
       <Sidebar />
       <main className="md:ml-52 pt-14 min-h-screen relative z-10">
@@ -48,7 +105,13 @@ export default function Availability() {
             <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">WEEKLY SUBMISSION</p>
             <h1 className="font-display font-black text-3xl text-ice-gradient">Availability Declaration</h1>
             <div className="gold-rule w-14 mt-2" />
-            <p className="font-body text-sm text-ice/40 mt-3">Complete in under 60 seconds. Deadline: Monday 11 AM.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
+              <div>
+                <p className="nav-label text-[0.55rem] text-gold/40 mb-1">SUBMISSION DEADLINE</p>
+                <p className="font-body text-sm text-ice/60">Monday 11:00 AM</p>
+              </div>
+              <CountdownTimer />
+            </div>
           </motion.div>
 
           <AnimatePresence mode="wait">
@@ -116,7 +179,7 @@ export default function Availability() {
                     style={{ borderTop: '1px solid rgba(201,168,76,0.1)' }}>
                     <div>
                       <p className="font-ui font-semibold text-sm text-frost/70">Exam Week</p>
-                      <p className="font-body text-xs text-ice/30">Applies −30 to CapacityScore</p>
+                      <p className="font-body text-xs text-red-400/80 font-bold tracking-wider">Applies −30 to CapacityScore</p>
                     </div>
                     <motion.button type="button" whileTap={{ scale: 0.95 }}
                       onClick={() => setIsExamWeek(!isExamWeek)}
@@ -130,7 +193,6 @@ export default function Availability() {
                   </div>
                 </motion.div>
 
-                {/* Max free block */}
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }} className="glass-card rounded-sm p-6">
                   <p className="nav-label text-[0.6rem] text-gold/60 mb-1">MAX CONTINUOUS FREE BLOCK</p>
@@ -152,7 +214,6 @@ export default function Availability() {
                   </div>
                 </motion.div>
 
-                {/* Busy blocks */}
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }} className="glass-card rounded-sm p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -210,7 +271,6 @@ export default function Availability() {
                   </AnimatePresence>
                 </motion.div>
 
-                {/* Note */}
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }} className="glass-card rounded-sm p-6">
                   <p className="nav-label text-[0.6rem] text-gold/60 mb-3">

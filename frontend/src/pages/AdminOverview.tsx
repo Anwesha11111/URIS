@@ -110,8 +110,8 @@ export default function AdminOverview() {
     <div className="min-h-screen bg-navy-950 text-frost">
       <Starfield />
       <Sidebar />
-      <main className="ml-52 pt-14 min-h-screen relative z-10">
-        <div className="px-8 py-8">
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="px-4 md:px-8 py-8">
 
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
@@ -185,9 +185,9 @@ export default function AdminOverview() {
                               </td>
                               <td>
                                 <div className="flex items-center gap-2">
-                                  <span className="status-dot" style={{
-                                    background: intern.capacityScore > 70 ? '#4ade80' : '#f59e0b',
-                                    boxShadow: `0 0 5px ${intern.capacityScore > 70 ? '#4ade8055' : '#f59e0b55'}`
+                                  <span className={`status-dot ${intern.capacityScore < 0 ? 'animate-pulse' : ''}`} style={{
+                                    background: intern.capacityScore < 0 ? '#ff4d4d' : intern.capacityScore > 70 ? '#4ade80' : '#f59e0b',
+                                    boxShadow: `0 0 ${intern.capacityScore < 0 ? '8px' : '5px'} ${intern.capacityScore < 0 ? '#ff4d4d88' : intern.capacityScore > 70 ? '#4ade8055' : '#f59e0b55'}`
                                   }} />
                                   <span className="font-body text-sm text-frost/80">{intern.name}</span>
                                 </div>
@@ -199,9 +199,12 @@ export default function AdminOverview() {
                                     color: intern.availability === 'Available' ? '#4ade80' : '#f59e0b',
                                   }}>{intern.availability}</span>
                               </td>
-                              <td className="text-center font-mono text-sm"
-                                style={{ color: intern.capacityScore > 70 ? '#4ade80' : '#f59e0b' }}>
-                                {intern.capacityScore}
+                              <td className="text-center font-mono text-sm">
+                                <span className={`px-2 py-0.5 rounded-sm ${intern.capacityScore < 0 ? 'bg-red-500/20 text-red-400 font-bold' : ''}`}
+                                  style={{ color: intern.capacityScore > 70 ? '#4ade80' : intern.capacityScore > 40 ? '#f59e0b' : intern.capacityScore < 0 ? '#ff4d4d' : '#f87171' }}>
+                                  {intern.capacityScore}
+                                  {intern.capacityScore === -30 && <span className="text-[0.5rem] block leading-none">EXAM WEEK</span>}
+                                </span>
                               </td>
                               <td className="text-center font-mono text-sm text-ice/60">{intern.tli?.toFixed(1)}</td>
                               <td className="text-center font-mono text-sm text-ice/60">{intern.rpi?.toFixed(1)}</td>

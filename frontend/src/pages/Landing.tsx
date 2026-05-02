@@ -28,26 +28,33 @@ export default function Landing() {
         <motion.div style={{ y: heroY, opacity: heroO }} className="w-full">
           {/* Signal badge */}
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-            className="signal-badge" style={{ display: 'inline-flex', marginBottom: '2.5rem' }}>
+            className="signal-badge" style={{ display: 'inline-flex', marginBottom: '1.5rem' }}>
             <span className="status-dot dot-green animate-pulse-s" />
             <Diamond size={8} style={{ color: '#c9a84c' }} />
-            <span className="nav-label" style={{ fontSize: '0.63rem', color: 'rgba(184,212,240,0.65)', letterSpacing: '0.28em' }}>SIGNAL INTELLIGENCE</span>
+            <span className="nav-label" style={{ fontSize: '0.63rem', color: 'rgba(184,212,240,0.65)', letterSpacing: '0.28em' }}>STEMONEF SIGNAL INTELLIGENCE</span>
           </motion.div>
 
           {/* GIANT heading */}
-          <motion.h1
-            initial={{ opacity: 0, y: 44 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.48, duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-            className="text-ice-gradient font-display font-black"
-            style={{ fontSize: 'clamp(5rem, 16vw, 14.5rem)', lineHeight: 0.88, letterSpacing: '0.015em', marginBottom: 0 }}
-          >
-            URIS
-          </motion.h1>
+          <div className="relative inline-block mb-12">
+            <motion.h1
+              initial={{ opacity: 0, y: 44 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.48, duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+              className="text-ice-gradient font-display font-black"
+              style={{ fontSize: 'clamp(3.5rem, 15vw, 12rem)', lineHeight: 0.88, letterSpacing: '0.015em', marginBottom: 0 }}
+            >
+              URIS
+            </motion.h1>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
+              className="absolute -bottom-4 left-1/2 -translate-x-1/2 nav-label text-[0.55rem] text-gold/40 tracking-[0.8em] whitespace-nowrap">
+              BY STEMONEF
+            </motion.div>
+          </div>
 
           {/* Gold rule */}
           <motion.div initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.9, duration: 0.9 }}
-            className="gold-rule" style={{ width: '55%', margin: '1.6rem auto' }} />
+            className="gold-rule" style={{ width: '40%', maxWidth: '300px', margin: '0 auto 1.6rem' }} />
 
           {/* Subtitle */}
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.05 }}
@@ -56,40 +63,40 @@ export default function Landing() {
           </motion.p>
 
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.15 }}
-            className="font-body" style={{ fontSize: '1.15rem', color: 'rgba(184,212,240,0.4)', maxWidth: 520, margin: '0 auto 2.8rem', lineHeight: 1.7 }}>
-            A middleware-driven platform integrating Nextcloud, Plane.so, and OpenProject into a single intelligent environment for intern availability and task assignment.
+            className="font-body px-4" style={{ fontSize: '1.1rem', color: 'rgba(184,212,240,0.4)', maxWidth: 520, margin: '0 auto 2.8rem', lineHeight: 1.7 }}>
+            A middleware-driven platform integrating Nextcloud, Plane.so, and OpenProject into a single intelligent environment.
           </motion.p>
 
           {/* CTAs */}
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.25 }}
-            style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center', alignItems: 'center' }}>
-            <Link to="/dashboard">
+            className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center px-6">
+            <Link to="/dashboard" className="w-full sm:w-auto">
               <motion.button whileHover={{ scale: 1.04, boxShadow: '0 14px 36px rgba(201,168,76,0.35)' }} whileTap={{ scale: 0.97 }}
-                className="btn-gold" style={{ padding: '14px 36px', fontSize: '0.72rem', borderRadius: 3 }}>
+                className="btn-gold w-full" style={{ padding: '14px 36px', fontSize: '0.72rem', borderRadius: 3 }}>
                 OPEN DASHBOARD
               </motion.button>
             </Link>
-            <Link to="/availability">
+            <Link to="/availability" className="w-full sm:w-auto">
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                className="btn-outline" style={{ padding: '14px 36px', fontSize: '0.72rem', borderRadius: 3 }}>
+                className="btn-outline w-full" style={{ padding: '14px 36px', fontSize: '0.72rem', borderRadius: 3 }}>
                 SUBMIT AVAILABILITY
               </motion.button>
             </Link>
-            <Link to="/tasks">
-              <span className="btn-ghost" style={{ fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                TASK MONITOR <ArrowRight size={12} />
-              </span>
-            </Link>
           </motion.div>
         </motion.div>
+        </motion.div>
 
-        {/* Scroll indicator */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2 }}
-          style={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <motion.div animate={{ y: [0, 7, 0] }} transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}>
-            <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, rgba(201,168,76,0.7), transparent)' }} />
-          </motion.div>
-          <span className="nav-label" style={{ fontSize: '0.5rem', color: 'rgba(201,168,76,0.28)', letterSpacing: '0.4em' }}>SCROLL</span>
+        {/* Scroll indicator - Improved responsiveness */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }}
+          className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 cursor-pointer group"
+          onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}>
+          <div className="w-[1px] h-12 relative overflow-hidden bg-white/5">
+            <motion.div 
+              animate={{ y: [-48, 48] }} 
+              transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+              className="absolute inset-0 bg-gradient-to-b from-transparent via-gold/50 to-transparent" />
+          </div>
+          <span className="nav-label text-[0.45rem] text-gold/20 tracking-[0.4em] group-hover:text-gold/40 transition-colors">EXPLORE</span>
         </motion.div>
       </section>
 
@@ -138,7 +145,7 @@ export default function Landing() {
         </div>
 
         <p className="nav-label" style={{ fontSize: '0.5rem', color: 'rgba(184,212,240,0.18)', letterSpacing: '0.4em' }}>
-          URIS -BY STEMONEF· MIDDLEWARE-DRIVEN UNIFIED ARCHITECTURE · 2026
+          URIS -BY STEMONEF- · MIDDLEWARE-DRIVEN UNIFIED ARCHITECTURE · 2026
         </p>
       </footer>
     </div>

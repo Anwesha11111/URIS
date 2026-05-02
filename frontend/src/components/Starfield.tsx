@@ -29,5 +29,5 @@ export default function Starfield() {
     draw()
     return () => { cancelAnimationFrame(id); window.removeEventListener('resize', resize) }
   }, [])
-  return <canvas ref={ref} style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }} />
+  return <canvas ref={ref} style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', width: '100vw', height: '100vh' }} />
 }
