@@ -210,7 +210,7 @@ export default function AuditLogs() {
                 {[
                   { label: 'ACTION',    cols: 'col-span-3' },
                   { label: 'ENTITY',    cols: 'col-span-2' },
-                  { label: 'USER ID',   cols: 'col-span-3' },
+                  { label: 'USER',      cols: 'col-span-3' },
                   { label: 'TIMESTAMP', cols: 'col-span-3' },
                   { label: '',          cols: 'col-span-1' },
                 ].map(h => (
@@ -260,11 +260,20 @@ export default function AuditLogs() {
                             )}
                           </div>
 
-                          {/* User ID */}
+                          {/* User */}
                           <div className="col-span-3">
-                            <span className="font-mono text-xs text-ice/50">
-                              {log.userId ? log.userId.slice(0, 12) + '…' : '—'}
-                            </span>
+                            {log.userName ? (
+                              <>
+                                <span className="font-body text-xs text-frost/70 truncate block">
+                                  {log.userName.split('@')[0]}
+                                </span>
+                                <span className="font-mono text-[0.5rem] text-ice/25 truncate block">
+                                  {log.userName}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="font-mono text-xs text-ice/30">system</span>
+                            )}
                           </div>
 
                           {/* Timestamp */}

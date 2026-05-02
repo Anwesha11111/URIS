@@ -6,15 +6,26 @@ export default function Starfield() {
     const c = ref.current; if (!c) return
     const ctx = c.getContext('2d')!
     let id: number
-    const resize = () => { c.width = window.innerWidth; c.height = window.innerHeight }
-    resize(); window.addEventListener('resize', resize)
-    const stars = Array.from({ length: 180 }, () => ({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      r: Math.random() * 1.1 + 0.15,
-      phase: Math.random() * Math.PI * 2,
-      speed: Math.random() * 0.012 + 0.003,
-    }))
+
+    const makeStars = (w: number, h: number) =>
+      Array.from({ length: 220 }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: Math.random() * 1.1 + 0.15,
+        phase: Math.random() * Math.PI * 2,
+        speed: Math.random() * 0.012 + 0.003,
+      }))
+
+    let stars = makeStars(window.innerWidth, window.innerHeight)
+
+    const resize = () => {
+      c.width = window.innerWidth
+      c.height = window.innerHeight
+      stars = makeStars(c.width, c.height)
+    }
+    resize()
+    window.addEventListener('resize', resize)
+
     let t = 0
     const draw = () => {
       ctx.clearRect(0, 0, c.width, c.height)
@@ -29,5 +40,18 @@ export default function Starfield() {
     draw()
     return () => { cancelAnimationFrame(id); window.removeEventListener('resize', resize) }
   }, [])
-  return <canvas ref={ref} style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', width: '100vw', height: '100vh' }} />
+
+  return (
+    <canvas
+      ref={ref}
+      style={{
+        position: 'fixed',
+        top: 0, left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+        pointerEvents: 'none',
+      }}
+    />
+  )
 }

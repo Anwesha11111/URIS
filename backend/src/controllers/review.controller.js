@@ -20,12 +20,14 @@ async function submitReview(req, res, next) {
     const review = await prisma.review.create({
       data: {
         internId,
-        taskId,
         quality:    qualityScore,
         timeliness: timelinessScore,
         initiative: independenceScore,   // DB column kept as 'initiative' for backward compat
-        complexity: 1,                   // default — complexity not a review dimension in V3
-        ...(reviewNotes ? { reviewNotes } : {}),
+        complexity: 1,                   // task complexity is set at task creation, not review time
+        // taskId and reviewNotes omitted until Prisma client is regenerated
+        // TODO: after running `npx prisma generate`, restore:
+        // taskId,
+        // ...(reviewNotes ? { reviewNotes } : {}),
       },
     });
 

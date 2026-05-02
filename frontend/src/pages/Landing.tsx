@@ -27,12 +27,14 @@ export default function Landing() {
 
         <motion.div style={{ y: heroY, opacity: heroO }} className="w-full">
           {/* Signal badge */}
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-            className="signal-badge" style={{ display: 'inline-flex', marginBottom: '1.5rem' }}>
-            <span className="status-dot dot-green animate-pulse-s" />
-            <Diamond size={8} style={{ color: '#c9a84c' }} />
-            <span className="nav-label" style={{ fontSize: '0.63rem', color: 'rgba(184,212,240,0.65)', letterSpacing: '0.28em' }}>STEMONEF SIGNAL INTELLIGENCE</span>
-          </motion.div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+              className="signal-badge" style={{ display: 'inline-flex' }}>
+              <span className="status-dot dot-green animate-pulse-s" />
+              <Diamond size={8} style={{ color: '#c9a84c' }} />
+              <span className="nav-label" style={{ fontSize: '0.63rem', color: 'rgba(184,212,240,0.65)', letterSpacing: '0.28em' }}>STEMONEF SIGNAL INTELLIGENCE</span>
+            </motion.div>
+          </div>
 
           {/* GIANT heading */}
           <div className="relative inline-block mb-12">
@@ -83,7 +85,6 @@ export default function Landing() {
               </motion.button>
             </Link>
           </motion.div>
-        </motion.div>
         </motion.div>
 
         {/* Scroll indicator - Improved responsiveness */}

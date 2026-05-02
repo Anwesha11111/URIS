@@ -26,3 +26,18 @@ export async function overrideScore(payload: OverrideScorePayload): Promise<void
 export async function assignTask(payload: AssignTaskPayload): Promise<void> {
   await api.post('/assign/assign-task', payload)
 }
+
+export interface AvailabilityDeadline {
+  day:    number  // 0=Sun, 1=Mon, ..., 6=Sat
+  hour:   number  // 0–23
+  minute: number  // 0–59
+}
+
+export async function getAvailabilityDeadline(): Promise<AvailabilityDeadline> {
+  const res = await api.get<{ success: boolean; data: AvailabilityDeadline }>('/admin/availability-deadline')
+  return res.data.data
+}
+
+export async function setAvailabilityDeadline(payload: AvailabilityDeadline): Promise<void> {
+  await api.post('/admin/availability-deadline', payload)
+}

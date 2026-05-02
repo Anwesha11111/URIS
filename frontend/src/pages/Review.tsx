@@ -9,7 +9,7 @@ import { extractErrorMessage } from '../services/error'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type RatingKey = 'quality' | 'timeliness' | 'initiative'
+type RatingKey = 'quality' | 'timeliness' | 'independence'
 type Ratings   = Record<RatingKey, number>
 
 interface RatingDim {
@@ -22,12 +22,12 @@ interface RatingDim {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DIMS: RatingDim[] = [
-  { label: 'Quality',    key: 'quality',    weight: 0.5, desc: 'Did the deliverable meet acceptance criteria?' },
-  { label: 'Timeliness', key: 'timeliness', weight: 0.3, desc: 'Was the task completed on or before deadline?' },
-  { label: 'Initiative', key: 'initiative', weight: 0.2, desc: 'Did the intern work autonomously without guidance?' },
+  { label: 'Quality',      key: 'quality',      weight: 0.40, desc: 'Did the deliverable meet acceptance criteria?' },
+  { label: 'Timeliness',   key: 'timeliness',   weight: 0.35, desc: 'Was the task completed on or before deadline?' },
+  { label: 'Independence', key: 'independence', weight: 0.25, desc: 'Did the intern work autonomously without guidance?' },
 ]
 
-const EMPTY_RATINGS: Ratings = { quality: 0, timeliness: 0, initiative: 0 }
+const EMPTY_RATINGS: Ratings = { quality: 0, timeliness: 0, independence: 0 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ export default function Review() {
     async function load(): Promise<void> {
       try {
         const all = await getAllTasks()
-        setCompletedTasks(all.filter(t => t.status === 'completed'))
+        setCompletedTasks(all.filter(t => t.status === 'completed' && !!t.internId))
       } catch (err) {
         setTasksError(extractErrorMessage(err, 'Failed to load completed tasks.'))
       } finally {
@@ -59,7 +59,7 @@ export default function Review() {
   }, [])
 
   const pps: number =
-    ratings.quality * 0.5 + ratings.timeliness * 0.3 + ratings.initiative * 0.2
+    ratings.quality * 0.40 + ratings.timeliness * 0.35 + ratings.independence * 0.25
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
@@ -72,12 +72,12 @@ export default function Review() {
     setError('')
     try {
       await submitReview({
-        internId:   selectedTask.internId ?? '',
-        taskId:     selectedTask.id,
-        quality:    ratings.quality,
-        timeliness: ratings.timeliness,
-        initiative: ratings.initiative,
-        note,
+        internId:          selectedTask.internId ?? '',
+        taskId:            selectedTask.id,
+        qualityScore:      ratings.quality,
+        timelinessScore:   ratings.timeliness,
+        independenceScore: ratings.independence,
+        reviewNotes:       note || undefined,
       })
       setSubmitted(true)
     } catch (err: unknown) {
@@ -110,7 +110,7 @@ export default function Review() {
             <h1 className="font-display font-black text-3xl text-ice-gradient">Task Review</h1>
             <div className="gold-rule w-14 mt-2" />
             <p className="font-body text-sm text-ice/40 mt-3">
-              Formula: Performance = 0.5 × Quality + 0.3 × Timeliness + 0.2 × Initiative
+              Formula: Performance = 0.40 × Quality + 0.35 × Timeliness + 0.25 × Independence
             </p>
           </motion.div>
 
@@ -159,7 +159,7 @@ export default function Review() {
 
                 {/* Task selector */}
                 <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }} className="glass-card rounded-sm p-6">
+                  transition={{ delay: 0.1 }} className="glass-card rounded-sm p-6" style={{ overflow: 'visible', position: 'relative', zIndex: 50 }}>
                   <p className="nav-label text-[0.6rem] text-gold/60 mb-3">SELECT COMPLETED TASK</p>
 
                   {tasksLoading && (
@@ -177,7 +177,7 @@ export default function Review() {
                   )}
 
                   {!tasksLoading && !tasksError && completedTasks.length === 0 && (
-                    <p className="font-body text-sm text-ice/30 py-3">No completed tasks found.</p>
+                    <p className="font-body text-sm text-ice/30 py-3">No completed assigned tasks found.</p>
                   )}
 
                   {!tasksLoading && !tasksError && completedTasks.length > 0 && (
@@ -196,7 +196,8 @@ export default function Review() {
                         {dropOpen && (
                           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -4 }}
-                            className="absolute top-full left-0 right-0 z-20 glass-card rounded-sm mt-1 overflow-hidden">
+                            className="absolute top-full left-0 right-0 glass-card rounded-sm mt-1 overflow-hidden"
+                            style={{ zIndex: 200 }}>
                             {completedTasks.map(t => (
                               <button key={t.id} type="button"
                                 onClick={() => { setSelectedTask(t); setDropOpen(false) }}
@@ -261,7 +262,7 @@ export default function Review() {
                         style={{ height: '100%', background: 'linear-gradient(90deg, #c9a84c88, #c9a84c)', borderRadius: 2 }} />
                     </div>
                     <p className="font-body text-xs text-ice/30 mt-2">
-                      = 0.5 × {ratings.quality} + 0.3 × {ratings.timeliness} + 0.2 × {ratings.initiative}
+                      = 0.40 × {ratings.quality} + 0.35 × {ratings.timeliness} + 0.25 × {ratings.independence}
                     </p>
                   </motion.div>
                 )}

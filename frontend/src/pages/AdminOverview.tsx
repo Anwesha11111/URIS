@@ -1,20 +1,30 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, TrendingUp, X, Check, UserCheck, AlertTriangle, Loader2 } from 'lucide-react'
+import { Shield, TrendingUp, X, Check, UserCheck, AlertTriangle, Loader2, Clock } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getAdminOverview, type InternRow } from '../services/dashboard.service'
 import { getAllTasks, type Task } from '../services/tasks.service'
-import { overrideScore, assignTask } from '../services/admin.service'
+import { overrideScore, assignTask, getAvailabilityDeadline, setAvailabilityDeadline, type AvailabilityDeadline } from '../services/admin.service'
 import { updateTaskStatus } from '../services/tasks.service'
 import { extractErrorMessage } from '../services/error'
+
+const DAY_OPTIONS = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+]
 
 export default function AdminOverview() {
   const [interns, setInterns]     = useState<InternRow[]>([])
   const [tasks, setTasks]         = useState<Task[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [dataError, setDataError] = useState('')
-  const [activeTab, setActiveTab] = useState<'override' | 'assign' | 'status'>('assign')
+  const [activeTab, setActiveTab] = useState<'override' | 'assign' | 'status' | 'deadline'>('assign')
 
   // Override score form
   const [overrideInternId, setOverrideInternId] = useState('')
@@ -36,6 +46,13 @@ export default function AdminOverview() {
   const [statusLoading, setStatusLoading]     = useState(false)
   const [statusMsg, setStatusMsg]             = useState<{ ok: boolean; text: string } | null>(null)
 
+  // Availability deadline form
+  const [deadlineDay, setDeadlineDay]       = useState(1)
+  const [deadlineHour, setDeadlineHour]     = useState(11)
+  const [deadlineMinute, setDeadlineMinute] = useState(0)
+  const [deadlineLoading, setDeadlineLoading] = useState(false)
+  const [deadlineMsg, setDeadlineMsg]       = useState<{ ok: boolean; text: string } | null>(null)
+
   useEffect(() => {
     async function load(): Promise<void> {
       try {
@@ -49,6 +66,17 @@ export default function AdminOverview() {
       }
     }
     void load()
+  }, [])
+
+  // Load current availability deadline
+  useEffect(() => {
+    getAvailabilityDeadline()
+      .then((dl: AvailabilityDeadline) => {
+        setDeadlineDay(dl.day)
+        setDeadlineHour(dl.hour)
+        setDeadlineMinute(dl.minute)
+      })
+      .catch(() => {/* use defaults */})
   }, [])
 
   const handleOverride = async (e: React.FormEvent) => {
@@ -100,10 +128,25 @@ export default function AdminOverview() {
     }
   }
 
+  const handleDeadline = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setDeadlineLoading(true)
+    setDeadlineMsg(null)
+    try {
+      await setAvailabilityDeadline({ day: deadlineDay, hour: deadlineHour, minute: deadlineMinute })
+      setDeadlineMsg({ ok: true, text: 'Availability deadline updated successfully.' })
+    } catch (err: unknown) {
+      setDeadlineMsg({ ok: false, text: extractErrorMessage(err, 'Failed to update deadline.') })
+    } finally {
+      setDeadlineLoading(false)
+    }
+  }
+
   const tabs = [
     { key: 'assign',   label: 'ASSIGN TASK',    icon: UserCheck },
     { key: 'override', label: 'SCORE OVERRIDE', icon: Shield },
     { key: 'status',   label: 'UPDATE STATUS',  icon: TrendingUp },
+    { key: 'deadline', label: 'DEADLINE',        icon: Clock },
   ] as const
 
   return (
@@ -365,6 +408,78 @@ export default function AdminOverview() {
                         </div>
                         {statusMsg && <FeedbackBanner ok={statusMsg.ok} text={statusMsg.text} />}
                         <ActionButton loading={statusLoading} label="UPDATE STATUS" loadingLabel="UPDATING..." />
+                      </motion.form>
+                    )}
+
+                    {/* AVAILABILITY DEADLINE */}
+                    {activeTab === 'deadline' && (
+                      <motion.form key="deadline" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }} onSubmit={handleDeadline} className="space-y-4">
+                        <div className="mb-3">
+                          <p className="nav-label text-[0.55rem] text-gold/40">AVAILABILITY SUBMISSION DEADLINE</p>
+                          <p className="font-body text-xs text-ice/30 mt-1">
+                            Sets the weekly cutoff shown on the intern availability form.
+                          </p>
+                        </div>
+
+                        {/* Day picker */}
+                        <div>
+                          <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">DAY OF WEEK</label>
+                          <div className="grid grid-cols-7 gap-1">
+                            {DAY_OPTIONS.map(d => (
+                              <motion.button key={d.value} type="button"
+                                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                onClick={() => setDeadlineDay(d.value)}
+                                className="py-2 rounded-sm flex flex-col items-center gap-0.5 transition-all duration-200"
+                                style={{
+                                  background: deadlineDay === d.value ? 'rgba(201,168,76,0.15)' : 'rgba(13,15,28,0.6)',
+                                  border: `1px solid ${deadlineDay === d.value ? 'rgba(201,168,76,0.5)' : 'rgba(201,168,76,0.1)'}`,
+                                }}>
+                                <span className="nav-label text-[0.5rem]"
+                                  style={{ color: deadlineDay === d.value ? '#c9a84c' : 'rgba(184,212,240,0.3)' }}>
+                                  {d.label.slice(0, 3).toUpperCase()}
+                                </span>
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Time picker */}
+                        <div>
+                          <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">TIME</label>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                              <p className="nav-label text-[0.5rem] text-ice/30 mb-1">HOUR (0–23)</p>
+                              <input
+                                type="number" min={0} max={23} className="uris-input text-center font-display font-black text-lg"
+                                value={deadlineHour}
+                                onChange={e => setDeadlineHour(Math.min(23, Math.max(0, Number(e.target.value))))}
+                              />
+                            </div>
+                            <span className="font-display font-black text-2xl text-gold/40 mt-4">:</span>
+                            <div className="flex-1">
+                              <p className="nav-label text-[0.5rem] text-ice/30 mb-1">MINUTE (0–59)</p>
+                              <input
+                                type="number" min={0} max={59} className="uris-input text-center font-display font-black text-lg"
+                                value={deadlineMinute}
+                                onChange={e => setDeadlineMinute(Math.min(59, Math.max(0, Number(e.target.value))))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Preview */}
+                        <div className="p-3 rounded-sm" style={{ background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.15)' }}>
+                          <p className="nav-label text-[0.5rem] text-gold/40 mb-1">PREVIEW</p>
+                          <p className="font-body text-sm text-frost/70">
+                            {DAY_OPTIONS[deadlineDay]?.label}{' '}
+                            {deadlineHour % 12 === 0 ? 12 : deadlineHour % 12}:{String(deadlineMinute).padStart(2, '0')}{' '}
+                            {deadlineHour < 12 ? 'AM' : 'PM'}
+                          </p>
+                        </div>
+
+                        {deadlineMsg && <FeedbackBanner ok={deadlineMsg.ok} text={deadlineMsg.text} />}
+                        <ActionButton loading={deadlineLoading} label="SAVE DEADLINE" loadingLabel="SAVING..." />
                       </motion.form>
                     )}
 

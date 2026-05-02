@@ -37,6 +37,14 @@ async function register({ email, password, role }) {
     select: { id: true, email: true, role: true, createdAt: true },
   });
 
+  // Auto-create an Intern record for intern-role users so all intern-scoped
+  // queries (dashboard, tasks, availability, alerts) work immediately after registration.
+  if (prismaRole === 'INTERN') {
+    await prisma.intern.create({
+      data: { userId: user.id },
+    });
+  }
+
   void logAction(user.id, AUDIT_ACTIONS.REGISTER, AUDIT_ENTITIES.USER, user.id, {
     email: user.email,
     role:  user.role,

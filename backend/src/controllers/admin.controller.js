@@ -3,16 +3,10 @@ const { logAction } = require('../utils/auditLogger');
 const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
 const { validateUpdateTaskStatus, isUUID } = require('../utils/validate');
 const { ok, validationError, notFound } = require('../utils/respond');
+const configStore = require('../services/configStore');
 
-const VALID_TASK_STATUSES = [
-  'backlog',
-  'in_progress_early',
-  'in_progress_mid',
-  'under_review',
-  'completed',
-  'active',
-  'paused',
-];
+// Default deadline: Monday at 11:00 AM
+const DEFAULT_DEADLINE = { day: 1, hour: 11, minute: 0 }; // day: 0=Sun,1=Mon,...6=Sat
 
 async function overrideScore(req, res, next) {
   try {
@@ -185,4 +179,29 @@ async function getAdminOverview(req, res, next) {
   }
 }
 
-module.exports = { overrideScore, updateTaskStatus, getAdminOverview };
+function getAvailabilityDeadline(req, res) {
+  const deadline = configStore.get('availabilityDeadline', DEFAULT_DEADLINE);
+  return ok(res, deadline, 'Availability deadline fetched');
+}
+
+function setAvailabilityDeadline(req, res) {
+  const { day, hour, minute } = req.body;
+
+  if (typeof day !== 'number' || day < 0 || day > 6) {
+    return validationError(res, 'day must be an integer 0 (Sun) – 6 (Sat)');
+  }
+  if (typeof hour !== 'number' || hour < 0 || hour > 23) {
+    return validationError(res, 'hour must be an integer 0–23');
+  }
+  if (typeof minute !== 'number' || minute < 0 || minute > 59) {
+    return validationError(res, 'minute must be an integer 0–59');
+  }
+
+  configStore.set('availabilityDeadline', { day, hour, minute });
+
+  void logAction(req.user?.id ?? null, 'SET_AVAILABILITY_DEADLINE', 'CONFIG', null, { day, hour, minute });
+
+  return ok(res, { day, hour, minute }, 'Availability deadline updated');
+}
+
+module.exports = { overrideScore, updateTaskStatus, getAdminOverview, getAvailabilityDeadline, setAvailabilityDeadline };

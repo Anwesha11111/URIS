@@ -5,56 +5,79 @@ import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { submitAvailability, type BusyBlock } from '../services/availability.service'
+import { getAvailabilityDeadline, type AvailabilityDeadline } from '../services/admin.service'
 import { extractErrorMessage } from '../services/error'
 import { useAuthStore } from '../store/authStore'
 
 const DAYS    = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const REASONS = ['Exam', 'Revision', 'Academic Project', 'Personal', 'Sprint', 'Other']
 
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+function formatDeadlineLabel(dl: AvailabilityDeadline): string {
+  const h = dl.hour % 12 === 0 ? 12 : dl.hour % 12
+  const m = String(dl.minute).padStart(2, '0')
+  const ampm = dl.hour < 12 ? 'AM' : 'PM'
+  return `${DAY_NAMES[dl.day]} ${h}:${m} ${ampm}`
+}
+
+function calcTimeLeft(dl: AvailabilityDeadline) {
+  const now = new Date()
+  const target = new Date()
+  // Find the next occurrence of dl.day at dl.hour:dl.minute
+  const dayDiff = (dl.day - now.getDay() + 7) % 7
+  target.setDate(now.getDate() + (dayDiff === 0 && (now.getHours() > dl.hour || (now.getHours() === dl.hour && now.getMinutes() >= dl.minute)) ? 7 : dayDiff))
+  target.setHours(dl.hour, dl.minute, 0, 0)
+
+  const diff = target.getTime() - now.getTime()
+  if (diff <= 0) return { d: 0, h: 0, m: 0, s: 0 }
+  return {
+    d: Math.floor(diff / (1000 * 60 * 60 * 24)),
+    h: Math.floor((diff / (1000 * 60 * 60)) % 24),
+    m: Math.floor((diff / (1000 * 60)) % 60),
+    s: Math.floor((diff / 1000) % 60),
+  }
+}
+
 function CountdownTimer() {
+  const [deadline, setDeadline] = useState<AvailabilityDeadline | null>(null)
   const [timeLeft, setTimeLeft] = useState<{ d: number, h: number, m: number, s: number } | null>(null)
 
   useEffect(() => {
-    const calc = () => {
-      const now = new Date()
-      const deadline = new Date()
-      const daysUntilMonday = (1 + 7 - now.getDay()) % 7
-      deadline.setDate(now.getDate() + (daysUntilMonday === 0 && now.getHours() >= 11 ? 7 : daysUntilMonday))
-      deadline.setHours(11, 0, 0, 0)
-
-      const diff = deadline.getTime() - now.getTime()
-      if (diff <= 0) return { d: 0, h: 0, m: 0, s: 0 }
-      
-      return {
-        d: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        h: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        m: Math.floor((diff / (1000 * 60)) % 60),
-        s: Math.floor((diff / 1000) % 60)
-      }
-    }
-
-    const timer = setInterval(() => setTimeLeft(calc()), 1000)
-    setTimeLeft(calc())
-    return () => clearInterval(timer)
+    getAvailabilityDeadline()
+      .then(dl => setDeadline(dl))
+      .catch(() => setDeadline({ day: 1, hour: 11, minute: 0 })) // fallback to Monday 11:00 AM
   }, [])
 
-  if (!timeLeft) return null
+  useEffect(() => {
+    if (!deadline) return
+    const tick = () => setTimeLeft(calcTimeLeft(deadline))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [deadline])
+
+  if (!timeLeft || !deadline) return null
 
   return (
-    <div className="flex gap-3 mt-4">
-      {[
-        { v: timeLeft.d, l: 'D' },
-        { v: timeLeft.h, l: 'H' },
-        { v: timeLeft.m, l: 'M' },
-        { v: timeLeft.s, l: 'S' },
-      ].map(t => (
-        <div key={t.l} className="flex flex-col items-center">
-          <div className="glass-card px-3 py-1.5 rounded-sm border-gold/20 min-w-[40px]">
-            <span className="font-display font-black text-lg text-gold">{String(t.v).padStart(2, '0')}</span>
+    <div className="flex flex-col gap-2">
+      <p className="nav-label text-[0.55rem] text-gold/40">SUBMISSION DEADLINE</p>
+      <p className="font-body text-sm text-ice/60">{formatDeadlineLabel(deadline)}</p>
+      <div className="flex gap-3">
+        {[
+          { v: timeLeft.d, l: 'D' },
+          { v: timeLeft.h, l: 'H' },
+          { v: timeLeft.m, l: 'M' },
+          { v: timeLeft.s, l: 'S' },
+        ].map(t => (
+          <div key={t.l} className="flex flex-col items-center">
+            <div className="glass-card px-3 py-1.5 rounded-sm border-gold/20 min-w-[40px]">
+              <span className="font-display font-black text-lg text-gold">{String(t.v).padStart(2, '0')}</span>
+            </div>
+            <span className="nav-label text-[0.45rem] text-ice/30 mt-1">{t.l}</span>
           </div>
-          <span className="nav-label text-[0.45rem] text-ice/30 mt-1">{t.l}</span>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
@@ -105,11 +128,7 @@ export default function Availability() {
             <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">WEEKLY SUBMISSION</p>
             <h1 className="font-display font-black text-3xl text-ice-gradient">Availability Declaration</h1>
             <div className="gold-rule w-14 mt-2" />
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
-              <div>
-                <p className="nav-label text-[0.55rem] text-gold/40 mb-1">SUBMISSION DEADLINE</p>
-                <p className="font-body text-sm text-ice/60">Monday 11:00 AM</p>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mt-6">
               <CountdownTimer />
             </div>
           </motion.div>

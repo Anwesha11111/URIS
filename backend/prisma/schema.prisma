@@ -76,6 +76,7 @@ model Task {
   createdAt     DateTime  @default(now())
 
   intern        Intern    @relation(fields: [internId], references: [id])
+  reviews       Review[]
 }
 
 model CredibilityScore {
@@ -107,11 +108,15 @@ model Review {
   id         String   @id @default(uuid())
   internId   String
   intern     Intern   @relation(fields: [internId], references: [id])
+  taskId     String?
+  task       Task?    @relation(fields: [taskId], references: [id])
   quality    Float
   timeliness Float
   initiative Float
   complexity Float
   createdAt  DateTime @default(now())
+
+  @@index([taskId])
 }
 
 model Alert {

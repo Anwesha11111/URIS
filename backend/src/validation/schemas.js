@@ -337,8 +337,8 @@ const getTasks = Joi.object({
 // ── Reviews ────────────────────────────────────────────────────────────────────
 //
 // Design §9.1 — three review dimensions, each 1–5:
-//   quality_score    (weight 0.40)
-//   timeliness_score (weight 0.35)
+//   quality_score      (weight 0.40)
+//   timeliness_score   (weight 0.35)
 //   independence_score (weight 0.25)
 //
 // Design §9.2 — PPS = (Quality×0.40) + (Timeliness×0.35) + (Independence×0.25)
@@ -353,15 +353,15 @@ const submitReview = Joi.object({
     internId: uuid.required().messages({
       'any.required': 'internId is required',
     }),
-    // Design §9.1 — quality_score 1–5
+    // Design §9.1 — quality_score 1–5 (weight 0.40)
     qualityScore: score1to5.required().messages({
       'any.required': 'qualityScore is required',
     }),
-    // Design §9.1 — timeliness_score 1–5
+    // Design §9.1 — timeliness_score 1–5 (weight 0.35)
     timelinessScore: score1to5.required().messages({
       'any.required': 'timelinessScore is required',
     }),
-    // Design §9.1 — independence_score 1–5
+    // Design §9.1 — independence_score 1–5 (weight 0.25)
     independenceScore: score1to5.required().messages({
       'any.required': 'independenceScore is required',
     }),

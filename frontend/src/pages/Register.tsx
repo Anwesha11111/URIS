@@ -48,7 +48,7 @@ export default function Register() {
           </div>
           <h1 className="font-display font-black text-5xl text-ice-gradient mb-2">URIS</h1>
           <div className="gold-rule w-20 mx-auto my-3" />
-          <p className="nav-label text-[0.65rem] text-ice/40 tracking-widest">REQUEST SYSTEM ACCESS</p>
+          <p className="nav-label text-[0.65rem] text-ice/40 tracking-widest">CREATE YOUR ACCOUNT</p>
         </div>
 
         <div className="glass-card rounded-sm p-8">

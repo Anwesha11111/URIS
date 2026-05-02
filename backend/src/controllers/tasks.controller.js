@@ -64,7 +64,20 @@ async function getTasks(req, res, next) {
     const [tasks, total] = await Promise.all([
       prisma.task.findMany({
         where:   filter,
-        select:  { id: true, title: true, status: true, internId: true, complexity: true, progressPct: true, createdAt: true },
+        select:  {
+          id:         true,
+          title:      true,
+          status:     true,
+          internId:   true,
+          complexity: true,
+          progressPct: true,
+          createdAt:  true,
+          intern: {
+            select: {
+              user: { select: { email: true } },
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take:    parseInt(limit),
@@ -72,11 +85,18 @@ async function getTasks(req, res, next) {
       prisma.task.count({ where: filter }),
     ]);
 
+    // Flatten intern → user → email into a top-level `assignee` field
+    const tasksWithAssignee = tasks.map(t => ({
+      ...t,
+      assignee: t.intern?.user?.email ?? null,
+      intern:   undefined,
+    }));
+
     console.log('[INFO] Tasks fetched:', tasks.length);
 
     return res.status(200).json({
       success: true,
-      data:    tasks,
+      data:    tasksWithAssignee,
       meta:    { total, page: parseInt(page), limit: parseInt(limit) },
     });
   } catch (err) {

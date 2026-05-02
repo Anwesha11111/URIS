@@ -4,12 +4,12 @@
 import api from './api'
 
 export interface SubmitReviewPayload {
-  internId:   string
-  taskId:     string
-  quality:    number  // 1–5
-  timeliness: number  // 1–5
-  initiative: number  // 1–5
-  note?:      string
+  internId:          string
+  taskId:            string
+  qualityScore:      number  // 1–5, weight 0.40
+  timelinessScore:   number  // 1–5, weight 0.35
+  independenceScore: number  // 1–5, weight 0.25
+  reviewNotes?:      string
 }
 
 export interface PerformanceData {

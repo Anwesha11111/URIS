@@ -7,6 +7,7 @@ import api from './api'
 export interface AuditLog {
   id:        string
   userId:    string | null
+  userName:  string | null   // resolved email/name from backend
   action:    string
   entity:    string
   entityId:  string | null
