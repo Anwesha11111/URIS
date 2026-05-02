@@ -1,19 +1,28 @@
 const prisma = require('../utils/prisma');
 const { computePerformanceIndex } = require('../services/performanceEngine');
+const { ok, notFound } = require('../utils/respond');
 
 async function getInternDashboard(req, res, next) {
   try {
     const intern = await prisma.intern.findUnique({
       where:   { userId: req.user.id },
-      include: { capacityScore: true, credibility: true, reviews: true },
+      include: {
+        credibility: true,
+        reviews:     true,
+        // Fetch the most recent capacity score from the new pipeline
+        scoreHistory: {
+          where:   { type: 'capacity' },
+          orderBy: { createdAt: 'desc' },
+          take:    1,
+        },
+      },
     });
 
     if (!intern) {
-      return res.status(404).json({ success: false, message: 'Intern not found' });
+      return notFound(res, 'Intern not found');
     }
 
     const internId = intern.id;
-
     console.log('[INFO] Intern dashboard fetched:', internId);
 
     const assignedTasks = await prisma.task.findMany({
@@ -22,18 +31,19 @@ async function getInternDashboard(req, res, next) {
     });
 
     const { performanceIndex } = computePerformanceIndex(intern.reviews);
-    const capacityScore  = Math.round((intern.capacityScore?.finalCapacity ?? 0) * 100);
-    const credibility    = intern.credibility?.score           ?? 0;
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        capacityScore,
-        performanceIndex,
-        credibility,
-        assignedTasks,
-      },
-    });
+    // Capacity score — read from ScoreHistory (integer 0–100) written by the
+    // new capacityEngine pipeline. Falls back to 0 if not yet computed.
+    const latestCapacity = intern.scoreHistory[0];
+    const capacityScore  = latestCapacity ? Math.round(latestCapacity.score) : 0;
+
+    // Credibility score — CredibilityScore.score is a 0–1 float; convert to
+    // 0–100 integer for consistent frontend display.
+    const credibility = intern.credibility
+      ? Math.round(intern.credibility.score * 100)
+      : 0;
+
+    return ok(res, { capacityScore, performanceIndex, credibility, assignedTasks });
   } catch (err) {
     next(err);
   }

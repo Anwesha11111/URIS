@@ -1,33 +1,35 @@
 const prisma = require('../utils/prisma');
-
-const inRange = (val, min, max) => typeof val === 'number' && val >= min && val <= max;
+const { validateReviewSubmission } = require('../services/businessRules');
+const { created, businessError } = require('../utils/respond');
 
 async function submitReview(req, res, next) {
   try {
-    const { internId, quality, timeliness, initiative, complexity } = req.body;
+    const { taskId, internId, qualityScore, timelinessScore, independenceScore, reviewNotes } = req.body;
 
-    if (!internId) {
-      return res.status(400).json({ success: false, message: 'internId is required', data: null });
-    }
-    if (!inRange(quality, 1, 5) || !inRange(timeliness, 1, 5) || !inRange(initiative, 1, 5)) {
-      return res.status(400).json({ success: false, message: 'quality, timeliness, and initiative must be between 1 and 5', data: null });
-    }
-    if (!inRange(complexity, 1, 3)) {
-      return res.status(400).json({ success: false, message: 'complexity must be between 1 and 3', data: null });
+    // Business-level rules: integer scores, task exists, task completed, intern matches, no duplicate
+    const biz = await validateReviewSubmission({ taskId, internId, qualityScore, timelinessScore, independenceScore });
+    if (!biz.ok) {
+      return businessError(res, biz.status, biz.message);
     }
 
-    // Ensure intern exists before creating the review
-    await prisma.intern.upsert({
-      where:  { id: internId },
-      update: {},
-      create: { id: internId },
-    });
+    // Design §9.2 — PPS = (Quality×0.40) + (Timeliness×0.35) + (Independence×0.25)
+    const perTaskPps = parseFloat(
+      (qualityScore * 0.40 + timelinessScore * 0.35 + independenceScore * 0.25).toFixed(2)
+    );
 
     const review = await prisma.review.create({
-      data: { internId, quality, timeliness, initiative, complexity },
+      data: {
+        internId,
+        taskId,
+        quality:    qualityScore,
+        timeliness: timelinessScore,
+        initiative: independenceScore,   // DB column kept as 'initiative' for backward compat
+        complexity: 1,                   // default — complexity not a review dimension in V3
+        ...(reviewNotes ? { reviewNotes } : {}),
+      },
     });
 
-    return res.status(201).json({ success: true, message: 'Review submitted', data: review });
+    return created(res, { ...review, perTaskPps }, 'Review submitted');
   } catch (err) {
     next(err);
   }

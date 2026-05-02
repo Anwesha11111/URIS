@@ -14,6 +14,8 @@ const TYPE_META = {
   credibility:       { icon: AlertTriangle, label: 'CREDIBILITY',      color: '#f87171' },
   availability:      { icon: Bell,          label: 'AVAILABILITY',     color: '#f59e0b' },
   capacity:          { icon: AlertTriangle, label: 'CAPACITY',         color: '#f59e0b' },
+  low_capacity:      { icon: AlertTriangle, label: 'LOW CAPACITY',     color: '#f59e0b' },
+  overload:          { icon: AlertTriangle, label: 'OVERLOAD',         color: '#f87171' },
   overreliance:      { icon: Bell,          label: 'OVER-RELIANCE',    color: '#b8d4f0' },
   reassignment:      { icon: AlertTriangle, label: 'REASSIGNMENT',     color: '#f59e0b' },
   low_performance:   { icon: AlertTriangle, label: 'LOW PERFORMANCE',  color: '#f87171' },
@@ -146,6 +148,7 @@ export default function Alerts() {
                     </motion.div>
                   ) : filtered.map((alert, i) => {
                     const type = alert.type in TYPE_META ? alert.type : 'capacity'
+
                     const meta = TYPE_META[type as keyof typeof TYPE_META]
                     const c = alert.severity === 'critical' ? '#f87171' : alert.severity === 'warning' ? '#f59e0b' : '#b8d4f0'
 

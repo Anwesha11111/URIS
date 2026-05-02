@@ -2,6 +2,7 @@ const { register, login } = require('../services/auth.service');
 const { validateAuth }    = require('../utils/validate');
 const { trackActivity }   = require('../utils/activityTracker');
 const { logAction }       = require('../utils/auditLogger');
+const { ok, created, validationError } = require('../utils/respond');
 const { ACTIVITY_TYPES }  = require('../constants/activityTypes');
 const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
 
@@ -16,16 +17,12 @@ async function registerUser(req, res, next) {
 
     const errors = validateAuth({ email, password });
     if (errors.length > 0) {
-      return res.status(400).json({ success: false, message: errors[0], data: null });
+      return validationError(res, errors[0]);
     }
 
     const user = await register({ email, password, role });
 
-    return res.status(201).json({
-      success: true,
-      message: 'Account created successfully.',
-      data:    user,
-    });
+    return created(res, user, 'Account created successfully.');
   } catch (err) {
     next(err);
   }
@@ -41,16 +38,12 @@ async function loginUser(req, res, next) {
 
     const errors = validateAuth({ email, password });
     if (errors.length > 0) {
-      return res.status(400).json({ success: false, message: errors[0], data: null });
+      return validationError(res, errors[0]);
     }
 
     const result = await login({ email, password });
 
-    return res.status(200).json({
-      success: true,
-      message: 'Login successful.',
-      data:    result,
-    });
+    return ok(res, result, 'Login successful.');
   } catch (err) {
     next(err);
   }
@@ -69,7 +62,7 @@ async function logoutUser(req, res) {
     void trackActivity(userId, ACTIVITY_TYPES.LOGOUT);
     void logAction(userId, AUDIT_ACTIONS.LOGOUT, AUDIT_ENTITIES.USER, userId, {});
   }
-  return res.status(200).json({ success: true, message: 'Logged out.', data: null });
+  return ok(res, null, 'Logged out.');
 }
 
 /**
@@ -84,14 +77,14 @@ async function recordActivity(req, res) {
 
   const allowed = [ACTIVITY_TYPES.TASK_WORK, ACTIVITY_TYPES.IDLE];
   if (!allowed.includes(type)) {
-    return res.status(400).json({ success: false, message: `type must be one of: ${allowed.join(', ')}`, data: null });
+    return validationError(res, `type must be one of: ${allowed.join(', ')}`);
   }
   if (typeof duration !== 'number' || duration < 0) {
-    return res.status(400).json({ success: false, message: 'duration must be a non-negative number (seconds)', data: null });
+    return validationError(res, 'duration must be a non-negative number (seconds)');
   }
 
   void trackActivity(userId, type, Math.round(duration));
-  return res.status(200).json({ success: true, message: 'Activity recorded.', data: null });
+  return ok(res, null, 'Activity recorded.');
 }
 
 module.exports = { registerUser, loginUser, logoutUser, recordActivity };

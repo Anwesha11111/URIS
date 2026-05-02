@@ -21,6 +21,7 @@ export interface InternRow {
 }
 
 export interface AlertItem {
+  id?: string | number
   type: string
   message: string
   severity: 'critical' | 'warning' | 'info'

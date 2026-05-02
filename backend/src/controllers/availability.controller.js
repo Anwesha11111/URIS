@@ -1,8 +1,11 @@
 const prisma = require('../utils/prisma');
 const { findAvailability } = require('../services/availability.service');
 const { processInternCapacity } = require('../services/processInternCapacity');
+const { computeCredibilityScore } = require('../services/credibilityService');
 const { uploadToNextcloud } = require('../services/storage.service');
 const { saveScoreHistory } = require('../services/scoreHistory.service');
+const { validateAvailabilitySubmission } = require('../services/businessRules');
+const { ok, validationError, businessError, notFound, forbidden, authError } = require('../utils/respond');
 
 const VALID_WEEK_STATUSES = ['normal', 'busy', 'exam', 'free'];
 
@@ -22,38 +25,53 @@ function normalizeWeekStatus(value) {
 
 async function submitAvailability(req, res, next) {
   try {
-    const { busyBlocks, maxFreeBlockHours, weekStatusToggle } = req.body;
+    const { busyBlocks, maxFreeBlockHours, weekStatusToggle, weekStart, weekEnd, isExamWeek } = req.body;
 
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ success: false, message: 'Unauthorized - user missing', data: null });
+      return authError(res, 'Unauthorized - user missing');
     }
 
-    if (!busyBlocks || !Array.isArray(busyBlocks)) {
-      return res.status(400).json({ success: false, message: 'busyBlocks must be an array', data: null });
-    }
-    if (typeof maxFreeBlockHours !== 'number' || maxFreeBlockHours < 1 || maxFreeBlockHours > 6) {
-      return res.status(400).json({ success: false, message: 'maxFreeBlockHours must be a number between 1 and 6', data: null });
+    const biz = validateAvailabilitySubmission({ maxFreeBlockHours, weekStart, weekEnd, busyBlocks });
+    if (!biz.ok) {
+      return businessError(res, biz.status, biz.message);
     }
 
     const normalizedStatus = normalizeWeekStatus(weekStatusToggle);
     if (!normalizedStatus) {
-      return res.status(400).json({ success: false, message: `weekStatusToggle must be one of: ${VALID_WEEK_STATUSES.join(', ')} (or a recognized synonym)`, data: null });
+      return validationError(res, `weekStatusToggle must be one of: ${VALID_WEEK_STATUSES.join(', ')} (or a recognized synonym)`);
     }
+
+    // isExamWeek is an explicit boolean flag from the client (design §12.2).
+    // When true it overrides the weekStatusToggle to 'exam' so the full −30
+    // exam penalty is always applied regardless of what toggle value was sent.
+    // This is the server-side derivation path — the client does not need to
+    // know the internal 'exam' toggle value; they just set isExamWeek: true.
+    const resolvedWeekStatus = isExamWeek ? 'exam' : normalizedStatus;
 
     const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
     if (!intern) {
-      return res.status(404).json({ success: false, message: 'Intern not found' });
+      return notFound(res, 'Intern not found');
     }
     const internId = intern.id;
+
+    // Fetch live credibility score — scoreOut100 is the 0–100 integer the capacity
+    // engine expects. Fall back to neutral 50 if the service fails so availability
+    // submission is never blocked by a credibility computation error.
+    let credibilityScore = 50; // neutral default
+    try {
+      const credResult = await computeCredibilityScore(internId);
+      credibilityScore = credResult.scoreOut100; // 0–100 integer
+    } catch (credErr) {
+      console.warn('[availability] Credibility fetch failed — using neutral default 50:', credErr.message);
+    }
 
     const { availability, TLI, capacityScore, capacityLabel } = await processInternCapacity({
       busyBlocks,
       maxFreeBlockHours,
-      weekStatusToggle: normalizedStatus,
+      weekStatusToggle: resolvedWeekStatus,
       tasks: [],
-      examFlag: false,
       internId,
-      credibilityScore: 75,
+      credibilityScore,
     });
 
     try {
@@ -70,11 +88,7 @@ async function submitAvailability(req, res, next) {
 
     await saveScoreHistory(internId, capacityScore, 'capacity');
 
-    return res.status(200).json({
-      success: true,
-      message: 'Availability processed',
-      data: { availability, TLI, capacityScore, capacityLabel },
-    });
+    return ok(res, { availability, TLI, capacityScore, capacityLabel }, 'Availability processed');
   } catch (err) {
     next(err);
   }
@@ -83,21 +97,25 @@ async function submitAvailability(req, res, next) {
 async function getAvailability(req, res, next) {
   try {
     const { internId, weekStart } = req.params;
+    
+    // Authorization check: Interns can only access their own data
+    if (req.user.role === 'INTERN') {
+      const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
+
+      if (!intern) {
+        return notFound(res, 'Intern record not found');
+      }
+
+      if (intern.id !== parseInt(internId, 10)) {
+        return forbidden(res, 'Access denied. You can only view your own availability.');
+      }
+    }
+
     const result = await findAvailability(internId, weekStart);
     if (!result) {
-      return res.status(200).json({
-        success: true,
-        message: 'No availability record found for this week.',
-        data: {
-          internId,
-          weekStart,
-          availability: 'UNKNOWN',
-          maxFreeBlockHours: null,
-          busyBlocks: [],
-        },
-      });
+      return ok(res, { internId, weekStart, availability: 'UNKNOWN', maxFreeBlockHours: null, busyBlocks: [] }, 'No availability record found for this week.');
     }
-    return res.status(200).json({ success: true, message: 'Availability retrieved', data: result });
+    return ok(res, result, 'Availability retrieved');
   } catch (err) {
     next(err);
   }

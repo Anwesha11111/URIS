@@ -60,7 +60,7 @@ const INTERN_DEFS = [
     email: 'rahul@uris.com',
     name:  'Rahul',
     capacity:    { base: 0.82, tli: 3.2, cred: 0.88, final: 0.82 },
-    credScore:   { updateFreq: 0.90, deadlineAdh: 0.85, throughput: 0.88, score: 88 },
+    credScore:   { updateFreq: 0.90, deadlineAdh: 0.85, throughput: 0.88, score: 0.88 },
     tasks: [
       { title: 'Build REST API for user module',    complexity: 0.7, status: 'active',    pct: 60,  skills: ['Node.js','Express','Prisma'],          blocker: false },
       { title: 'Write unit tests for auth service', complexity: 0.5, status: 'active',    pct: 40,  skills: ['Jest','Testing'],                      blocker: false },
@@ -79,7 +79,7 @@ const INTERN_DEFS = [
     email: 'priya@uris.com',
     name:  'Priya',
     capacity:    { base: 0.65, tli: 4.8, cred: 0.78, final: 0.65 },
-    credScore:   { updateFreq: 0.75, deadlineAdh: 0.80, throughput: 0.78, score: 78 },
+    credScore:   { updateFreq: 0.75, deadlineAdh: 0.80, throughput: 0.78, score: 0.78 },
     tasks: [
       { title: 'Design database schema for analytics', complexity: 0.6, status: 'active',    pct: 75,  skills: ['PostgreSQL','Prisma','Data Modelling'], blocker: false },
       { title: 'Implement dashboard charts',           complexity: 0.65, status: 'active',   pct: 50,  skills: ['React','Recharts','TypeScript'],        blocker: true, blockerType: 'dependency' },
@@ -101,7 +101,7 @@ const INTERN_DEFS = [
     email: 'arjun@uris.com',
     name:  'Arjun',
     capacity:    { base: 0.91, tli: 2.1, cred: 0.94, final: 0.91 },
-    credScore:   { updateFreq: 0.95, deadlineAdh: 0.93, throughput: 0.94, score: 94 },
+    credScore:   { updateFreq: 0.95, deadlineAdh: 0.93, throughput: 0.94, score: 0.94 },
     tasks: [
       { title: 'Integrate Plane API for task sync',   complexity: 0.75, status: 'completed', pct: 100, skills: ['API Integration','Node.js'],          blocker: false },
       { title: 'Build anomaly detection service',     complexity: 0.90, status: 'active',    pct: 45,  skills: ['Node.js','Statistics','Prisma'],       blocker: false },
@@ -294,12 +294,12 @@ async function seed() {
       });
     }
 
-    // ScoreHistory — 3 credibility entries
+    // ScoreHistory — 3 credibility entries (0–100 integer scale, consistent with new pipeline)
     for (let w = 2; w >= 0; w--) {
       await prisma.scoreHistory.create({
         data: {
           internId:  intern.id,
-          score:     parseFloat((def.credScore.score + rf(-4, 4)).toFixed(1)),
+          score:     parseFloat((def.credScore.score * 100 + rf(-4, 4)).toFixed(1)),
           type:      'credibility',
           createdAt: daysAgo(w * 7 + 1),
         },

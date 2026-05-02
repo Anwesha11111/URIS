@@ -19,15 +19,19 @@ const auditLogRoutes     = require('./src/routes/auditLog.routes');
 const activityRoutes     = require('./src/routes/activity.routes');
 const teamRoutes         = require('./src/routes/team.routes');
 
+const healthRoutes       = require('./src/routes/health.routes');
 const { errorHandler } = require('./src/middleware/error.middleware');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use('/availability', availabilityRoutes);
-app.use('/assignment',   assignmentRoutes);
+app.use('/assign',       assignmentRoutes);
 app.use('/demo',         demoRoutes);
 app.use('/auth',         authRoutes);
 app.use('/tasks',        taskRoutes);
@@ -41,6 +45,7 @@ app.use('/intern',       internRoutes);
 app.use('/audit-logs',   auditLogRoutes);
 app.use('/activity',     activityRoutes);
 app.use('/teams',        teamRoutes);
+app.use('/health',       healthRoutes);
 app.use('/',             nextcloudRoutes);
 app.use(errorHandler);
 

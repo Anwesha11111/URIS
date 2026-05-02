@@ -1,8 +1,11 @@
 const { syncTasksFromPlane, detectAndMarkStaleTasks, getTasksOverviewForAllInterns } = require('../services/taskService');
 const { generateBlockerAlerts } = require('../services/alertService');
+const { validateTaskCreation }  = require('../services/businessRules');
+const { ok, created, validationError, businessError, notFound } = require('../utils/respond');
 const prisma = require('../utils/prisma');
 const { logAction } = require('../utils/auditLogger');
 const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
+const { validatePagination } = require('../utils/validate');
 
 async function getTasksOverview(req, res) {
   try {
@@ -28,17 +31,31 @@ async function getTasks(req, res, next) {
     const { status, page = 1, limit = 20 } = req.query;
     const isAdmin = req.user.role === 'ADMIN';
 
+    const paginationErrors = validatePagination({ page, limit, status });
+    if (paginationErrors.length > 0) {
+      return validationError(res, paginationErrors[0]);
+    }
+
     const filter = {};
 
     // Status filter — case-insensitive, stored lowercase in DB
     if (status) filter.status = status.toLowerCase();
 
-    // Interns only see their own tasks
     if (!isAdmin) {
+      // Resolve the intern record for this authenticated user.
+      // If no intern record exists (e.g. user registered but onboarding incomplete),
+      // return an empty list — never 404, which would leak existence information.
       const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
       if (!intern) {
-        return res.status(404).json({ success: false, message: 'Intern not found' });
+        return res.status(200).json({
+          success: true,
+          data:    [],
+          meta:    { total: 0, page: parseInt(page), limit: parseInt(limit) },
+        });
       }
+      // Scope the query strictly to this intern's own tasks.
+      // This filter is always set before the DB query runs — no path exists
+      // where a non-admin can receive another intern's tasks.
       filter.internId = intern.id;
     }
 
@@ -71,20 +88,13 @@ async function createTask(req, res, next) {
   try {
     const { title, complexity, internId, planeTaskId, skills = [], deadline } = req.body;
 
-    if (!title || !internId || !planeTaskId) {
-      return res.status(400).json({ success: false, message: 'title, internId, and planeTaskId are required', data: null });
-    }
-    if (typeof complexity !== 'number' || complexity < 0 || complexity > 1) {
-      return res.status(400).json({ success: false, message: 'complexity must be a number between 0 and 1', data: null });
+    // Business-level rules: integer complexity, future deadline, unique planeTaskId, intern exists
+    const biz = await validateTaskCreation({ complexity, deadline, planeTaskId, internId });
+    if (!biz.ok) {
+      return businessError(res, biz.status, biz.message);
     }
 
-    // Ensure intern exists before creating task to avoid FK constraint error
-    await prisma.intern.upsert({
-      where:  { id: internId },
-      update: {},
-      create: { id: internId },
-    });
-
+    // Intern existence confirmed by validateTaskCreation — safe to create directly
     const task = await prisma.task.create({
       data: {
         title,
@@ -102,13 +112,10 @@ async function createTask(req, res, next) {
     console.log('[INFO] Task created:', task.id);
 
     void logAction(req.user?.id ?? null, AUDIT_ACTIONS.CREATE_TASK, AUDIT_ENTITIES.TASK, task.id, {
-      title,
-      internId,
-      complexity,
-      planeTaskId,
+      title, internId, complexity, planeTaskId,
     });
 
-    return res.status(201).json({ success: true, message: 'Task created', data: task });
+    return created(res, task, 'Task created');
   } catch (err) {
     next(err);
   }

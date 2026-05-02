@@ -1,6 +1,8 @@
 const prisma = require('../utils/prisma');
 const { logAction } = require('../utils/auditLogger');
 const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
+const { validateUpdateTaskStatus, isUUID } = require('../utils/validate');
+const { ok, validationError, notFound } = require('../utils/respond');
 
 const VALID_TASK_STATUSES = [
   'backlog',
@@ -17,10 +19,13 @@ async function overrideScore(req, res, next) {
     const { internId, overrideScore } = req.body;
 
     if (!internId) {
-      return res.status(400).json({ success: false, message: 'internId is required', data: null });
+      return validationError(res, 'internId is required');
+    }
+    if (!isUUID(internId)) {
+      return validationError(res, 'internId must be a valid UUID');
     }
     if (typeof overrideScore !== 'number' || overrideScore < 0 || overrideScore > 100) {
-      return res.status(400).json({ success: false, message: 'overrideScore must be a number between 0 and 100', data: null });
+      return validationError(res, 'overrideScore must be a number between 0 and 100');
     }
 
     const intern = await prisma.intern.findUnique({ where: { id: internId }, select: { overrideScore: true } });
@@ -38,7 +43,7 @@ async function overrideScore(req, res, next) {
       reason:   req.body.reason ?? null,
     });
 
-    return res.status(200).json({ success: true, message: 'Score overridden successfully', data: null });
+    return ok(res, null, 'Score overridden successfully');
   } catch (err) {
     next(err);
   }
@@ -48,16 +53,14 @@ async function updateTaskStatus(req, res, next) {
   try {
     const { taskId, status, progress } = req.body;
 
-    if (!taskId) {
-      return res.status(400).json({ success: false, message: 'taskId is required', data: null });
-    }
-    if (!VALID_TASK_STATUSES.includes(status)) {
-      return res.status(400).json({ success: false, message: `status must be one of: ${VALID_TASK_STATUSES.join(', ')}`, data: null });
+    const errors = validateUpdateTaskStatus({ taskId, status, progress });
+    if (errors.length > 0) {
+      return validationError(res, errors[0]);
     }
 
     const existingTask = await prisma.task.findUnique({ where: { id: taskId } });
     if (!existingTask) {
-      return res.status(404).json({ success: false, message: 'Task not found', data: null });
+      return notFound(res, 'Task not found');
     }
 
     await prisma.task.update({
@@ -75,7 +78,7 @@ async function updateTaskStatus(req, res, next) {
       ...(typeof progress === 'number' ? { progressPct: progress } : {}),
     });
 
-    return res.status(200).json({ success: true, message: `Task status updated to ${status}`, data: null });
+    return ok(res, null, `Task status updated to ${status}`);
   } catch (err) {
     next(err);
   }
@@ -91,13 +94,17 @@ async function getAdminOverview(req, res, next) {
       prisma.intern.findMany({
         take:    10,
         include: {
-          user:          { select: { email: true } },
-          capacityScore: true,
-          credibility:   true,
-          reviews:       { select: { quality: true, timeliness: true, initiative: true } },
-          // Fetch ALL tasks to compute completion % and real task count
+          user:        { select: { email: true } },
+          credibility: true,
+          reviews:     { select: { quality: true, timeliness: true, initiative: true } },
           tasks: {
             select: { status: true, complexity: true, progressPct: true },
+          },
+          // Fetch the most recent capacity score written by the new pipeline
+          scoreHistory: {
+            where:   { type: 'capacity' },
+            orderBy: { createdAt: 'desc' },
+            take:    1,
           },
         },
       }),
@@ -109,12 +116,12 @@ async function getAdminOverview(req, res, next) {
     ]);
 
     const interns = allInterns.map(i => {
-      const activeTasks    = i.tasks.filter(t => t.status === 'active');
-      const completedTasks = i.tasks.filter(t => t.status === 'completed');
-      const totalTasks     = i.tasks.length;
+      const activeTasksList = i.tasks.filter(t => t.status === 'active');
+      const completedTasks  = i.tasks.filter(t => t.status === 'completed');
+      const totalTasks      = i.tasks.length;
 
       // Task Load Index — sum of (complexity × remaining work) for active tasks
-      const tli = activeTasks.reduce(
+      const tli = activeTasksList.reduce(
         (sum, t) => sum + t.complexity * (1 - t.progressPct / 100),
         0
       );
@@ -136,25 +143,43 @@ async function getAdminOverview(req, res, next) {
         ? Math.round((completedTasks.length / totalTasks) * 100)
         : 0;
 
+      // Capacity score — read from ScoreHistory (integer 0–100) written by the
+      // new capacityEngine pipeline via saveScoreHistory.
+      // Falls back to 0 if no capacity score has been computed yet.
+      const latestCapacity = i.scoreHistory[0];
+      const capacityScore  = latestCapacity ? Math.round(latestCapacity.score) : 0;
+
+      // Derive the human-readable availability label from the numeric score.
+      // Mirrors the label thresholds in capacityEngine.js so the dashboard
+      // stays consistent without needing to store the label separately.
+      let availability;
+      if (!latestCapacity)        availability = 'No data';
+      else if (capacityScore >= 70) availability = 'High availability and low workload';
+      else if (capacityScore >= 40) availability = 'Moderate availability';
+      else                          availability = 'High workload or low availability';
+
+      // Credibility score — CredibilityScore.score is a 0–1 float; multiply by
+      // 100 to get the 0–100 integer the frontend expects.
+      const credibilityScore = i.credibility
+        ? Math.round(i.credibility.score * 100)
+        : 0;
+
       return {
-        id:               i.id,
-        name:             i.user?.email?.split('@')[0] ?? i.id,
-        capacityScore:    Math.round((i.capacityScore?.finalCapacity ?? 0) * 100),
-        tli:              parseFloat(tli.toFixed(2)),
+        id:            i.id,
+        name:          i.user?.email?.split('@')[0] ?? i.id,
+        capacityScore,
+        tli:           parseFloat(tli.toFixed(2)),
         rpi,
-        credibilityScore: Math.round(i.credibility?.score ?? 0),
-        availability:     i.capacityScore?.capacityLabel ?? 'Unknown',
-        taskCount:        totalTasks,
-        activeTasks:      activeTasks.length,
-        completedTasks:   completedTasks.length,
+        credibilityScore,
+        availability,
+        taskCount:     totalTasks,
+        activeTasks:   activeTasksList.length,
+        completedTasks: completedTasks.length,
         completionPct,
       };
     });
 
-    return res.status(200).json({
-      success: true,
-      data: { totalInterns, activeTasks, openAlerts, completedLast30, interns, alerts },
-    });
+    return ok(res, { totalInterns, activeTasks, openAlerts, completedLast30, interns, alerts });
   } catch (err) {
     next(err);
   }

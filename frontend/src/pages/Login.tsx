@@ -19,17 +19,14 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
-    console.log('[Login] handleSubmit fired — calling POST /auth/login')
     setLoading(true)
     setError('')
     try {
       const res = await authAPI.login(email, password)
-      console.log('[Login] API response received:', res.status)
       const { token, user } = res.data.data as { token: string; user: { id: string; name: string; email: string; role: string } }
       login(token, user as Parameters<typeof login>[1])
       navigate(user.role === 'intern' ? '/availability' : '/dashboard')
     } catch (err: unknown) {
-      console.error('[Login] API call failed:', err)
       setError(extractErrorMessage(err, 'Invalid credentials. Please try again.'))
     } finally {
       setLoading(false)
