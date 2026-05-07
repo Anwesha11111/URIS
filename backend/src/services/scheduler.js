@@ -13,23 +13,23 @@
  *      - generateWeeklyDigest() — snapshots capacity/credibility/RPI per intern
  *
  * Configuration:
- *   SYNC_INTERVAL_CRON — 5-field cron for the sync job (default: "*/15 * * * *")
+ *   SYNC_INTERVAL_CRON — 5-field cron for the sync job (default: "*\/15 * * * *")
  *   DIGEST_CRON        — 5-field cron for the digest job (default: "0 8 * * 1")
  *
  * Both jobs are skipped when NODE_ENV === 'test'.
  * Call scheduler.stop() on SIGINT/SIGTERM to clean up cron tasks.
  */
 
-const cron   = require('node-cron');
+const cron = require('node-cron');
 const logger = require('../utils/logger');
 const { syncTasksFromPlane, detectAndMarkStaleTasks } = require('./taskService');
 const { generateBlockerAlerts } = require('./alertService');
-const { generateWeeklyDigest }  = require('./digestService');
+const { generateWeeklyDigest } = require('./digestService');
 
-const DEFAULT_SYNC_CRON   = '*/15 * * * *';
+const DEFAULT_SYNC_CRON = '*/15 * * * *';
 const DEFAULT_DIGEST_CRON = '0 8 * * 1';   // Monday 08:00 UTC
 
-let _syncTask   = null;
+let _syncTask = null;
 let _digestTask = null;
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ function _startSyncJob() {
     try {
       const { synced, error: syncErr } = await syncTasksFromPlane();
       if (syncErr) logger.warn({ runId, syncErr }, 'syncTasksFromPlane completed with error');
-      else         logger.info({ runId, synced }, 'syncTasksFromPlane completed');
+      else logger.info({ runId, synced }, 'syncTasksFromPlane completed');
     } catch (err) {
       logger.error({ runId, err }, 'syncTasksFromPlane threw unexpectedly');
     }
@@ -88,7 +88,7 @@ function _startDigestJob() {
     try {
       const { generated, errors } = await generateWeeklyDigest();
       if (errors > 0) logger.warn({ generated, errors }, 'Weekly digest completed with errors');
-      else            logger.info({ generated }, 'Weekly digest completed successfully');
+      else logger.info({ generated }, 'Weekly digest completed successfully');
     } catch (err) {
       logger.error({ err }, 'Weekly digest job threw unexpectedly');
     }
