@@ -13,9 +13,9 @@
  *      - generateWeeklyDigest() — snapshots capacity/credibility/RPI per intern
  *
  * Configuration:
- *   SYNC_INTERVAL_CRON — 5-field cron for the sync job (default: "*/15 * * * * ")
-  * DIGEST_CRON        — 5 - field cron for the digest job(default: "0 8 * * 1")
-    *
+ *   SYNC_INTERVAL_CRON — 5-field cron for the sync job (default: "*/15 * * * *")
+ *   DIGEST_CRON        — 5-field cron for the digest job (default: "0 8 * * 1")
+ *
  * Both jobs are skipped when NODE_ENV === 'test'.
  * Call scheduler.stop() on SIGINT / SIGTERM to clean up cron tasks.
  */
