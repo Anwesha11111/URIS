@@ -1,56 +1,55 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, AlertOctagon, Bell, Clock, Check, X, Loader2, Flag, Star, ClipboardList, Pause, ShieldAlert } from 'lucide-react'
+import {
+  Bell, Check, Loader2, AlertTriangle,
+  ClipboardList, Pause, Flag, Star, Clock, ShieldAlert,
+} from 'lucide-react'
 import Sidebar   from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { useAlertStore } from '../store/alertStore'
 
 // ── Type meta ─────────────────────────────────────────────────────────────────
 
-const TYPE_META: Record<string, { Icon: React.ElementType; label: string; color: string }> = {
-  blocker:              { Icon: AlertOctagon,  label: 'BLOCKER',          color: '#f87171' },
-  blocker_escalation:   { Icon: AlertOctagon,  label: 'BLOCKER ESC.',     color: '#f87171' },
-  blocker_reported:     { Icon: Flag,          label: 'BLOCKER',          color: '#f87171' },
-  task_paused:          { Icon: Pause,         label: 'TASK PAUSED',      color: '#f59e0b' },
-  task_assigned:        { Icon: ClipboardList, label: 'TASK ASSIGNED',    color: '#c9a84c' },
-  review_submitted:     { Icon: Star,          label: 'REVIEW',           color: '#4ade80' },
-  stale:                { Icon: Clock,         label: 'STALE TASK',       color: '#f59e0b' },
-  stale_task:           { Icon: Clock,         label: 'STALE TASK',       color: '#f59e0b' },
-  deadline_approaching: { Icon: Clock,         label: 'DEADLINE',         color: '#f87171' },
-  availability_reminder:{ Icon: Bell,          label: 'AVAILABILITY',     color: '#c9a84c' },
-  credibility:          { Icon: AlertTriangle, label: 'CREDIBILITY',      color: '#f87171' },
-  availability:         { Icon: Bell,          label: 'AVAILABILITY',     color: '#f59e0b' },
-  capacity:             { Icon: AlertTriangle, label: 'CAPACITY',         color: '#f59e0b' },
-  low_capacity:         { Icon: AlertTriangle, label: 'LOW CAPACITY',     color: '#f59e0b' },
-  overload:             { Icon: ShieldAlert,   label: 'OVERLOAD',         color: '#f87171' },
-  overreliance:         { Icon: Bell,          label: 'OVER-RELIANCE',    color: '#b8d4f0' },
-  reassignment:         { Icon: AlertTriangle, label: 'REASSIGNMENT',     color: '#f59e0b' },
-  low_performance:      { Icon: AlertTriangle, label: 'LOW PERFORMANCE',  color: '#f87171' },
-  spike:                { Icon: Bell,          label: 'SCORE SPIKE',      color: '#f59e0b' },
+const TYPE_META: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
+  task_assigned:         { label: 'TASK ASSIGNED',  color: '#c9a84c', Icon: ClipboardList },
+  task_paused:           { label: 'TASK PAUSED',    color: '#f59e0b', Icon: Pause         },
+  blocker_reported:      { label: 'BLOCKER',        color: '#f87171', Icon: Flag          },
+  review_submitted:      { label: 'REVIEW',         color: '#4ade80', Icon: Star          },
+  deadline_approaching:  { label: 'DEADLINE',       color: '#f87171', Icon: Clock         },
+  availability_reminder: { label: 'AVAILABILITY',   color: '#c9a84c', Icon: Bell          },
+  stale_task:            { label: 'STALE TASK',     color: '#f59e0b', Icon: Clock         },
+  overload:              { label: 'OVERLOAD',       color: '#f87171', Icon: ShieldAlert   },
+  low_performance:       { label: 'PERFORMANCE',    color: '#f87171', Icon: AlertTriangle },
+  spike:                 { label: 'SCORE SPIKE',    color: '#f59e0b', Icon: AlertTriangle },
+  low_capacity:          { label: 'LOW CAPACITY',   color: '#f59e0b', Icon: AlertTriangle },
 }
 
 function getMeta(type: string) {
-  return TYPE_META[type] ?? { Icon: AlertTriangle, label: type.replace(/_/g, ' ').toUpperCase(), color: '#f59e0b' }
+  return TYPE_META[type] ?? {
+    label: type.replace(/_/g, ' ').toUpperCase(),
+    color: '#f59e0b',
+    Icon:  AlertTriangle,
+  }
 }
 
-function timeAgo(iso?: string): string {
-  if (!iso) return '—'
+function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
-  const h = Math.floor(diff / 3_600_000)
-  if (h < 1) return 'just now'
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1)  return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)  return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function Alerts() {
-  const { alerts, resolvedAlerts, loading, unread, hasCrit, resolve, resolveAll, refresh } = useAlertStore()
-  const [filter, setFilter]       = useState<'all' | 'critical' | 'warning'>('all')
+export default function Notifications() {
+  const { alerts, resolvedAlerts, loading, unread, resolve, resolveAll, refresh } = useAlertStore()
+  const [filter, setFilter]             = useState<'all' | 'critical' | 'warning'>('all')
   const [resolvingIds, setResolvingIds] = useState<Set<string>>(new Set())
-  const [clearing, setClearing]   = useState(false)
+  const [clearing, setClearing]         = useState(false)
 
-  // Refresh on mount so the page is always fresh
   useEffect(() => { void refresh() }, [refresh])
 
   const handleResolve = async (id: string) => {
@@ -86,8 +85,8 @@ export default function Alerts() {
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-8">
             <div>
-              <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">SIGNAL MONITORING</p>
-              <h1 className="font-display font-black text-3xl text-ice-gradient">System Alerts</h1>
+              <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">SIGNAL FEED</p>
+              <h1 className="font-display font-black text-3xl text-ice-gradient">Notifications</h1>
               <div className="gold-rule w-14 mt-2" />
             </div>
             <div className="flex items-center gap-3 flex-wrap">
@@ -116,7 +115,6 @@ export default function Alerts() {
             </div>
           </motion.div>
 
-          {/* Loading */}
           {loading && (
             <div className="flex items-center justify-center py-20">
               <Loader2 size={24} className="text-gold animate-spin" />
@@ -125,7 +123,6 @@ export default function Alerts() {
 
           {!loading && (
             <>
-              {/* Count pills */}
               {alerts.length > 0 && (
                 <div className="flex flex-wrap gap-3 mb-6">
                   {[
@@ -147,7 +144,6 @@ export default function Alerts() {
                 </div>
               )}
 
-              {/* Alert list */}
               <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
                   {filtered.length === 0 ? (
@@ -170,19 +166,19 @@ export default function Alerts() {
                       </div>
                       <p className="font-display text-xl text-frost/60 mb-1">All signals clear</p>
                       <p className="font-body text-sm text-ice/25">
-                        {filter !== 'all' ? `No ${filter} alerts` : 'No active alerts'}
+                        {filter !== 'all' ? `No ${filter} notifications` : "You're all caught up"}
                       </p>
                     </motion.div>
                   ) : filtered.map((alert, i) => {
-                    const meta        = getMeta(alert.type)
-                    const c           = alert.severity === 'critical' ? '#f87171' : meta.color
-                    const Icon        = meta.Icon
+                    const meta       = getMeta(alert.type)
+                    const c          = alert.severity === 'critical' ? '#f87171' : meta.color
+                    const Icon       = meta.Icon
                     const isResolving = resolvingIds.has(alert.id)
 
                     return (
                       <motion.div key={alert.id}
                         layout
-                        initial={{ opacity: 0, x: -12, scale: 0.98 }}
+                        initial={{ opacity: 0, x: -16, scale: 0.98 }}
                         animate={{ opacity: 1, x: 0,   scale: 1    }}
                         exit={{   opacity: 0, x: 20,   scale: 0.96, transition: { duration: 0.2 } }}
                         transition={{ delay: i * 0.04 }}
@@ -229,14 +225,14 @@ export default function Alerts() {
                             <p className="font-body text-sm text-frost/80 leading-snug">{alert.message}</p>
                           </div>
 
-                          {/* Resolve button */}
+                          {/* Mark as read */}
                           <motion.button
                             whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.88 }}
                             onClick={() => handleResolve(alert.id)}
                             disabled={isResolving}
                             className="flex-shrink-0 w-7 h-7 rounded-sm flex items-center justify-center transition-colors disabled:opacity-50"
                             style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)' }}
-                            title="Mark as resolved"
+                            title="Mark as read"
                           >
                             {isResolving
                               ? <Loader2 size={11} className="text-green-400 animate-spin" />
@@ -272,7 +268,7 @@ export default function Alerts() {
                         <p className="font-body text-xs text-ice/50 leading-snug">{alert.message}</p>
                         <p className="nav-label text-[0.44rem] text-ice/20 mt-0.5">{timeAgo(alert.createdAt)}</p>
                       </div>
-                      <span className="nav-label text-[0.44rem] text-green-400/50 flex-shrink-0">✓ RESOLVED</span>
+                      <span className="nav-label text-[0.44rem] text-green-400/50 flex-shrink-0">✓ READ</span>
                     </div>
                   )
                 })}
@@ -280,7 +276,6 @@ export default function Alerts() {
             </div>
           )}
 
-          {/* Branding */}
           <div className="mt-12 py-8 flex flex-col items-center gap-4 opacity-40">
             <div className="h-[1px] w-12 bg-gold/20" />
             <span className="font-display font-black text-xs tracking-[0.4em] text-ice-gradient">STEMONEF</span>

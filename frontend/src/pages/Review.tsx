@@ -6,6 +6,7 @@ import Starfield from '../components/Starfield'
 import { submitReview } from '../services/review.service'
 import { getAllTasks, type Task } from '../services/tasks.service'
 import { extractErrorMessage } from '../services/error'
+import api from '../services/api'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,8 +48,21 @@ export default function Review() {
   useEffect(() => {
     async function load(): Promise<void> {
       try {
-        const all = await getAllTasks()
-        setCompletedTasks(all.filter(t => t.status === 'completed' && !!t.internId))
+        // Fetch all completed tasks and all existing reviews in parallel
+        const [all, reviewsRes] = await Promise.all([
+          getAllTasks(),
+          api.get<{ success: boolean; data: { taskId: string }[] }>('/review/all-task-ids').catch(() => ({ data: { data: [] } })),
+        ])
+
+        // Build a set of taskIds that already have a review
+        const reviewedTaskIds = new Set(
+          (reviewsRes.data.data ?? []).map((r: { taskId: string }) => r.taskId)
+        )
+
+        // Only show completed tasks that have NOT been reviewed yet
+        setCompletedTasks(
+          all.filter(t => t.status === 'completed' && !!t.internId && !reviewedTaskIds.has(t.id))
+        )
       } catch (err) {
         setTasksError(extractErrorMessage(err, 'Failed to load completed tasks.'))
       } finally {
@@ -79,6 +93,8 @@ export default function Review() {
         independenceScore: ratings.independence,
         reviewNotes:       note || undefined,
       })
+      // Remove the reviewed task from the dropdown immediately
+      setCompletedTasks(prev => prev.filter(t => t.id !== selectedTask.id))
       setSubmitted(true)
     } catch (err: unknown) {
       setError(extractErrorMessage(err, 'Submission failed. Please try again.'))

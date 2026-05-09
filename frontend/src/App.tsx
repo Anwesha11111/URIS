@@ -1,27 +1,51 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
-import ErrorBoundary from './components/ErrorBoundary'
-import ProtectedRoute from './routes/ProtectedRoute'
-import SessionGuard  from './components/SessionGuard'
-import Landing       from './pages/Landing'
-import Login         from './pages/Login'
-import Register      from './pages/Register'
-import Dashboard     from './pages/Dashboard'
-import Availability  from './pages/Availability'
-import Tasks         from './pages/Tasks'
-import Review        from './pages/Review'
-import Team          from './pages/Team'
-import Alerts        from './pages/Alerts'
-import AdminOverview from './pages/AdminOverview'
-import AuditLogs     from './features/admin/AuditLogs'
+import ErrorBoundary      from './components/ErrorBoundary'
+import ProtectedRoute     from './routes/ProtectedRoute'
+import SessionGuard       from './components/SessionGuard'
+import FloatingAlertBell  from './components/FloatingAlertBell'
+import Landing            from './pages/Landing'
+import Login              from './pages/Login'
+import Register           from './pages/Register'
+import Dashboard          from './pages/Dashboard'
+import Availability       from './pages/Availability'
+import Tasks              from './pages/Tasks'
+import Review             from './pages/Review'
+import Team               from './pages/Team'
+import Alerts             from './pages/Alerts'
+import AdminOverview      from './pages/AdminOverview'
+import AuditLogs          from './features/admin/AuditLogs'
+import Notifications      from './pages/Notifications'
+import { useAuthStore, selectIsAuthenticated, selectIsAdmin } from './store/authStore'
+import { useAlertStore } from './store/alertStore'
+
+function AlertPollingManager() {
+  const isAuthenticated = useAuthStore(selectIsAuthenticated)
+  const isAdmin         = useAuthStore(selectIsAdmin)
+  const { startPolling, stopPolling } = useAlertStore()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Always restart with the current role — ensures admin gets /alerts, intern gets /alerts/my
+      startPolling(isAdmin)
+    } else {
+      stopPolling()
+    }
+    // Cleanup on unmount or role/auth change
+    return () => stopPolling()
+  }, [isAuthenticated, isAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null
+}
 
 export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        {/* SessionGuard must be inside BrowserRouter so useNavigate works.
-            It is a no-op when the user is not authenticated. */}
         <SessionGuard />
+        <AlertPollingManager />
+        <FloatingAlertBell />
 
         <Routes>
           {/* Public routes */}
@@ -36,6 +60,8 @@ export default function App() {
             element={<ProtectedRoute><Availability /></ProtectedRoute>} />
           <Route path="/tasks"
             element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+          <Route path="/notifications"
+            element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
 
           {/* Protected — admin only */}
           <Route path="/review"

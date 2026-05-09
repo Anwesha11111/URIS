@@ -36,16 +36,29 @@ export interface AdminOverview {
   alerts: AlertItem[]
 }
 
+export interface InternAlert {
+  id: string
+  type: string
+  severity: string
+  message: string
+  createdAt: string
+  taskId?: string | null
+}
+
 export interface InternDashboard {
   capacityScore: number
   performanceIndex: number
   credibility: number
+  unreadCount: number
+  unreadAlerts: InternAlert[]
   assignedTasks: Array<{
     id: string
     title: string
     status: string
     complexity: number
     progressPct: number
+    hasBlocker?: boolean
+    deadline?: string | null
   }>
 }
 

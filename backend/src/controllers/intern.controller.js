@@ -27,8 +27,16 @@ async function getInternDashboard(req, res, next) {
     logger.info({ internId }, 'Intern dashboard fetched');
 
     const assignedTasks = await prisma.task.findMany({
-      where:  { internId, status: 'active' },
-      select: { id: true, title: true, status: true, complexity: true, progressPct: true },
+      where:  { internId, status: { notIn: ['completed'] } },
+      select: { id: true, title: true, status: true, complexity: true, progressPct: true, hasBlocker: true, deadline: true },
+    });
+
+    // Fetch unread alerts for the intern — all types relevant to them
+    const unreadAlerts = await prisma.alert.findMany({
+      where:   { internId, resolved: false },
+      orderBy: { createdAt: 'desc' },
+      take:    20,
+      select:  { id: true, type: true, severity: true, message: true, createdAt: true, taskId: true },
     });
 
     const { performanceIndex } = computePerformanceIndex(intern.reviews);
@@ -44,7 +52,7 @@ async function getInternDashboard(req, res, next) {
       ? Math.round(intern.credibility.score * 100)
       : 0;
 
-    return ok(res, { capacityScore, performanceIndex, credibility, assignedTasks });
+    return ok(res, { capacityScore, performanceIndex, credibility, assignedTasks, unreadAlerts, unreadCount: unreadAlerts.length });
   } catch (err) {
     next(err);
   }

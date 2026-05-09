@@ -67,16 +67,20 @@ async function getTasks(req, res, next) {
       prisma.task.findMany({
         where:   filter,
         select:  {
-          id:         true,
-          title:      true,
-          status:     true,
-          internId:   true,
-          complexity: true,
-          progressPct: true,
-          createdAt:  true,
+          id:           true,
+          title:        true,
+          status:       true,
+          internId:     true,
+          complexity:   true,
+          progressPct:  true,
+          hasBlocker:   true,
+          blockerType:  true,
+          deadline:     true,
+          lastUpdatedAt: true,
+          createdAt:    true,
           intern: {
             select: {
-              user: { select: { email: true } },
+              user: { select: { email: true, name: true } },
             },
           },
         },
@@ -87,10 +91,11 @@ async function getTasks(req, res, next) {
       prisma.task.count({ where: filter }),
     ]);
 
-    // Flatten intern → user → email into a top-level `assignee` field
+    // Flatten intern → user → email/name into top-level fields
     const tasksWithAssignee = tasks.map(t => ({
       ...t,
-      assignee: t.intern?.user?.email ?? null,
+      assignee: t.intern?.user?.name || t.intern?.user?.email || null,
+      deadline: t.deadline ? t.deadline.toISOString().split('T')[0] : null,
       intern:   undefined,
     }));
 
@@ -147,15 +152,16 @@ async function createTask(req, res, next) {
   }
 }
 
-module.exports = { getTasksOverview, getTasks, createTask, internUpdateTask };
-
 async function internUpdateTask(req, res, next) {
   try {
     const { taskId } = req.params;
     const { progressPct, note, hasBlocker, blockerType } = req.body;
 
     // Resolve the intern record for the authenticated user
-    const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
+    const intern = await prisma.intern.findUnique({
+      where:   { userId: req.user.id },
+      include: { user: { select: { name: true, email: true } } },
+    });
     if (!intern) {
       return notFound(res, 'Intern record not found');
     }
@@ -185,6 +191,55 @@ async function internUpdateTask(req, res, next) {
       data:  updateData,
     });
 
+    // If intern just set a blocker, create alerts:
+    // - One for the intern (first-person, reassuring)
+    // - One for the admin (third-person, actionable) — stored without internId so it shows in admin feed
+    if (hasBlocker && !task.hasBlocker) {
+      const blockerLabel = blockerType && blockerType !== 'none'
+        ? blockerType.replace(/_/g, ' ')
+        : 'general blocker';
+
+      const existingIntern = await prisma.alert.findFirst({
+        where: { taskId, internId: intern.id, type: 'blocker_reported', resolved: false },
+      });
+      if (!existingIntern) {
+        // Intern-facing alert
+        await prisma.alert.create({
+          data: {
+            internId: intern.id,
+            taskId,
+            type:     'blocker_reported',
+            severity: 'warning',
+            message:  `You flagged a blocker on "${task.title}" (${blockerLabel}). An admin has been notified.`,
+          },
+        });
+      }
+
+      // Admin-facing alert — uses a different type so it shows in admin feed
+      const existingAdmin = await prisma.alert.findFirst({
+        where: { taskId, type: 'blocker_escalation', resolved: false },
+      });
+      if (!existingAdmin) {
+        await prisma.alert.create({
+          data: {
+            internId: intern.id,   // still scoped to intern so admin can see who
+            taskId,
+            type:     'blocker_escalation',
+            severity: 'warning',
+            message:  `${intern.user?.name || intern.user?.email || 'An intern'} reported a blocker on task "${task.title}": ${blockerLabel}. Progress: ${progressPct}%.`,
+          },
+        });
+      }
+    }
+
+    // If intern cleared a blocker, resolve any open blocker alerts for this task
+    if (hasBlocker === false && task.hasBlocker) {
+      await prisma.alert.updateMany({
+        where: { taskId, type: 'blocker_reported', resolved: false },
+        data:  { resolved: true },
+      });
+    }
+
     void logAction(req.user.id, AUDIT_ACTIONS.INTERN_UPDATE_TASK, AUDIT_ENTITIES.TASK, taskId, {
       taskId,
       internId:       intern.id,
@@ -207,3 +262,5 @@ async function internUpdateTask(req, res, next) {
     next(err);
   }
 }
+
+module.exports = { getTasksOverview, getTasks, createTask, internUpdateTask };

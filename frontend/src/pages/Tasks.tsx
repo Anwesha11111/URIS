@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, ChevronUp, AlertOctagon, Clock, Flag, Plus, X, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, AlertOctagon, Clock, Flag, Plus, X, Loader2, AlertTriangle, CheckCircle2, Pause, Play, ShieldAlert, Star } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
-import { getAllTasks, createTask, updateTaskProgress, type Task } from '../services/tasks.service'
+import { getAllTasks, createTask, updateTaskProgress, adminControlTask, getReviewForTask, type Task, type TaskReview } from '../services/tasks.service'
 import { useAuthStore } from '../store/authStore'
 import { extractErrorMessage } from '../services/error'
 
@@ -45,7 +45,31 @@ export default function Tasks() {
   const [blockerTypeInput, setBlockerTypeInput] = useState('')
   const [updating, setUpdating]             = useState(false)
   const [updateError, setUpdateError]       = useState('')
-  const [updateSuccess, setUpdateSuccess]   = useState('')
+
+  // Admin task control state
+  const [adminControlTaskId, setAdminControlTaskId] = useState<string | null>(null)
+  const [adminAction, setAdminAction]               = useState<'pause' | 'block' | null>(null)
+  const [adminReason, setAdminReason]               = useState('')
+  const [adminBlockerType, setAdminBlockerType]     = useState('')
+  const [adminControlling, setAdminControlling]     = useState(false)
+  const [adminControlError, setAdminControlError]   = useState('')
+
+  // Review state — cache fetched reviews by taskId
+  const [reviews, setReviews]         = useState<Record<string, TaskReview | null>>({})
+  const [loadingReview, setLoadingReview] = useState<string | null>(null)
+
+  const fetchReview = async (taskId: string) => {
+    if (reviews[taskId] !== undefined) return  // already fetched
+    setLoadingReview(taskId)
+    try {
+      const review = await getReviewForTask(taskId)
+      setReviews(prev => ({ ...prev, [taskId]: review }))
+    } catch {
+      setReviews(prev => ({ ...prev, [taskId]: null }))
+    } finally {
+      setLoadingReview(null)
+    }
+  }
 
   const fetchData = async (): Promise<void> => {
     setLoading(true)
@@ -94,21 +118,20 @@ export default function Tasks() {
     setHasBlockerInput(task.hasBlocker ?? false)
     setBlockerTypeInput(task.blockerType ?? '')
     setUpdateError('')
-    setUpdateSuccess('')
   }
 
   const handleProgressUpdate = async (taskId: string) => {
     setUpdating(true)
     setUpdateError('')
-    setUpdateSuccess('')
     try {
       await updateTaskProgress(taskId, {
         progressPct:  progressInput,
         note:         noteInput || undefined,
         hasBlocker:   hasBlockerInput,
-        blockerType:  hasBlockerInput && blockerTypeInput ? blockerTypeInput : null,
+        blockerType:  hasBlockerInput && blockerTypeInput && blockerTypeInput !== 'none'
+                        ? blockerTypeInput
+                        : undefined,
       })
-      setUpdateSuccess('Progress updated!')
       setEditingTaskId(null)
       await fetchData()
     } catch (err: unknown) {
@@ -118,6 +141,38 @@ export default function Tasks() {
     }
   }
 
+  const handleAdminControl = async (taskId: string, action: 'pause' | 'block' | 'resume' | 'unblock') => {
+    setAdminControlling(true)
+    setAdminControlError('')
+    try {
+      if (action === 'resume') {
+        await adminControlTask({ taskId, status: 'active' })
+      } else if (action === 'unblock') {
+        await adminControlTask({ taskId, status: 'active', hasBlocker: false })
+      } else if (action === 'pause') {
+        await adminControlTask({ taskId, status: 'paused', pauseReason: adminReason || 'Admin paused' })
+      } else if (action === 'block') {
+        await adminControlTask({
+          taskId,
+          status:      'active',
+          hasBlocker:  true,
+          blockerType: adminBlockerType || 'none',
+          pauseReason: adminReason || undefined,
+        })
+      }
+      setAdminControlTaskId(null)
+      setAdminAction(null)
+      setAdminReason('')
+      setAdminBlockerType('')
+      await fetchData()
+    } catch (err: unknown) {
+      setAdminControlError(extractErrorMessage(err, 'Failed to update task.'))
+    } finally {
+      setAdminControlling(false)
+    }
+  }
+
+  const filtered = tasks.filter(t =>
     filter === 'all'     ? true :
     filter === 'stale'   ? t.isStale :
     !!(t.blocker ?? t.hasBlocker)
@@ -212,7 +267,14 @@ export default function Tasks() {
                       transition={{ delay: i * 0.06 }} className="glass-card rounded-sm overflow-hidden"
                       style={{ borderColor: task.isStale ? 'rgba(245,158,11,0.25)' : hasBlocker ? 'rgba(248,113,113,0.2)' : undefined }}>
                       <motion.button className="w-full flex items-center gap-4 px-5 py-4 text-left"
-                        onClick={() => setExpanded(isOpen ? null : task.id)}>
+                        onClick={() => {
+                          const next = isOpen ? null : task.id
+                          setExpanded(next)
+                          // Fetch review when intern expands a completed task
+                          if (!isAdmin && task.status === 'completed' && next) {
+                            void fetchReview(task.id)
+                          }
+                        }}>
                         {/* Radial progress */}
                         <div className="relative flex-shrink-0 w-9 h-9">
                           <svg viewBox="0 0 36 36" className="w-9 h-9 -rotate-90">
@@ -292,10 +354,109 @@ export default function Tasks() {
                                 <div className="flex items-center gap-2 p-3 rounded-sm"
                                   style={{ background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.2)' }}>
                                   <AlertOctagon size={13} className="text-red-400 flex-shrink-0" />
-                                  <p className="font-body text-sm text-red-300/80">
-                                    Blocker: <strong>{task.blocker ?? task.blockerType ?? 'Unspecified'}</strong>
+                                  <div>
+                                    <p className="font-body text-sm text-red-300/80">
+                                      <strong>Blocked</strong>
+                                      {(task.blockerType) && (
+                                        <span className="ml-2 nav-label text-[0.55rem] px-2 py-0.5 rounded-sm"
+                                          style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171' }}>
+                                          {task.blockerType.replace(/_/g, ' ').toUpperCase()}
+                                        </span>
+                                      )}
+                                    </p>
+                                    {task.note && (
+                                      <p className="font-body text-xs text-red-300/60 mt-1 italic">"{task.note}"</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {task.status === 'paused' && (
+                              <div className="px-5 pb-4">
+                                <div className="flex items-center gap-2 p-3 rounded-sm"
+                                  style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                                  <Pause size={13} className="text-amber-400 flex-shrink-0" />
+                                  <p className="font-body text-sm text-amber-300/80">
+                                    <strong>Task paused by admin</strong>
                                   </p>
                                 </div>
+                              </div>
+                            )}
+
+                            {/* Admin controls panel */}
+                            {isAdmin && task.status !== 'completed' && (
+                              <div className="px-5 pb-5" style={{ borderTop: '1px solid rgba(201,168,76,0.08)' }}>
+                                {adminControlTaskId === task.id ? (
+                                  <div className="pt-4 space-y-3">
+                                    <p className="nav-label text-[0.55rem] text-gold/50">
+                                      {adminAction === 'pause' ? 'PAUSE TASK' : 'FLAG BLOCKER'}
+                                    </p>
+                                    {adminAction === 'block' && (
+                                      <select value={adminBlockerType} onChange={e => setAdminBlockerType(e.target.value)}
+                                        className="uris-input text-xs w-full">
+                                        <option value="none">None / General blocker</option>
+                                        {['code_review','manager_approval','api_access','dependency','unclear_req'].map(b => (
+                                          <option key={b} value={b}>{b.replace(/_/g, ' ')}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                    <textarea rows={2} maxLength={280}
+                                      placeholder={adminAction === 'pause' ? 'Reason for pausing...' : 'Describe the blocker...'}
+                                      value={adminReason} onChange={e => setAdminReason(e.target.value)}
+                                      className="uris-input w-full resize-none text-sm" style={{ minHeight: '56px' }} />
+                                    {adminControlError && (
+                                      <p className="font-body text-xs text-red-400/80 py-1.5 px-3 rounded-sm"
+                                        style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+                                        {adminControlError}
+                                      </p>
+                                    )}
+                                    <div className="flex gap-2">
+                                      <motion.button whileTap={{ scale: 0.97 }} disabled={adminControlling}
+                                        onClick={() => handleAdminControl(task.id, adminAction!)}
+                                        className="btn-gold flex-1 py-2 rounded-sm text-xs flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                        {adminControlling ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                                        {adminControlling ? 'SAVING...' : 'CONFIRM'}
+                                      </motion.button>
+                                      <motion.button whileTap={{ scale: 0.97 }}
+                                        onClick={() => { setAdminControlTaskId(null); setAdminAction(null); setAdminReason(''); setAdminBlockerType(''); setAdminControlError('') }}
+                                        className="btn-outline px-4 rounded-sm text-xs">CANCEL</motion.button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="pt-4 flex flex-wrap gap-2">
+                                    {task.status === 'paused' ? (
+                                      <motion.button whileTap={{ scale: 0.97 }}
+                                        onClick={() => handleAdminControl(task.id, 'resume')}
+                                        className="nav-label text-[0.6rem] px-3 py-1.5 rounded-sm flex items-center gap-1.5 transition-all"
+                                        style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)', color: '#4ade80' }}>
+                                        <Play size={9} />RESUME TASK
+                                      </motion.button>
+                                    ) : (
+                                      <motion.button whileTap={{ scale: 0.97 }}
+                                        onClick={() => { setAdminControlTaskId(task.id); setAdminAction('pause'); setAdminControlError('') }}
+                                        className="nav-label text-[0.6rem] px-3 py-1.5 rounded-sm flex items-center gap-1.5 transition-all"
+                                        style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b' }}>
+                                        <Pause size={9} />PAUSE TASK
+                                      </motion.button>
+                                    )}
+                                    {hasBlocker ? (
+                                      <motion.button whileTap={{ scale: 0.97 }}
+                                        onClick={() => handleAdminControl(task.id, 'unblock')}
+                                        className="nav-label text-[0.6rem] px-3 py-1.5 rounded-sm flex items-center gap-1.5 transition-all"
+                                        style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)', color: '#4ade80' }}>
+                                        <ShieldAlert size={9} />CLEAR BLOCKER
+                                      </motion.button>
+                                    ) : (
+                                      <motion.button whileTap={{ scale: 0.97 }}
+                                        onClick={() => { setAdminControlTaskId(task.id); setAdminAction('block'); setAdminControlError('') }}
+                                        className="nav-label text-[0.6rem] px-3 py-1.5 rounded-sm flex items-center gap-1.5 transition-all"
+                                        style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', color: '#f87171' }}>
+                                        <Flag size={9} />FLAG BLOCKER
+                                      </motion.button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             )}
 
@@ -322,7 +483,10 @@ export default function Tasks() {
                                         className="uris-input w-full resize-none text-sm" style={{ minHeight: '60px' }} />
                                     </div>
                                     <div className="flex items-center gap-3">
-                                      <button type="button" onClick={() => setHasBlockerInput(b => !b)}
+                                      <button type="button" onClick={() => {
+                                          setHasBlockerInput(b => !b)
+                                          setBlockerTypeInput('')
+                                        }}
                                         className="nav-label text-[0.55rem] px-3 py-1.5 rounded-sm transition-all"
                                         style={{
                                           background: hasBlockerInput ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.04)',
@@ -335,7 +499,7 @@ export default function Tasks() {
                                       {hasBlockerInput && (
                                         <select value={blockerTypeInput} onChange={e => setBlockerTypeInput(e.target.value)}
                                           className="uris-input text-xs flex-1">
-                                          <option value="">Blocker type...</option>
+                                          <option value="">Type (optional)...</option>
                                           {['code_review','manager_approval','api_access','dependency','unclear_req'].map(b => (
                                             <option key={b} value={b}>{b.replace(/_/g, ' ')}</option>
                                           ))}
@@ -371,6 +535,73 @@ export default function Tasks() {
                                 )}
                               </div>
                             )}
+                            {/* Intern: review panel for completed tasks */}
+                            {!isAdmin && task.status === 'completed' && (
+                              <div className="px-5 pb-5" style={{ borderTop: '1px solid rgba(201,168,76,0.08)' }}>
+                                <div className="pt-4">
+                                  <p className="nav-label text-[0.55rem] text-gold/40 mb-3">TASK REVIEW</p>
+                                  {loadingReview === task.id ? (
+                                    <div className="flex items-center gap-2 py-2">
+                                      <Loader2 size={13} className="text-gold animate-spin" />
+                                      <span className="font-body text-xs text-ice/30">Loading review...</span>
+                                    </div>
+                                  ) : reviews[task.id] === undefined ? (
+                                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                                      onClick={() => fetchReview(task.id)}
+                                      className="nav-label text-[0.6rem] px-4 py-2 rounded-sm transition-all flex items-center gap-1.5"
+                                      style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', color: '#c9a84c' }}>
+                                      <Star size={10} />VIEW REVIEW
+                                    </motion.button>
+                                  ) : reviews[task.id] === null ? (
+                                    <p className="font-body text-xs text-ice/30 italic">No review submitted for this task yet.</p>
+                                  ) : (
+                                    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                                      className="rounded-sm p-4 space-y-3"
+                                      style={{ background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.15)' }}>
+                                      {/* PPS score */}
+                                      <div className="flex items-center justify-between">
+                                        <span className="nav-label text-[0.55rem] text-gold/50">PERFORMANCE SCORE</span>
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-display font-black text-xl text-gold">
+                                            {reviews[task.id]!.pps.toFixed(2)}
+                                          </span>
+                                          <span className="font-body text-xs text-ice/30">/5</span>
+                                        </div>
+                                      </div>
+                                      {/* Score bars */}
+                                      {[
+                                        { label: 'QUALITY',     val: reviews[task.id]!.quality,    weight: '40%', c: '#c9a84c' },
+                                        { label: 'TIMELINESS',  val: reviews[task.id]!.timeliness, weight: '35%', c: '#b8d4f0' },
+                                        { label: 'INITIATIVE',  val: reviews[task.id]!.initiative, weight: '25%', c: '#4ade80' },
+                                      ].map(s => (
+                                        <div key={s.label}>
+                                          <div className="flex justify-between mb-1">
+                                            <span className="nav-label text-[0.48rem] text-ice/35">
+                                              {s.label} <span className="text-ice/20">({s.weight})</span>
+                                            </span>
+                                            <span className="nav-label text-[0.5rem]" style={{ color: s.c }}>
+                                              {s.val}/5
+                                            </span>
+                                          </div>
+                                          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                                            <motion.div
+                                              initial={{ width: 0 }}
+                                              animate={{ width: `${(s.val / 5) * 100}%` }}
+                                              transition={{ duration: 0.8, ease: 'easeOut' }}
+                                              className="h-full rounded-full"
+                                              style={{ background: s.c }} />
+                                          </div>
+                                        </div>
+                                      ))}
+                                      <p className="nav-label text-[0.46rem] text-ice/20 pt-1">
+                                        Reviewed {new Date(reviews[task.id]!.createdAt).toLocaleDateString()}
+                                      </p>
+                                    </motion.div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
                         )}
                       </AnimatePresence>
                     </motion.div>

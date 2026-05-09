@@ -20,15 +20,19 @@
 
 const cron = require('node-cron');
 const logger = require('../utils/logger');
-const { syncTasksFromPlane, detectAndMarkStaleTasks } = require('./taskService');
+const { syncTasksFromPlane, detectAndMarkStaleTasks, generateDeadlineAlerts, generateAvailabilityReminders } = require('./taskService');
 const { generateBlockerAlerts } = require('./alertService');
 const { generateWeeklyDigest } = require('./digestService');
 
-const DEFAULT_SYNC_CRON = '*/15 * * * *';
-const DEFAULT_DIGEST_CRON = '0 8 * * 1';   // Monday 08:00 UTC
+const DEFAULT_SYNC_CRON         = '*/15 * * * *';
+const DEFAULT_DIGEST_CRON       = '0 8 * * 1';   // Monday 08:00 UTC
+const DEFAULT_DEADLINE_CRON     = '0 * * * *';   // Every hour
+const DEFAULT_AVAILABILITY_CRON = '0 9 * * 1';   // Monday 09:00 UTC
 
-let _syncTask = null;
-let _digestTask = null;
+let _syncTask         = null;
+let _digestTask       = null;
+let _deadlineTask     = null;
+let _availabilityTask = null;
 
 function _startSyncJob() {
   const expression = process.env.SYNC_INTERVAL_CRON || DEFAULT_SYNC_CRON;
@@ -98,18 +102,50 @@ function start() {
   }
   _startSyncJob();
   _startDigestJob();
+  _startDeadlineJob();
+  _startAvailabilityReminderJob();
 }
 
 function stop() {
-  if (_syncTask) {
-    _syncTask.stop();
-    _syncTask = null;
-  }
-  if (_digestTask) {
-    _digestTask.stop();
-    _digestTask = null;
-  }
+  if (_syncTask)         { _syncTask.stop();         _syncTask         = null; }
+  if (_digestTask)       { _digestTask.stop();       _digestTask       = null; }
+  if (_deadlineTask)     { _deadlineTask.stop();     _deadlineTask     = null; }
+  if (_availabilityTask) { _availabilityTask.stop(); _availabilityTask = null; }
   logger.info('All scheduled jobs stopped');
+}
+
+function _startDeadlineJob() {
+  const expression = process.env.DEADLINE_CRON || DEFAULT_DEADLINE_CRON;
+  if (!cron.validate(expression)) {
+    logger.error({ expression }, 'DEADLINE_CRON is not valid — deadline alert job not started');
+    return;
+  }
+  logger.info({ expression }, 'Starting deadline alert job');
+  _deadlineTask = cron.schedule(expression, async () => {
+    try {
+      const count = await generateDeadlineAlerts();
+      logger.info({ count }, 'generateDeadlineAlerts completed');
+    } catch (err) {
+      logger.error({ err }, 'generateDeadlineAlerts threw unexpectedly');
+    }
+  });
+}
+
+function _startAvailabilityReminderJob() {
+  const expression = process.env.AVAILABILITY_REMINDER_CRON || DEFAULT_AVAILABILITY_CRON;
+  if (!cron.validate(expression)) {
+    logger.error({ expression }, 'AVAILABILITY_REMINDER_CRON is not valid — reminder job not started');
+    return;
+  }
+  logger.info({ expression }, 'Starting availability reminder job');
+  _availabilityTask = cron.schedule(expression, async () => {
+    try {
+      const count = await generateAvailabilityReminders();
+      logger.info({ count }, 'generateAvailabilityReminders completed');
+    } catch (err) {
+      logger.error({ err }, 'generateAvailabilityReminders threw unexpectedly');
+    }
+  });
 }
 
 module.exports = { start, stop };

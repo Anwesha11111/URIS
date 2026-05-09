@@ -442,6 +442,7 @@ const internUpdateTask = Joi.object({
     blockerType: Joi.string()
       .valid(...VALID_BLOCKER_TYPES)
       .optional()
+      .allow('', null)
       .messages({ 'any.only': `blockerType must be one of: ${VALID_BLOCKER_TYPES.join(', ')}` }),
   }).required(),
   params: Joi.object({

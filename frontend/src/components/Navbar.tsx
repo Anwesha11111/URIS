@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Menu, X, Diamond } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore, selectToken, selectUser, selectIsAdmin } from '../store/authStore'
+import NotificationBell from './NotificationBell'
 
 const navLinks = [
   { label: 'Dashboard',    to: '/dashboard',    internOnly: false },
@@ -79,6 +80,7 @@ export default function Navbar() {
           </div>
           {token ? (
             <>
+              <NotificationBell />
               <span className="nav-label text-[0.6rem] hidden sm:block" style={{ color: 'rgba(201,168,76,0.55)' }}>
                 {user?.name?.split(' ')[0]?.toUpperCase()}
               </span>

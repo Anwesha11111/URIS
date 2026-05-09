@@ -126,6 +126,17 @@ async function assignTask(req, res, next) {
       }),
     ]);
 
+    // Notify the intern that a new task has been assigned to them
+    await prisma.alert.create({
+      data: {
+        internId,
+        taskId,
+        type:     'task_assigned',
+        severity: 'warning',
+        message:  `You have been assigned a new task: "${task.title}". Check your task list and update your progress regularly.`,
+      },
+    });
+
     logger.info({ taskId, internId, reservationHours: RESERVATION_HOURS }, 'Task assigned with soft reservation');
 
     void logAction(req.user?.id ?? null, AUDIT_ACTIONS.ASSIGN_TASK, AUDIT_ENTITIES.TASK, taskId, {

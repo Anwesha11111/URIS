@@ -202,13 +202,103 @@ async function detectAndMarkStaleTasks() {
           internId: task.internId,
           type:     'stale_task',
           taskId:   task.id,
-          message:  `Task "${task.title}" has not been updated in 2+ days and the deadline is approaching.`
+          message:  `Your task "${task.title}" has not been updated in 2+ days and the deadline is approaching. Please update your progress.`
         }
       });
     }
   }
 
   return staleTasks.length;
+}
+
+/**
+ * Generate deadline-approaching alerts for interns whose tasks are due within 48 hours.
+ * Runs as part of the periodic sync job.
+ */
+async function generateDeadlineAlerts() {
+  const now          = new Date();
+  const in48Hours    = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+  const in24Hours    = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  const urgentTasks = await prisma.task.findMany({
+    where: {
+      status:   { notIn: ['completed', 'stale'] },
+      deadline: { lte: in48Hours, gte: now },
+    },
+  });
+
+  let created = 0;
+  for (const task of urgentTasks) {
+    const isVeryUrgent = task.deadline <= in24Hours;
+    const existing = await prisma.alert.findFirst({
+      where: { taskId: task.id, type: 'deadline_approaching', resolved: false },
+    });
+    if (existing) continue;
+
+    await prisma.alert.create({
+      data: {
+        internId: task.internId,
+        taskId:   task.id,
+        type:     'deadline_approaching',
+        severity: isVeryUrgent ? 'critical' : 'warning',
+        message:  isVeryUrgent
+          ? `URGENT: Task "${task.title}" is due in less than 24 hours. Current progress: ${task.progressPct}%.`
+          : `Task "${task.title}" is due within 48 hours. Current progress: ${task.progressPct}%. Make sure to update your progress.`,
+      },
+    });
+    created++;
+  }
+  return created;
+}
+
+/**
+ * Generate availability reminder alerts for interns who have not submitted
+ * availability for the current week. Runs Monday morning.
+ */
+async function generateAvailabilityReminders() {
+  const monday = new Date();
+  const day = monday.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  monday.setUTCDate(monday.getUTCDate() + diff);
+  monday.setUTCHours(0, 0, 0, 0);
+
+  // Find all interns who have NOT submitted availability for this week
+  const allInterns = await prisma.intern.findMany({
+    select: { id: true, user: { select: { name: true, email: true } } },
+  });
+
+  const submittedThisWeek = await prisma.availabilitySlot.findMany({
+    where: { weekStart: monday },
+    select: { internId: true },
+  });
+
+  const submittedIds = new Set(submittedThisWeek.map(s => s.internId));
+  const missing = allInterns.filter(i => !submittedIds.has(i.id));
+
+  let created = 0;
+  for (const intern of missing) {
+    const existing = await prisma.alert.findFirst({
+      where: {
+        internId: intern.id,
+        type:     'availability_reminder',
+        resolved: false,
+        createdAt: { gte: monday },
+      },
+    });
+    if (existing) continue;
+
+    const internName = intern.user?.name || intern.user?.email?.split('@')[0] || 'An intern';
+    await prisma.alert.create({
+      data: {
+        internId: intern.id,
+        type:     'availability_reminder',
+        severity: 'warning',
+        message:  `${internName} has not submitted availability for this week. Tasks cannot be assigned until availability is confirmed.`,
+      },
+    });
+    created++;
+  }
+  return created;
 }
 
 async function getTasksOverviewForAllInterns() {
@@ -243,4 +333,4 @@ function getTLIBand(tli) {
   return 'High';
 }
 
-module.exports = { syncTasksFromPlane, syncSingleIssueFromPlane, computeTLI, getTLIForIntern, detectAndMarkStaleTasks, getTasksOverviewForAllInterns, getTLIBand };
+module.exports = { syncTasksFromPlane, syncSingleIssueFromPlane, computeTLI, getTLIForIntern, detectAndMarkStaleTasks, getTasksOverviewForAllInterns, getTLIBand, generateDeadlineAlerts, generateAvailabilityReminders };

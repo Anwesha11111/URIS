@@ -2,17 +2,19 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LayoutDashboard, CalendarDays, ClipboardList, Star, Users, Bell, LogOut, ChevronRight, ShieldCheck, ScrollText } from 'lucide-react'
 import { useAuthStore, selectUser, selectIsAdmin } from '../store/authStore'
+import { useAlertStore } from '../store/alertStore'
 import TeamSwitcher from './TeamSwitcher'
 
 const allItems = [
-  { icon: LayoutDashboard, label: 'Overview',    to: '/dashboard',    adminOnly: false, internOnly: false },
-  { icon: CalendarDays,    label: 'Availability', to: '/availability', adminOnly: false, internOnly: true  },
-  { icon: ClipboardList,   label: 'Tasks',        to: '/tasks',        adminOnly: false, internOnly: false },
-  { icon: Star,            label: 'Reviews',      to: '/review',       adminOnly: true,  internOnly: false },
-  { icon: Users,           label: 'Team',         to: '/team',         adminOnly: true,  internOnly: false },
-  { icon: Bell,            label: 'Alerts',       to: '/alerts',       adminOnly: true,  internOnly: false },
-  { icon: ShieldCheck,     label: 'Admin',        to: '/admin',        adminOnly: true,  internOnly: false },
-  { icon: ScrollText,      label: 'Audit Logs',   to: '/audit-logs',   adminOnly: true,  internOnly: false },
+  { icon: LayoutDashboard, label: 'Overview',      to: '/dashboard',     adminOnly: false, internOnly: false },
+  { icon: CalendarDays,    label: 'Availability',  to: '/availability',  adminOnly: false, internOnly: true  },
+  { icon: ClipboardList,   label: 'Tasks',         to: '/tasks',         adminOnly: false, internOnly: false },
+  { icon: Bell,            label: 'Notifications', to: '/notifications', adminOnly: false, internOnly: true  },
+  { icon: Star,            label: 'Reviews',       to: '/review',        adminOnly: true,  internOnly: false },
+  { icon: Users,           label: 'Team',          to: '/team',          adminOnly: true,  internOnly: false },
+  { icon: Bell,            label: 'Alerts',        to: '/alerts',        adminOnly: true,  internOnly: false },
+  { icon: ShieldCheck,     label: 'Admin',         to: '/admin',         adminOnly: true,  internOnly: false },
+  { icon: ScrollText,      label: 'Audit Logs',    to: '/audit-logs',    adminOnly: true,  internOnly: false },
 ]
 
 export default function Sidebar() {
@@ -21,7 +23,11 @@ export default function Sidebar() {
   const isAdmin = useAuthStore(selectIsAdmin)
   const logout  = useAuthStore(s => s.logout)
   const nav     = useNavigate()
-  const items   = allItems.filter(i => {
+
+  // Read unread count from shared store — no local fetch
+  const unread = useAlertStore(s => s.unread)
+
+  const items = allItems.filter(i => {
     if (i.adminOnly && !isAdmin) return false
     if (i.internOnly && isAdmin) return false
     return true
@@ -41,13 +47,26 @@ export default function Sidebar() {
         </div>
         <nav className="px-2 space-y-0.5">
           {items.map((item, i) => {
-            const active = loc.pathname === item.to
+            const active     = loc.pathname === item.to
+            const showBadge  = (item.to === '/notifications' && !isAdmin && unread > 0)
+                            || (item.to === '/alerts' && isAdmin && unread > 0)
             return (
               <motion.div key={item.to} initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.12 + i * 0.05 }}>
                 <Link to={item.to} className={`sidebar-item ${active ? 'active' : ''}`}>
                   <item.icon size={13} />
                   {item.label}
-                  {active && <ChevronRight size={9} style={{ marginLeft: 'auto', color: 'rgba(201,168,76,0.5)' }} />}
+                  {showBadge && (
+                    <motion.span
+                      key={unread}
+                      initial={{ scale: 0.5 }} animate={{ scale: 1 }}
+                      className="ml-auto flex items-center justify-center min-w-[16px] h-4 px-0.5 rounded-full font-bold text-[0.46rem]"
+                      style={{ background: '#f87171', color: '#fff', boxShadow: '0 0 6px #f8717166' }}>
+                      {unread > 9 ? '9+' : unread}
+                    </motion.span>
+                  )}
+                  {active && !showBadge && (
+                    <ChevronRight size={9} style={{ marginLeft: 'auto', color: 'rgba(201,168,76,0.5)' }} />
+                  )}
                 </Link>
               </motion.div>
             )

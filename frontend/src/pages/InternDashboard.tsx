@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { ClipboardList, TrendingUp, Star, AlertTriangle, Loader2 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ClipboardList, TrendingUp, Star, AlertTriangle, Loader2, Bell, BellRing, CheckCircle2, Flag, Pause, Clock, X } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getInternDashboard, type InternDashboard } from '../services/dashboard.service'
@@ -10,6 +10,7 @@ import ActivitySummaryCard from '../components/ActivitySummaryCard'
 import AnomalyAlertPanel  from '../components/AnomalyAlertPanel'
 import { useTeamStore, selectActiveTeam } from '../store/teamStore'
 import { getTeamContribution, type TeamContribution } from '../services/team.service'
+import api from '../services/api'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ export default function InternDashboard() {
   const [error, setError]                 = useState('')
   const [teamStats, setTeamStats]         = useState<TeamContribution | null>(null)
   const [teamStatsLoading, setTeamStatsLoading] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
 
   useEffect(() => {
     async function load(): Promise<void> {
@@ -70,6 +72,29 @@ export default function InternDashboard() {
     }
     void load()
   }, [])
+
+  const dismissAlert = async (alertId: string) => {
+    try {
+      await api.patch(`/alerts/my/${alertId}/resolve`)
+      setData(prev => prev ? {
+        ...prev,
+        unreadAlerts: prev.unreadAlerts?.filter((a: { id: string }) => a.id !== alertId) ?? [],
+        unreadCount:  Math.max(0, (prev.unreadCount ?? 0) - 1),
+      } : prev)
+    } catch {
+      // non-fatal
+    }
+  }
+
+  const alertIcon = (type: string) => {
+    if (type === 'task_assigned')        return <ClipboardList size={13} className="text-gold flex-shrink-0" />
+    if (type === 'task_paused')          return <Pause size={13} className="text-amber-400 flex-shrink-0" />
+    if (type === 'blocker_reported')     return <Flag size={13} className="text-red-400 flex-shrink-0" />
+    if (type === 'review_submitted')     return <Star size={13} className="text-green-400 flex-shrink-0" />
+    if (type === 'deadline_approaching') return <Clock size={13} className="text-red-400 flex-shrink-0" />
+    if (type === 'availability_reminder') return <Bell size={13} className="text-gold flex-shrink-0" />
+    return <AlertTriangle size={13} className="text-amber-400 flex-shrink-0" />
+  }
 
   // Reload team-specific contribution whenever active team changes
   useEffect(() => {
@@ -98,11 +123,79 @@ export default function InternDashboard() {
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
             <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">INTERN PORTAL</p>
-            <h1 className="font-display font-black text-3xl md:text-4xl text-ice-gradient">
-              Welcome, {user?.name ?? 'Intern'}
-            </h1>
+            <div className="flex items-center justify-between">
+              <h1 className="font-display font-black text-3xl md:text-4xl text-ice-gradient">
+                Welcome, {user?.name ?? 'Intern'}
+              </h1>
+              {/* Notification bell */}
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={() => setShowNotifications(v => !v)}
+                className="relative p-2 rounded-sm transition-all"
+                style={{ background: showNotifications ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)' }}>
+                {(data?.unreadCount ?? 0) > 0
+                  ? <BellRing size={18} className="text-gold" />
+                  : <Bell size={18} className="text-ice/40" />}
+                {(data?.unreadCount ?? 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[0.5rem] font-bold"
+                    style={{ background: '#f87171', color: '#fff' }}>
+                    {data!.unreadCount > 9 ? '9+' : data!.unreadCount}
+                  </span>
+                )}
+              </motion.button>
+            </div>
             <div className="gold-rule w-16 mt-2" />
           </motion.div>
+
+          {/* Notification panel */}
+          <AnimatePresence>
+            {showNotifications && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                className="glass-card rounded-sm mb-6 overflow-hidden"
+                style={{ border: '1px solid rgba(201,168,76,0.2)' }}>
+                <div className="flex items-center justify-between px-5 py-3"
+                  style={{ borderBottom: '1px solid rgba(201,168,76,0.1)' }}>
+                  <div>
+                    <p className="nav-label text-[0.55rem] text-gold/40 mb-0.5">NOTIFICATIONS</p>
+                    <h2 className="font-display text-base text-frost">Your Alerts</h2>
+                  </div>
+                  <button onClick={() => setShowNotifications(false)} className="text-ice/30 hover:text-frost transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+                {(!data?.unreadAlerts || data.unreadAlerts.length === 0) ? (
+                  <div className="px-5 py-8 text-center">
+                    <CheckCircle2 size={20} className="text-green-400/40 mx-auto mb-2" />
+                    <p className="font-body text-sm text-ice/30">You're all caught up.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gold/5 max-h-80 overflow-y-auto">
+                    {data.unreadAlerts.map((alert: { id: string; type: string; severity: string; message: string; createdAt: string }) => {
+                      const isCritical = alert.severity === 'critical'
+                      const c = isCritical ? '#f87171' : alert.type === 'task_assigned' || alert.type === 'review_submitted' ? '#4ade80' : '#f59e0b'
+                      return (
+                        <motion.div key={alert.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                          className="flex items-start gap-3 px-5 py-3">
+                          <div className="mt-0.5">{alertIcon(alert.type)}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-body text-sm leading-snug" style={{ color: `${c}cc` }}>
+                              {alert.message}
+                            </p>
+                            <p className="nav-label text-[0.5rem] text-ice/25 mt-1">
+                              {new Date(alert.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <button onClick={() => dismissAlert(alert.id)}
+                            className="flex-shrink-0 text-ice/20 hover:text-ice/60 transition-colors mt-0.5">
+                            <X size={12} />
+                          </button>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Loading */}
           {loading && (

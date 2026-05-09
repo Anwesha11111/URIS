@@ -47,7 +47,7 @@ async function overrideScore(req, res, next) {
 
 async function updateTaskStatus(req, res, next) {
   try {
-    const { taskId, status, progress } = req.body;
+    const { taskId, status, progress, hasBlocker, blockerType, pauseReason } = req.body;
 
     const errors = validateUpdateTaskStatus({ taskId, status, progress });
     if (errors.length > 0) {
@@ -63,14 +63,54 @@ async function updateTaskStatus(req, res, next) {
       where: { id: taskId },
       data:  {
         status,
-        ...(typeof progress === 'number' ? { progressPct: progress } : {}),
+        lastUpdatedAt: new Date(),
+        ...(typeof progress === 'number'    ? { progressPct: progress }   : {}),
+        ...(typeof hasBlocker === 'boolean' ? { hasBlocker }              : {}),
+        ...(blockerType !== undefined       ? { blockerType: hasBlocker ? blockerType : null } : {}),
       },
     });
+
+    // If admin is pausing or blocking, create an alert with the reason
+    if ((status === 'paused' || hasBlocker === true) && (pauseReason || blockerType)) {
+      const reason = pauseReason || (blockerType ? blockerType.replace(/_/g, ' ') : 'admin action');
+      const alertType = status === 'paused' ? 'task_paused' : 'blocker_reported';
+      const existing = await prisma.alert.findFirst({
+        where: { taskId, type: alertType, resolved: false },
+      });
+      if (!existing) {
+        await prisma.alert.create({
+          data: {
+            internId: existingTask.internId,
+            taskId,
+            type:     alertType,
+            severity: 'warning',
+            message:  status === 'paused'
+              ? `Admin paused task "${existingTask.title}". Reason: ${reason}.`
+              : `Admin flagged blocker on task "${existingTask.title}": ${reason}.`,
+          },
+        });
+      }
+    }
+
+    // If admin is resuming (active) or unblocking, resolve related alerts
+    if (status === 'active' || hasBlocker === false) {
+      await prisma.alert.updateMany({
+        where: {
+          taskId,
+          type:     { in: ['task_paused', 'blocker_reported'] },
+          resolved: false,
+        },
+        data: { resolved: true },
+      });
+    }
 
     void logAction(req.user?.id ?? null, AUDIT_ACTIONS.UPDATE_TASK, AUDIT_ENTITIES.TASK, taskId, {
       taskId,
       previousStatus: existingTask.status,
       newStatus:      status,
+      hasBlocker:     hasBlocker ?? null,
+      blockerType:    blockerType ?? null,
+      pauseReason:    pauseReason ?? null,
       ...(typeof progress === 'number' ? { progressPct: progress } : {}),
     });
 

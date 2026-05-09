@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Eight critical correctness bugs exist across the Node.js/Express/Prisma backend and React/TypeScript/Zustand frontend that prevent the application from functioning correctly with real data. The bugs span four categories: hardcoded/mocked data returned to clients, ID mapping errors (User ID used where Intern ID is required), a broken registration flow that leaves the frontend without a token, and enum/type mismatches that cause validation to reject valid inputs. Together they make the admin overview unreliable, intern dashboards and alert queries return wrong or empty results, registration silently fails on the frontend, task status updates are rejected for valid statuses, and the logout action uses a non-standard module import pattern that can break in ESM environments.
+Ten correctness bugs exist across the Node.js/Express/Prisma backend and React/TypeScript/Zustand frontend that prevent the application from functioning correctly with real data. The bugs span five categories: hardcoded/mocked data returned to clients, ID mapping errors (User ID used where Intern ID is required), a broken registration flow that leaves the frontend without a token, enum/type mismatches that cause validation to reject valid inputs, and alert content/deduplication issues that expose intern-facing messages to admins and allow duplicate alerts to accumulate. Together they make the admin overview unreliable, intern dashboards and alert queries return wrong or empty results, registration silently fails on the frontend, task status updates are rejected for valid statuses, the logout action uses a non-standard module import pattern that can break in ESM environments, admins see intern-addressed availability messages in their System Alerts page, and repeated seed runs create duplicate availability_reminder alerts.
 
 ---
 
@@ -48,6 +48,16 @@ Eight critical correctness bugs exist across the Node.js/Express/Prisma backend 
 
 1.14 WHEN an admin requests the overview endpoint THEN the system computes `openAlerts` as `prisma.task.count({ where: { status: { in: ['active', 'paused'] } } })`, returning a count of active/paused tasks rather than a count of unresolved Alert records
 
+**Bug 9 — Admin sees intern-facing availability_reminder messages**
+
+1.15 WHEN an admin requests `GET /alerts` THEN the system returns `availability_reminder` alerts whose `message` reads "You have not submitted your availability for this week. Please submit it so tasks can be assigned to you correctly." — copy addressed directly to the intern — because both `taskService.js` (`generateAvailabilityReminders`) and `seed-alerts.js` create these alerts with second-person intern-facing language
+1.16 WHEN an admin views the System Alerts page THEN the system displays the intern-addressed message verbatim, making it appear as though the admin themselves has not submitted availability, which is confusing and incorrect
+
+**Bug 10 — Duplicate availability_reminder alerts from seed-alerts.js**
+
+1.17 WHEN `seed-alerts.js` is run and an intern has no `AvailabilitySlot` records THEN the system creates a new `availability_reminder` alert without checking whether an unresolved `availability_reminder` already exists for that intern, causing one duplicate alert per intern per script execution
+1.18 WHEN `seed-alerts.js` is run multiple times (or run after a prior run that created alerts) THEN the system accumulates duplicate `availability_reminder` alerts in the Alert table (e.g. 26 duplicates across 3 interns after repeated runs), because the deduplication guard present in `taskService.js` is absent from `seed-alerts.js`
+
 ---
 
 ### Expected Behavior (Correct)
@@ -90,6 +100,16 @@ Eight critical correctness bugs exist across the Node.js/Express/Prisma backend 
 
 2.14 WHEN an admin requests the overview endpoint THEN the system SHALL compute `openAlerts` as `prisma.alert.count({ where: { resolved: false } })`, returning the true count of unresolved Alert records
 
+**Bug 9 — Admin sees intern-facing availability_reminder messages**
+
+2.15 WHEN `generateAvailabilityReminders` in `taskService.js` creates an `availability_reminder` alert THEN the system SHALL use a message that includes the intern's name so it reads correctly for an admin (e.g. `"${internName} has not submitted availability for this week."`) rather than second-person intern-addressed copy
+2.16 WHEN `seed-alerts.js` creates an `availability_reminder` alert THEN the system SHALL use the same admin-readable, name-inclusive message format so that the alert is meaningful to both the intern (via `GET /alerts/my`) and the admin (via `GET /alerts`)
+
+**Bug 10 — Duplicate availability_reminder alerts from seed-alerts.js**
+
+2.17 WHEN `seed-alerts.js` is about to create an `availability_reminder` alert for an intern THEN the system SHALL first query the Alert table for an existing unresolved `availability_reminder` for that intern and skip creation if one already exists, matching the deduplication pattern used in `taskService.js`
+2.18 WHEN `seed-alerts.js` is run multiple times THEN the system SHALL create at most one unresolved `availability_reminder` alert per intern, regardless of how many times the script is executed
+
 ---
 
 ### Unchanged Behavior (Regression Prevention)
@@ -106,3 +126,6 @@ Eight critical correctness bugs exist across the Node.js/Express/Prisma backend 
 3.10 WHEN an authenticated intern accesses their dashboard and their Intern record does not exist THEN the system SHALL CONTINUE TO return a 404 not found response
 3.11 WHEN a non-admin user is authenticated THEN the system SHALL CONTINUE TO be restricted from admin-only endpoints by the existing role middleware
 3.12 WHEN the auth store is rehydrated from localStorage THEN the system SHALL CONTINUE TO restore `token`, `user`, and `isAuthenticated` correctly
+3.13 WHEN an intern requests `GET /alerts/my` THEN the system SHALL CONTINUE TO return their `availability_reminder` alerts (the alert type is not removed, only the message content and deduplication logic are changed)
+3.14 WHEN `seed-alerts.js` is run and an intern has no `AvailabilitySlot` records and no existing unresolved `availability_reminder` THEN the system SHALL CONTINUE TO create one `availability_reminder` alert for that intern
+3.15 WHEN `taskService.js` `generateAvailabilityReminders` runs and an intern already has an unresolved `availability_reminder` for the current week THEN the system SHALL CONTINUE TO skip creation, preserving the existing deduplication behaviour
