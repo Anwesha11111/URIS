@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { Diamond, BarChart3, Shield, Zap, ArrowRight } from 'lucide-react'
+import { Diamond, BarChart3, Shield, Zap } from 'lucide-react'
 import Starfield from '../components/Starfield'
 import Navbar from '../components/Navbar'
 

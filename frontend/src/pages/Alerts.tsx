@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, AlertOctagon, Bell, Clock, Check, X, Loader2, Flag, Star, ClipboardList, Pause, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, AlertOctagon, Bell, Clock, Check, Loader2, Flag, Star, ClipboardList, Pause, ShieldAlert } from 'lucide-react'
 import Sidebar   from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { useAlertStore } from '../store/alertStore'
@@ -45,7 +45,7 @@ function timeAgo(iso?: string): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Alerts() {
-  const { alerts, resolvedAlerts, loading, unread, hasCrit, resolve, resolveAll, refresh } = useAlertStore()
+  const { alerts, resolvedAlerts, loading, unread, resolve, resolveAll, refresh } = useAlertStore()
   const [filter, setFilter]       = useState<'all' | 'critical' | 'warning'>('all')
   const [resolvingIds, setResolvingIds] = useState<Set<string>>(new Set())
   const [clearing, setClearing]   = useState(false)

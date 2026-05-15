@@ -99,10 +99,11 @@ export default function InternDashboard() {
   // Reload team-specific contribution whenever active team changes
   useEffect(() => {
     if (!activeTeam) { setTeamStats(null); return }
+    const team = activeTeam
     async function loadTeamStats(): Promise<void> {
       setTeamStatsLoading(true)
       try {
-        const stats = await getTeamContribution(activeTeam.teamId)
+        const stats = await getTeamContribution(team.teamId)
         setTeamStats(stats)
       } catch {
         setTeamStats(null)
