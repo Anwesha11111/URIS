@@ -129,7 +129,7 @@ async function seed() {
   const admin = await prisma.user.upsert({
     where:  { email: 'admin@uris.com' },
     update: { name: 'Admin' },
-    create: { email: 'admin@uris.com', password: hash, name: 'Admin', role: 'ADMIN' },
+    create: { email: 'admin@uris.com', password: hash, name: 'Admin', role: 'CORE_ADMIN' },
   });
   console.log(`✓ Admin:  ${admin.email}`);
 
@@ -152,7 +152,7 @@ async function seed() {
     const user = await prisma.user.upsert({
       where:  { email: def.email },
       update: { name: def.name },
-      create: { email: def.email, password: hash, name: def.name, role: 'INTERN' },
+      create: { email: def.email, password: hash, name: def.name, role: 'TECHNICAL_INTERN' },
     });
 
     // Intern record
@@ -339,7 +339,7 @@ async function seed() {
         action:   'REGISTER',
         entity:   'USER',
         entityId: user.id,
-        metadata: { email: user.email, role: 'INTERN' },
+        metadata: { email: user.email, role: 'TECHNICAL_INTERN' },
         createdAt: daysAgo(14),
       },
     });

@@ -15,6 +15,7 @@
 'use strict';
 
 const Joi = require('joi');
+const { VALID_ROLES } = require('../constants/roles');
 
 // ── Reusable primitives ────────────────────────────────────────────────────────
 
@@ -96,8 +97,8 @@ const register = Joi.object({
       'string.min':   'password must be at least 6 characters',
       'any.required': 'password is required',
     }),
-    role: Joi.string().valid('intern', 'admin').default('intern').messages({
-      'any.only': 'role must be one of: intern, admin',
+    role: Joi.string().valid(...VALID_ROLES).default('TECHNICAL_INTERN').messages({
+      'any.only': `role must be one of: ${[...VALID_ROLES].join(', ')}`,
     }),
   }).required(),
   params: Joi.object(),
