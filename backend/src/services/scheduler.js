@@ -24,12 +24,13 @@ const { syncTasksFromPlane, detectAndMarkStaleTasks, generateDeadlineAlerts, gen
 const { generateBlockerAlerts } = require('./alertService');
 const { generateWeeklyDigest } = require('./digestService');
 
-const DEFAULT_SYNC_CRON         = '*/15 * * * *';
-const DEFAULT_DIGEST_CRON       = '0 8 * * 1';   // Monday 08:00 UTC
-const DEFAULT_DEADLINE_CRON     = '0 * * * *';   // Every hour
-const DEFAULT_AVAILABILITY_CRON = '0 9 * * 1';   // Monday 09:00 UTC
+const DEFAULT_SYNC_CRON          = '*/15 * * * *';
+const DEFAULT_DIGEST_CRON        = '0 8 * * 1';   // Monday 08:00 UTC
+const DEFAULT_DEADLINE_CRON      = '0 * * * *';   // Every hour
+const DEFAULT_AVAILABILITY_CRON  = '0 9 * * 1';   // Monday 09:00 UTC
 const DEFAULT_TASK_REMINDER_CRON = '0 9 * * 0,4'; // Thursday and Sunday 09:00 UTC
 const DEFAULT_FORM_REMINDER_CRON = '0 9 */3 * *'; // Every 3 days at 09:00 UTC
+const DEFAULT_PRUNE_CRON         = '0 3 * * 0';   // Sunday 03:00 UTC — low-traffic window
 
 let _syncTask         = null;
 let _digestTask       = null;
@@ -37,6 +38,7 @@ let _deadlineTask     = null;
 let _availabilityTask = null;
 let _taskReminderTask = null;
 let _formReminderTask = null;
+let _pruneTask        = null;
 
 function _startSyncJob() {
   const expression = process.env.SYNC_INTERVAL_CRON || DEFAULT_SYNC_CRON;
@@ -110,6 +112,7 @@ function start() {
   _startAvailabilityReminderJob();
   _startTaskReminderJob();
   _startFormReminderJob();
+  _startPruneJob();
 }
 
 function stop() {
@@ -119,6 +122,7 @@ function stop() {
   if (_availabilityTask) { _availabilityTask.stop(); _availabilityTask = null; }
   if (_taskReminderTask) { _taskReminderTask.stop(); _taskReminderTask = null; }
   if (_formReminderTask) { _formReminderTask.stop(); _formReminderTask = null; }
+  if (_pruneTask)        { _pruneTask.stop();        _pruneTask        = null; }
   logger.info('All scheduled jobs stopped');
 }
 
@@ -187,6 +191,40 @@ function _startFormReminderJob() {
       logger.info({ count }, 'generateFormReminders completed');
     } catch (err) {
       logger.error({ err }, 'generateFormReminders threw unexpectedly');
+    }
+  });
+}
+
+/**
+ * _startPruneJob
+ *
+ * Prunes old ScoreHistory rows to prevent unbounded table growth.
+ * Keeps the most recent 52 weeks (1 year) of history per intern per type.
+ * Runs weekly on Sunday at 03:00 UTC (low-traffic window).
+ *
+ * Configurable via PRUNE_CRON env var.
+ * Retention window configurable via SCORE_HISTORY_RETENTION_DAYS (default: 365).
+ */
+function _startPruneJob() {
+  const expression = process.env.PRUNE_CRON || DEFAULT_PRUNE_CRON;
+  if (!cron.validate(expression)) {
+    logger.error({ expression }, 'PRUNE_CRON is not valid — prune job not started');
+    return;
+  }
+  logger.info({ expression }, 'Starting ScoreHistory prune job');
+
+  const prisma = require('../utils/prisma');
+  const retentionDays = parseInt(process.env.SCORE_HISTORY_RETENTION_DAYS) || 365;
+
+  _pruneTask = cron.schedule(expression, async () => {
+    try {
+      const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+      const { count } = await prisma.scoreHistory.deleteMany({
+        where: { createdAt: { lt: cutoff } },
+      });
+      logger.info({ count, retentionDays, cutoff }, 'ScoreHistory prune completed');
+    } catch (err) {
+      logger.error({ err }, 'ScoreHistory prune job threw unexpectedly');
     }
   });
 }

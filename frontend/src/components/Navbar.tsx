@@ -1,8 +1,9 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Menu, X, Diamond } from 'lucide-react'
-import { useState } from 'react'
 import { useAuthStore, selectToken, selectUser, selectIsAdmin } from '../store/authStore'
+import { useMobileNavStore } from '../store/mobileNavStore'
+import { useLogout } from '../hooks/useLogout'
 import NotificationBell from './NotificationBell'
 
 const navLinks = [
@@ -18,11 +19,12 @@ export default function Navbar() {
   const token   = useAuthStore(selectToken)
   const user    = useAuthStore(selectUser)
   const isAdmin = useAuthStore(selectIsAdmin)
-  const logout  = useAuthStore(s => s.logout)
-  const [open, setOpen] = useState(false)
-  const nav = useNavigate()
+  const logout  = useLogout()
+  // Single source of truth for mobile nav state — no local duplicate
+  const { open: mobileNavOpen, toggle: toggleMobileNav } = useMobileNavStore()
 
-  const handleSignOut = (): void => { logout(); nav('/login') }
+  // Redirect to landing page "/" on user-initiated sign-out
+  const handleSignOut = (): void => logout({ redirectTo: '/', reason: 'user_initiated' })
 
   return (
     <>
@@ -97,45 +99,18 @@ export default function Navbar() {
               </motion.button>
             </Link>
           )}
-          <button className="md:hidden p-1.5 transition-colors" style={{ color: 'rgba(184,212,240,0.5)' }} onClick={() => setOpen(!open)}>
-            {open ? <X size={17} /> : <Menu size={17} />}
+          {/* Hamburger — mobile only, min 44px touch target */}
+          <button
+            className="md:hidden p-2.5 transition-colors rounded-sm"
+            style={{ color: 'rgba(184,212,240,0.5)', minWidth: 44, minHeight: 44 }}
+            aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+            onClick={toggleMobileNav}
+          >
+            {mobileNavOpen ? <X size={17} /> : <Menu size={17} />}
           </button>
         </div>
       </motion.nav>
 
-      {/* Mobile menu */}
-      {open && (
-        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-          className="fixed top-[49px] left-0 right-0 z-40 glass-card md:hidden">
-          {navLinks
-            .filter(l => {
-              if (l.internOnly && isAdmin) return false
-              if ((l.to === '/review' || l.to === '/team') && !isAdmin) return false
-              return true
-            })
-            .map(l => (
-              <Link key={l.to} to={l.to} onClick={() => setOpen(false)}
-                className="block nav-label text-[0.68rem] px-6 py-3"
-                style={{ color: loc.pathname === l.to ? '#c9a84c' : 'rgba(184,212,240,0.5)', borderBottom: '1px solid rgba(201,168,76,0.08)', textDecoration: 'none' }}>
-                {l.label}
-              </Link>
-            ))}
-          {isAdmin && (
-            <Link to="/admin" onClick={() => setOpen(false)}
-              className="block nav-label text-[0.68rem] px-6 py-3"
-              style={{ color: loc.pathname === '/admin' ? '#c9a84c' : 'rgba(184,212,240,0.5)', borderBottom: '1px solid rgba(201,168,76,0.08)', textDecoration: 'none' }}>
-              Admin
-            </Link>
-          )}
-          {token && (
-            <button onClick={() => { handleSignOut(); setOpen(false) }}
-              className="block nav-label text-[0.68rem] px-6 py-3 w-full text-left"
-              style={{ color: 'rgba(248,113,113,0.6)', borderTop: '1px solid rgba(201,168,76,0.08)' }}>
-              SIGN OUT
-            </button>
-          )}
-        </motion.div>
-      )}
     </>
   )
 }

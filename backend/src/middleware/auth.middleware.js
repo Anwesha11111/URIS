@@ -24,9 +24,10 @@ function verifyToken(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = {
-      id:    decoded.id,
-      email: decoded.email,
-      role:  decoded.role,
+      id:     decoded.id,
+      email:  decoded.email,
+      role:   decoded.role,
+      teamId: decoded.teamId ?? null,   // Phase 2: team context from JWT
     };
     next();
   } catch {
@@ -106,4 +107,52 @@ function checkRole(role) {
   return requireRole(role);
 }
 
-module.exports = { verifyToken, requireRole, checkRole };
+/**
+ * authorize(check)
+ *
+ * Lightweight, composable permission middleware for resource-level checks.
+ * Runs AFTER verifyToken — req.user is guaranteed to be populated.
+ *
+ * The `check` function receives req and returns true (allow) or false (deny).
+ * This keeps route-level authorization logic close to the route definition
+ * without polluting the middleware layer with business rules.
+ *
+ * Design principles:
+ *  - Simple: one function, one boolean return
+ *  - Composable: chain multiple authorize() calls for AND logic
+ *  - Extensible: check can be async for DB-backed permission checks
+ *  - No hardcoded role lists here — those belong in the route file
+ *
+ * @param {(req: import('express').Request) => boolean | Promise<boolean>} check
+ * @returns {import('express').RequestHandler}
+ *
+ * @example
+ * // Only allow the resource owner or an admin
+ * router.get('/tasks/:id',
+ *   verifyToken,
+ *   authorize(req => req.user.id === req.params.id || req.user.role === ROLES.CORE_ADMIN),
+ *   getTask
+ * )
+ *
+ * // Team-scoped: only allow if user belongs to the team
+ * router.get('/teams/:teamId/data',
+ *   verifyToken,
+ *   authorize(req => req.user.teamId === req.params.teamId || req.user.role === ROLES.CORE_ADMIN),
+ *   getTeamData
+ * )
+ */
+function authorize(check) {
+  return async (req, res, next) => {
+    try {
+      const allowed = await check(req);
+      if (!allowed) {
+        return forbidden(res, 'Access denied. Insufficient permissions.');
+      }
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+module.exports = { verifyToken, requireRole, checkRole, authorize };

@@ -11,15 +11,23 @@
  *    seconds of expiry, shows the same warning modal. If already expired,
  *    logs out immediately with no modal.
  *
+ * Phase 4: Uses useLogout() for all logout paths so that:
+ *   - Server-side audit log is written
+ *   - Alert polling is stopped
+ *   - Mobile nav is closed
+ *   - Redirect destination is correct:
+ *       user-initiated "LOG OUT" button → "/"  (landing page)
+ *       session expiry / inactivity     → "/login" (with reason state)
+ *
  * Place this once inside the app — it is a no-op when not authenticated.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, ShieldAlert } from 'lucide-react'
 import { useAuthStore, selectIsAuthenticated, selectToken } from '../store/authStore'
 import { useSessionTimeout } from '../hooks/useSessionTimeout'
+import { useLogout } from '../hooks/useLogout'
 import { recordActivity } from '../services/activity.service'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -35,10 +43,6 @@ const TOKEN_CHECK_INTERVAL_MS = 60_000  // 1 minute
 
 // ── JWT decode helper ─────────────────────────────────────────────────────────
 
-/**
- * Decode the `exp` claim from a JWT without a library.
- * Returns the expiry as a Unix timestamp in seconds, or null if unreadable.
- */
 function getTokenExpiry(token: string): number | null {
   try {
     const payload = token.split('.')[1]
@@ -55,14 +59,15 @@ function getTokenExpiry(token: string): number | null {
 export default function SessionGuard() {
   const isAuthenticated = useAuthStore(selectIsAuthenticated)
   const token           = useAuthStore(selectToken)
-  const logout          = useAuthStore(s => s.logout)
-  const navigate        = useNavigate()
 
-  const [showWarning, setShowWarning] = useState(false)
-  const [countdown, setCountdown]     = useState(WARNING_DURATION_S)
-  const [warningReason, setWarningReason] = useState<'inactivity' | 'token_expiry'>('inactivity')
-  const countdownRef                  = useRef<ReturnType<typeof setInterval> | null>(null)
-  const tokenCheckRef                 = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Phase 4: single canonical logout — handles audit log, polling, nav, redirect
+  const logout = useLogout()
+
+  const [showWarning,    setShowWarning]    = useState(false)
+  const [countdown,      setCountdown]      = useState(WARNING_DURATION_S)
+  const [warningReason,  setWarningReason]  = useState<'inactivity' | 'token_expiry'>('inactivity')
+  const countdownRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const tokenCheckRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // ── Countdown ticker ───────────────────────────────────────────────────────
 
@@ -87,20 +92,21 @@ export default function SessionGuard() {
     setCountdown(WARNING_DURATION_S)
   }, [])
 
-  // ── Shared logout handler ──────────────────────────────────────────────────
+  // ── Shared expiry handler — redirects to /login with reason ───────────────
+  // Used for automatic expiry (inactivity, token expiry).
+  // NOT used for the "LOG OUT" button — that goes to "/" via handleLogoutNow.
 
   const handleExpireNow = useCallback((reason: string = 'session_expired'): void => {
     setShowWarning(false)
     stopCountdown()
-    logout()
-    navigate('/login', { replace: true, state: { reason } })
-  }, [logout, navigate, stopCountdown])
+    // Session expiry → /login so the user can re-authenticate immediately
+    logout({ redirectTo: '/login', reason })
+  }, [logout, stopCountdown])
 
   // ── Token expiry polling ───────────────────────────────────────────────────
 
   const checkTokenExpiry = useCallback((): void => {
     if (!token) return
-
     const exp = getTokenExpiry(token)
     if (exp === null) return
 
@@ -108,13 +114,11 @@ export default function SessionGuard() {
     const secondsLeft = exp - nowS
 
     if (secondsLeft <= 0) {
-      // Already expired — logout immediately, no modal
       handleExpireNow('token_expired')
       return
     }
 
     if (secondsLeft <= TOKEN_EXPIRY_WARN_S && !showWarning) {
-      // Within warning window — show modal with actual seconds remaining
       setWarningReason('token_expiry')
       setShowWarning(true)
       startCountdown(Math.min(secondsLeft, WARNING_DURATION_S))
@@ -123,12 +127,8 @@ export default function SessionGuard() {
 
   useEffect(() => {
     if (!isAuthenticated) return
-
-    // Check immediately on mount (catches already-expired tokens from localStorage)
     checkTokenExpiry()
-
     tokenCheckRef.current = setInterval(checkTokenExpiry, TOKEN_CHECK_INTERVAL_MS)
-
     return () => {
       if (tokenCheckRef.current) clearInterval(tokenCheckRef.current)
     }
@@ -145,8 +145,7 @@ export default function SessionGuard() {
   const handleWarnDismiss = useCallback((): void => {
     setShowWarning(false)
     stopCountdown()
-    const idleSeconds = WARNING_DURATION_S
-    void recordActivity('IDLE', idleSeconds).catch(() => { /* non-fatal */ })
+    void recordActivity('IDLE', WARNING_DURATION_S).catch(() => { /* non-fatal */ })
   }, [stopCountdown])
 
   const handleExpire = useCallback((): void => {
@@ -159,18 +158,21 @@ export default function SessionGuard() {
     onExpire:      handleExpire,
   })
 
-  // ── "Stay logged in" handler ───────────────────────────────────────────────
+  // ── "Stay logged in" ──────────────────────────────────────────────────────
 
   const handleStayLoggedIn = useCallback((): void => {
     setShowWarning(false)
     stopCountdown()
   }, [stopCountdown])
 
-  // ── Logout now handler ─────────────────────────────────────────────────────
+  // ── "LOG OUT" button in the modal — user-initiated → "/" ──────────────────
 
   const handleLogoutNow = useCallback((): void => {
-    handleExpireNow('user_initiated')
-  }, [handleExpireNow])
+    setShowWarning(false)
+    stopCountdown()
+    // User explicitly clicked "LOG OUT" → landing page
+    logout({ redirectTo: '/', reason: 'user_initiated' })
+  }, [logout, stopCountdown])
 
   // ── Cleanup on unmount ─────────────────────────────────────────────────────
 
@@ -180,8 +182,8 @@ export default function SessionGuard() {
 
   // ── Format countdown ───────────────────────────────────────────────────────
 
-  const mins = Math.floor(countdown / 60)
-  const secs = countdown % 60
+  const mins  = Math.floor(countdown / 60)
+  const secs  = countdown % 60
   const countdownLabel = `${mins}:${String(secs).padStart(2, '0')}`
   const urgency = countdown <= 30
 
@@ -257,9 +259,9 @@ export default function SessionGuard() {
                   animate={{ width: `${(countdown / WARNING_DURATION_S) * 100}%` }}
                   transition={{ duration: 0.9, ease: 'linear' }}
                   style={{
-                    height:     '100%',
+                    height:       '100%',
                     borderRadius: 2,
-                    background: urgency
+                    background:   urgency
                       ? 'linear-gradient(90deg, #f8717155, #f87171)'
                       : 'linear-gradient(90deg, #c9a84c55, #c9a84c)',
                   }}

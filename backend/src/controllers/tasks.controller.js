@@ -8,6 +8,7 @@ const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
 const { validatePagination } = require('../utils/validate');
 const { randomUUID } = require('crypto');
 const logger = require('../utils/logger');
+const { canSeeNotes, stripNotes } = require('../utils/noteVisibility');
 
 async function getTasksOverview(req, res) {
   try {
@@ -63,11 +64,10 @@ async function getTaskById(req, res, next) {
       delete task.skills;
     }
 
-    // "Can See Notes: NO" logic
-    // (Assuming notes might be added to the model or are part of the description)
-    // If we have a 'notes' field, we would delete it here for relevant roles.
-    
-    return ok(res, task);
+    // Note visibility — strip private notes for roles that cannot see them
+    const taskResult = canSeeNotes(req.user.role) ? task : stripNotes(task);
+
+    return ok(res, taskResult);
   } catch (err) {
     next(err);
   }

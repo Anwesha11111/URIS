@@ -24,7 +24,9 @@ const teamRoutes         = require('./src/routes/team.routes');
 
 const healthRoutes       = require('./src/routes/health.routes');
 const webhookRoutes      = require('./src/routes/webhook.routes');
+const supportRoutes      = require('./src/routes/support.routes');
 const { errorHandler } = require('./src/middleware/error.middleware');
+const { ipBlockMiddleware } = require('./src/middleware/ipBlock.middleware');
 
 const app = express();
 
@@ -67,6 +69,11 @@ app.use(apiLimiter);
 // runs first the raw body is consumed and verification will always fail.
 app.use('/webhooks', webhookRoutes);
 
+// ── IP block check ────────────────────────────────────────────────────────────
+// Must run after CORS/helmet but before any route handler.
+// Health checks are exempted inside the middleware itself.
+app.use(ipBlockMiddleware);
+
 app.use(express.json());
 
 // ── Minimal structured HTTP request log ──────────────────────────────────────
@@ -90,6 +97,9 @@ app.use('/intern',       internRoutes);
 app.use('/audit-logs',   auditLogRoutes);
 app.use('/activity',     activityRoutes);
 app.use('/teams',        teamRoutes);
+app.use('/support',      supportRoutes);
+app.use('/archive',      require('./src/routes/archive.routes'));
+app.use('/operational',  require('./src/routes/operational.routes'));
 app.use('/health',       healthRoutes);
 app.use('/',             nextcloudRoutes);
 app.use('/portfolio',   require('./src/routes/portfolio.routes.js'));

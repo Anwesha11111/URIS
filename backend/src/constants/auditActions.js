@@ -29,17 +29,26 @@ const AUDIT_ACTIONS = Object.freeze({
 
   // ── Alerts ─────────────────────────────────────────────────────────────────
   RESOLVE_ALERT:   'RESOLVE_ALERT',
+
+  // ── Phase 2: Security & Governance ────────────────────────────────────────
+  BLOCK_IP:        'BLOCK_IP',
+  UNBLOCK_IP:      'UNBLOCK_IP',
+  CHANGE_USER_ROLE:'CHANGE_USER_ROLE',
 });
 
 /**
  * Audit entity constants — the type of record being acted on.
  */
 const AUDIT_ENTITIES = Object.freeze({
-  USER:   'USER',
-  TASK:   'TASK',
-  SCORE:  'SCORE',
-  REVIEW: 'REVIEW',
-  ALERT:  'ALERT',
+  USER:    'USER',
+  TASK:    'TASK',
+  SCORE:   'SCORE',
+  REVIEW:  'REVIEW',
+  ALERT:   'ALERT',
+  SYSTEM:  'SYSTEM',
+  SUPPORT: 'SUPPORT',
+  CONFIG:  'CONFIG',
+  INTERN:  'INTERN',
 });
 
 module.exports = { AUDIT_ACTIONS, AUDIT_ENTITIES };

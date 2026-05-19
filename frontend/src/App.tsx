@@ -19,8 +19,12 @@ import AuditLogs          from './features/admin/AuditLogs'
 import Notifications      from './pages/Notifications'
 import Portfolio          from './pages/Portfolio'
 import PortfolioEdit      from './pages/PortfolioEdit'
+import Support            from './pages/Support'
+import SupportAdmin       from './pages/SupportAdmin'
+import UserLifecycle      from './pages/UserLifecycle'
 import { useAuthStore, selectIsAuthenticated, selectIsAdmin } from './store/authStore'
 import { useAlertStore } from './store/alertStore'
+import { ROLES } from './constants/roles'
 
 function AlertPollingManager() {
   const isAuthenticated = useAuthStore(selectIsAuthenticated)
@@ -79,6 +83,27 @@ export default function App() {
             element={<ProtectedRoute adminOnly><AdminOverview /></ProtectedRoute>} />
           <Route path="/audit-logs"
             element={<ProtectedRoute adminOnly><AuditLogs /></ProtectedRoute>} />
+
+          {/* Phase 3: Support system — interns submit, admins/leads manage */}
+          <Route path="/support"
+            element={<ProtectedRoute><Support /></ProtectedRoute>} />
+          <Route path="/support-admin"
+            element={
+              <ProtectedRoute allowRoles={[
+                ROLES.CORE_ADMIN, ROLES.TECHNICAL_LEAD, ROLES.OPERATIONS_LEAD,
+                ROLES.RESEARCH_LEAD, ROLES.OPERATIONS_PROGRAM_MANAGER,
+              ]}>
+                <SupportAdmin />
+              </ProtectedRoute>
+            } />
+
+          {/* Phase 3: User lifecycle — CORE_ADMIN only */}
+          <Route path="/user-lifecycle"
+            element={
+              <ProtectedRoute allowRoles={[ROLES.CORE_ADMIN]}>
+                <UserLifecycle />
+              </ProtectedRoute>
+            } />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />

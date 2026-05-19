@@ -61,3 +61,77 @@ export async function approveUser(userId: string): Promise<void> {
 export async function finishInternship(internId: string): Promise<void> {
   await api.post('/admin/finish-internship', { internId })
 }
+
+// ── Phase 2: IP Block Management ─────────────────────────────────────────────
+
+export interface BlockedIP {
+  id:          string
+  ipAddress:   string
+  reason:      string | null
+  blockedAt:   string
+  expiresAt:   string | null
+  blockedById: string | null
+}
+
+export async function listBlockedIPs(): Promise<BlockedIP[]> {
+  const res = await api.get<{ success: boolean; data: BlockedIP[] }>('/admin/blocked-ips')
+  return res.data.data
+}
+
+export async function blockIP(payload: {
+  ipAddress: string
+  reason?:   string
+  expiresAt?: string   // ISO date string, omit for permanent
+}): Promise<BlockedIP> {
+  const res = await api.post<{ success: boolean; data: BlockedIP }>('/admin/block-ip', payload)
+  return res.data.data
+}
+
+export async function unblockIP(ipAddress: string): Promise<void> {
+  await api.post('/admin/unblock-ip', { ipAddress })
+}
+
+// ── Phase 2: Login Log Viewer ─────────────────────────────────────────────────
+
+export interface LoginLogEntry {
+  id:         string
+  userId:     string | null
+  email:      string
+  ipAddress:  string
+  userAgent:  string | null
+  success:    boolean
+  failReason: string | null
+  createdAt:  string
+}
+
+export interface LoginLogResponse {
+  logs:       LoginLogEntry[]
+  pagination: { page: number; limit: number; total: number; pages: number }
+}
+
+export async function getLoginLogs(params?: {
+  page?:      number
+  limit?:     number
+  success?:   boolean
+  ipAddress?: string
+  email?:     string
+}): Promise<LoginLogResponse> {
+  const res = await api.get<{ success: boolean; data: LoginLogResponse }>('/admin/login-logs', {
+    params,
+  })
+  return res.data.data
+}
+
+// ── Phase 2: Role Change (Promotion-safe) ─────────────────────────────────────
+
+export async function changeUserRole(payload: {
+  userId:  string
+  newRole: string
+  reason?: string
+}): Promise<{ userId: string; previousRole: string; newRole: string }> {
+  const res = await api.post<{
+    success: boolean
+    data: { userId: string; previousRole: string; newRole: string }
+  }>('/admin/change-role', payload)
+  return res.data.data
+}

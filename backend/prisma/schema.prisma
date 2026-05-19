@@ -29,20 +29,40 @@ enum Role {
   PAST_EMPLOYEE
 }
 
+// UserStatus — enterprise lifecycle states for a user account.
+// ACTIVE   : normal, can log in
+// INACTIVE : temporarily disabled (e.g. on leave), cannot log in
+// ARCHIVED : soft-archived, data preserved, cannot log in
+// REMOVED  : marked for removal, data preserved for compliance
+//
+// The existing `status` TEXT column on User is kept for backward compatibility
+// and continues to drive auth logic ("active" | "pending" | "alumni").
+// This enum is used by the new ArchivedUser model and will gradually replace
+// the free-text column in a future migration.
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+  REMOVED
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  password  String     // bcrypt hash only — never plain text
-  name      String     @default("")   // display name supplied at registration
-  role      Role       @default(TECHNICAL_INTERN)
-  status    String     @default("active")  // "active" | "pending" | "alumni"
-  createdAt DateTime   @default(now())
-  intern    Intern?
-  teams     UserTeam[]
+  id         String     @id @default(uuid())
+  email      String     @unique
+  password   String     // bcrypt hash only — never plain text
+  name       String     @default("")   // display name supplied at registration
+  role       Role       @default(TECHNICAL_INTERN)
+  status     String     @default("active")  // "active" | "pending" | "alumni"
+  createdAt  DateTime   @default(now())
+  intern     Intern?
+  teams      UserTeam[]
+  activities Activity[]
+  auditLogs  AuditLog[]
+  supportRequests SupportRequest[]
 }
 
 model Intern {
@@ -67,6 +87,8 @@ model Intern {
   capacityScore     CapacityScore?
   reviews           Review[]
   scoreHistory      ScoreHistory[]
+  digests           InternDigest[]
+  syncLogs          SyncLog[]
 }
 
 model AvailabilitySlot {
@@ -107,6 +129,7 @@ model Task {
 
   intern        Intern    @relation(fields: [internId], references: [id])
   reviews       Review[]
+  alerts        Alert[]
 }
 
 model CredibilityScore {
@@ -146,6 +169,7 @@ model Review {
   complexity Float
   createdAt  DateTime @default(now())
 
+  @@unique([internId, taskId], name: "Review_internId_taskId_key", map: "Review_internId_taskId_key")
   @@index([taskId])
 }
 
@@ -154,6 +178,7 @@ model Alert {
   internId  String
   type      String
   taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
   message   String
   severity  String   @default("warning")  // "warning" | "critical"
   resolved  Boolean  @default(false)
@@ -162,6 +187,7 @@ model Alert {
   @@index([internId])
   @@index([severity])
   @@index([resolved])
+  @@index([internId, resolved])
 }
 
 model ScoreHistory {
@@ -171,11 +197,15 @@ model ScoreHistory {
   score     Float
   type      String   // "performance" | "credibility" | "capacity"
   createdAt DateTime @default(now())
+
+  @@index([internId, type, createdAt(sort: Desc)])
+  @@index([createdAt])
 }
 
 model SyncLog {
   id        String   @id @default(uuid())
   internId  String?
+  intern    Intern?  @relation(fields: [internId], references: [id], onDelete: SetNull)
   filename  String
   status    String   @default("SUCCESS") // "SUCCESS" | "FAILED"
   error     String?
@@ -198,7 +228,7 @@ model UserTeam {
   id       String    @id @default(uuid())
   userId   String
   teamId   String
-  role     String    @default("member")  // "member" | "lead"
+  role     String    @default("member")  // "member" | "lead" — enforced by DB CHECK constraint
   joinedAt DateTime  @default(now())
   leftAt   DateTime?                     // null = currently active member
 
@@ -216,7 +246,8 @@ model UserTeam {
 
 model Activity {
   id        String   @id @default(uuid())
-  userId    String                        // always set — activity is user-specific
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      String                        // ACTIVITY_TYPES constant: LOGIN, LOGOUT, TASK_WORK, IDLE
   duration  Int?                          // seconds; null for point-in-time events (LOGIN/LOGOUT)
   timestamp DateTime @default(now())
@@ -233,6 +264,7 @@ model Activity {
 model AuditLog {
   id        String   @id @default(uuid())
   userId    String?                      // null for system-generated events
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action    String                       // e.g. "LOGIN", "CREATE_TASK"
   entity    String                       // e.g. "USER", "TASK", "SCORE"
   entityId  String?                      // id of the affected record
@@ -264,6 +296,7 @@ model Config {
 model InternDigest {
   id               String   @id @default(uuid())
   internId         String
+  intern           Intern   @relation(fields: [internId], references: [id], onDelete: Cascade)
   weekStart        DateTime @db.Date      // Monday of the digest week
   capacityScore    Float                  // snapshot from ScoreHistory
   credibilityScore Float                  // snapshot from CredibilityScore
@@ -276,4 +309,134 @@ model InternDigest {
   @@unique([internId, weekStart])
   @@index([internId])
   @@index([weekStart])
+}
+
+// ---------------------------------------------------------------------------
+// User Archive Foundation (Phase 1)
+// ---------------------------------------------------------------------------
+// Preserves a complete snapshot of a user record at the time of archival.
+// This is an additive, non-destructive model — no existing data is touched.
+//
+// Lifecycle:
+//   ACTIVE → INACTIVE → ARCHIVED → REMOVED
+//
+// The original User row is NOT deleted. ArchivedUser is a point-in-time
+// snapshot written by the archive workflow (to be implemented in Phase 2).
+// The `status` field uses the new UserStatus enum for type safety.
+//
+// archivedBy is nullable to support system-initiated archival (e.g. scheduler).
+
+model ArchivedUser {
+  id           String     @id @default(uuid())
+  originalId   String     @unique          // the User.id that was archived
+  snapshot     Json                        // full user record at time of archival
+  status       UserStatus @default(ARCHIVED)
+  archivedAt   DateTime   @default(now())
+  archivedById String?                     // User.id of the admin who triggered archival
+
+  @@index([originalId])
+  @@index([archivedAt])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// User Role History (Phase 2 — Feature 7)
+// ---------------------------------------------------------------------------
+// Tracks every role change for a user, enabling promotion-safe architecture.
+// The user's identity (User.id) is preserved across all role changes.
+// No data is deleted — this is an append-only audit trail.
+//
+// changedById is nullable to support system-initiated role changes.
+// previousRole / newRole use the Role enum for type safety.
+
+model UserRoleHistory {
+  id           String   @id @default(uuid())
+  userId       String                        // the user whose role changed
+  previousRole Role                          // role before the change
+  newRole      Role                          // role after the change
+  changedAt    DateTime @default(now())
+  changedById  String?                       // admin who made the change (null = system)
+  reason       String?                       // optional justification
+
+  @@index([userId])
+  @@index([changedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Login Log (Phase 2 — Feature 8)
+// ---------------------------------------------------------------------------
+// Records every login attempt (success and failure) with IP and user-agent.
+// Used for security auditing and anomaly detection foundation.
+// userId is nullable — failed attempts for unknown emails have no userId.
+
+model LoginLog {
+  id          String   @id @default(uuid())
+  userId      String?                        // null for failed attempts with unknown email
+  email       String                         // attempted email (always recorded)
+  ipAddress   String                         // client IP (from X-Forwarded-For or socket)
+  userAgent   String?                        // User-Agent header
+  success     Boolean                        // true = successful login, false = failed
+  failReason  String?                        // e.g. "invalid_password", "pending_account"
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([ipAddress])
+  @@index([email])
+  @@index([createdAt])
+  @@index([success])
+}
+
+// ---------------------------------------------------------------------------
+// Blocked IP (Phase 2 — Feature 8)
+// ---------------------------------------------------------------------------
+// Stores IP addresses that are blocked from accessing the system.
+// Blocking is enforced by the ipBlock middleware before any route handler runs.
+// expiresAt is nullable — null means the block is permanent.
+// blockedById is nullable to support automated/system-initiated blocks.
+
+model BlockedIP {
+  id          String    @id @default(uuid())
+  ipAddress   String    @unique              // the blocked IP (IPv4 or IPv6)
+  reason      String?                        // human-readable reason for the block
+  blockedAt   DateTime  @default(now())
+  expiresAt   DateTime?                      // null = permanent block
+  blockedById String?                        // admin who created the block
+
+  @@index([ipAddress])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Support Request (Phase 3 — Feature 3, extended in Phase 5)
+// ---------------------------------------------------------------------------
+// Allows interns to contact operations/admins/leads for blockers, emergencies,
+// and operational concerns. Lightweight — not a full chat system.
+//
+// status lifecycle: OPEN → IN_PROGRESS → RESOLVED | CLOSED
+// priority:         LOW | MEDIUM | HIGH | URGENT | CRITICAL
+// category:         TECHNICAL_ISSUE | ACCESS_PROBLEM | EMERGENCY | TASK_BLOCKER
+//                   HR_OPERATIONS | INFRASTRUCTURE | GENERAL | OTHER
+
+model SupportRequest {
+  id            String    @id @default(cuid())
+  userId        String                        // the user who submitted the request
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject       String                        // short summary (max 120 chars)
+  message       String                        // full message body
+  priority      String    @default("MEDIUM")  // LOW | MEDIUM | HIGH | URGENT | CRITICAL
+  category      String    @default("GENERAL") // see category constants above
+  status        String    @default("OPEN")    // OPEN | IN_PROGRESS | RESOLVED | CLOSED
+  assignedToId  String?                       // admin/lead assigned to handle this
+  internalNotes String?                       // admin/ops only — never returned to interns
+  closedById    String?                       // who closed/resolved the request
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([createdAt])
+  @@index([assignedToId])
 }

@@ -125,7 +125,6 @@ async function submitReview(req, res, next) {
         timeliness: timelinessScore,
         initiative: independenceScore,   // DB column kept as 'initiative' for backward compat
         complexity: taskComplexity,      // use actual task complexity for weighted performance index
-        ...(reviewNotes ? { reviewNotes } : {}),
       },
     });
 
@@ -143,8 +142,8 @@ async function submitReview(req, res, next) {
         internId,
         taskId,
         type:     'review_submitted',
-        severity: 'warning',
-        message:  `Your work on task has been reviewed. Score: ${perTaskPps}/5 (${scoreLabel}).${reviewNotes ? ` Note: "${reviewNotes}"` : ''}`,
+        severity: perTaskPps >= 3 ? 'warning' : 'critical',  // 'warning' = neutral/positive, 'critical' = needs attention
+        message:  `Your work on task has been reviewed. Score: ${perTaskPps}/5 (${scoreLabel}).`,
       },
     });
 

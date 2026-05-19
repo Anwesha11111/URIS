@@ -319,11 +319,11 @@ export default function AdminOverview() {
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }} className="glass-card rounded-sm">
 
-                {/* Tabs */}
-                <div className="flex flex-wrap" style={{ borderBottom: '1px solid rgba(201,168,76,0.1)' }}>
+                {/* Tabs — horizontally scrollable on mobile */}
+                <div className="flex overflow-x-auto scrollbar-none" style={{ borderBottom: '1px solid rgba(201,168,76,0.1)' }}>
                   {tabs.map(t => (
                     <button key={t.key} onClick={() => setActiveTab(t.key)}
-                      className="flex-1 py-3 nav-label text-[0.55rem] transition-all duration-200 flex flex-col items-center gap-1 relative"
+                      className="flex-shrink-0 flex-1 min-w-[72px] py-3 nav-label text-[0.55rem] transition-all duration-200 flex flex-col items-center gap-1 relative"
                       style={{
                         background: activeTab === t.key ? 'rgba(201,168,76,0.08)' : 'transparent',
                         borderBottom: activeTab === t.key ? '2px solid #c9a84c' : '2px solid transparent',
@@ -469,8 +469,11 @@ export default function AdminOverview() {
                                 style={{ background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.15)' }}>
                                 <div className="min-w-0 flex-1">
                                   <p className="font-body text-sm text-frost/80 truncate">{u.email}</p>
-                                  <p className="nav-label text-[0.5rem] text-gold/40 mt-0.5">
-                                    ADMIN · {new Date(u.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  <p className="nav-label text-[0.5rem] text-gold/50 mt-0.5 truncate">
+                                    {u.role.replace(/_/g, ' ')}
+                                  </p>
+                                  <p className="nav-label text-[0.45rem] text-ice/25 mt-0.5">
+                                    {new Date(u.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                                   </p>
                                 </div>
                                 <motion.button

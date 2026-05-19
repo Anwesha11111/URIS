@@ -87,6 +87,14 @@ const VALID_BLOCKER_TYPES = [
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 
+// Roles allowed via public self-registration
+const PUBLIC_SIGNUP_ROLES = [
+  'TECHNICAL_INTERN',
+  'OPERATIONS_INTERN',
+  'RESEARCH_INTERN',
+  'ORENDA_MEMBER',
+];
+
 const register = Joi.object({
   body: Joi.object({
     email:    Joi.string().email().required().messages({
@@ -97,8 +105,9 @@ const register = Joi.object({
       'string.min':   'password must be at least 6 characters',
       'any.required': 'password is required',
     }),
-    role: Joi.string().valid(...VALID_ROLES).default('TECHNICAL_INTERN').messages({
-      'any.only': `role must be one of: ${[...VALID_ROLES].join(', ')}`,
+    name: Joi.string().trim().max(100).optional().allow('', null),
+    role: Joi.string().valid(...PUBLIC_SIGNUP_ROLES).default('TECHNICAL_INTERN').messages({
+      'any.only': `Public registration only allows intern roles. Contact an administrator for other access.`,
     }),
   }).required(),
   params: Joi.object(),

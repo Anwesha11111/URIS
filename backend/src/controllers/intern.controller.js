@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const { computePerformanceIndex } = require('../services/performanceEngine');
+const { getRpiWindowStart } = require('../services/performanceEngine');
 const { ok, notFound } = require('../utils/respond');
 const logger = require('../utils/logger');
 
@@ -9,7 +10,10 @@ async function getInternDashboard(req, res, next) {
       where:   { userId: req.user.id },
       include: {
         credibility: true,
-        reviews:     true,
+        // Only reviews within the rolling RPI window — matches admin overview behaviour
+        reviews: {
+          where:   { createdAt: { gte: getRpiWindowStart() } },
+        },
         // Fetch the most recent capacity score from the new pipeline
         scoreHistory: {
           where:   { type: 'capacity' },
@@ -27,7 +31,7 @@ async function getInternDashboard(req, res, next) {
     logger.info({ internId }, 'Intern dashboard fetched');
 
     const assignedTasks = await prisma.task.findMany({
-      where:  { internId, status: { notIn: ['completed'] } },
+      where:  { internId, status: { notIn: ['completed'] }, deletedAt: null },
       select: { id: true, title: true, status: true, complexity: true, progressPct: true, hasBlocker: true, deadline: true },
     });
 

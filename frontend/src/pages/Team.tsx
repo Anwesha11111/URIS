@@ -108,7 +108,7 @@ export default function Team() {
 
           {/* Team grid */}
           {!loading && !error && team.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {team.map((intern, i) => (
                 <motion.div key={intern.id}
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}

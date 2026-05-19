@@ -22,6 +22,11 @@ async function getShortlist(req, res, next) {
     }
 
     const dbInterns = await prisma.intern.findMany({
+      where: {
+        // Phase 6: Only include interns whose user account is active.
+        // Inactive, archived, and removed users must not appear in assignment flows.
+        user: { status: 'active' },
+      },
       include: {
         credibility: true,
         tasks:       { where: { status: 'active' } },

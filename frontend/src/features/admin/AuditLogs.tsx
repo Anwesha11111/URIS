@@ -202,10 +202,10 @@ export default function AuditLogs() {
           {/* Table */}
           {!loading && !error && logs.length > 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              transition={{ delay: 0.15 }} className="glass-card rounded-sm">
+              transition={{ delay: 0.15 }} className="glass-card rounded-sm overflow-hidden">
 
-              {/* Table header */}
-              <div className="px-6 py-3 grid grid-cols-12 gap-4"
+              {/* Desktop table header — hidden on mobile */}
+              <div className="hidden md:grid px-6 py-3 grid-cols-12 gap-4"
                 style={{ borderBottom: '1px solid rgba(201,168,76,0.1)' }}>
                 {[
                   { label: 'ACTION',    cols: 'col-span-3' },
@@ -234,59 +234,84 @@ export default function AuditLogs() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.03 }}>
 
-                        {/* Main row */}
+                        {/* Main row — responsive: stacked on mobile, grid on desktop */}
                         <button
                           onClick={() => setExpanded(isOpen ? null : log.id)}
-                          className="w-full px-6 py-3.5 grid grid-cols-12 gap-4 items-center text-left
-                            hover:bg-white/[0.02] transition-colors">
+                          className="w-full px-4 md:px-6 py-3.5 text-left hover:bg-white/[0.02] transition-colors">
 
-                          {/* Action badge */}
-                          <div className="col-span-3 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                              style={{ background: color }} />
-                            <span className="nav-label text-[0.6rem] px-2 py-0.5 rounded-sm"
-                              style={{ background: `${color}15`, color }}>
-                              {log.action}
-                            </span>
-                          </div>
-
-                          {/* Entity */}
-                          <div className="col-span-2">
-                            <span className="nav-label text-[0.6rem] text-ice/50">{log.entity}</span>
-                            {log.entityId && (
-                              <p className="font-mono text-[0.5rem] text-ice/25 truncate mt-0.5">
-                                {log.entityId.slice(0, 8)}…
+                          {/* Mobile layout */}
+                          <div className="flex items-start justify-between gap-3 md:hidden">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                  style={{ background: color }} />
+                                <span className="nav-label text-[0.6rem] px-2 py-0.5 rounded-sm"
+                                  style={{ background: `${color}15`, color }}>
+                                  {log.action}
+                                </span>
+                                <span className="nav-label text-[0.5rem] text-ice/40">{log.entity}</span>
+                              </div>
+                              <p className="font-body text-xs text-frost/60 truncate">
+                                {log.userName ?? 'system'}
                               </p>
-                            )}
-                          </div>
-
-                          {/* User */}
-                          <div className="col-span-3">
-                            {log.userName ? (
-                              <>
-                                <span className="font-body text-xs text-frost/70 truncate block">
-                                  {log.userName.split('@')[0]}
-                                </span>
-                                <span className="font-mono text-[0.5rem] text-ice/25 truncate block">
-                                  {log.userName}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="font-mono text-xs text-ice/30">system</span>
-                            )}
-                          </div>
-
-                          {/* Timestamp */}
-                          <div className="col-span-3">
-                            <p className="font-body text-xs text-frost/70">{date}</p>
-                            <p className="font-mono text-[0.55rem] text-ice/35 mt-0.5">{time}</p>
-                          </div>
-
-                          {/* Expand chevron */}
-                          <div className="col-span-1 flex justify-end">
-                            <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                              <p className="font-mono text-[0.5rem] text-ice/30 mt-0.5">{date} · {time}</p>
+                            </div>
+                            <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}
+                              className="flex-shrink-0 mt-1">
                               <ChevronRight size={12} className="text-ice/25" style={{ transform: 'rotate(90deg)' }} />
                             </motion.div>
+                          </div>
+
+                          {/* Desktop layout */}
+                          <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+                            {/* Action badge */}
+                            <div className="col-span-3 flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{ background: color }} />
+                              <span className="nav-label text-[0.6rem] px-2 py-0.5 rounded-sm"
+                                style={{ background: `${color}15`, color }}>
+                                {log.action}
+                              </span>
+                            </div>
+
+                            {/* Entity */}
+                            <div className="col-span-2">
+                              <span className="nav-label text-[0.6rem] text-ice/50">{log.entity}</span>
+                              {log.entityId && (
+                                <p className="font-mono text-[0.5rem] text-ice/25 truncate mt-0.5">
+                                  {log.entityId.slice(0, 8)}…
+                                </p>
+                              )}
+                            </div>
+
+                            {/* User */}
+                            <div className="col-span-3">
+                              {log.userName ? (
+                                <>
+                                  <span className="font-body text-xs text-frost/70 truncate block">
+                                    {log.userName.split('@')[0]}
+                                  </span>
+                                  <span className="font-mono text-[0.5rem] text-ice/25 truncate block">
+                                    {log.userName}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="font-mono text-xs text-ice/30">system</span>
+                              )}
+                            </div>
+
+                            {/* Timestamp */}
+                            <div className="col-span-3">
+                              <p className="font-body text-xs text-frost/70">{date}</p>
+                              <p className="font-mono text-[0.55rem] text-ice/35 mt-0.5">{time}</p>
+                            </div>
+
+                            {/* Expand chevron */}
+                            <div className="col-span-1 flex justify-end">
+                              <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                                <ChevronRight size={12} className="text-ice/25" style={{ transform: 'rotate(90deg)' }} />
+                              </motion.div>
+                            </div>
                           </div>
                         </button>
 
@@ -299,9 +324,9 @@ export default function AuditLogs() {
                               exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.2 }}
                               style={{ overflow: 'hidden', borderTop: '1px solid rgba(201,168,76,0.06)' }}>
-                              <div className="px-6 py-4 ml-6">
+                              <div className="px-4 md:px-6 py-4 md:ml-6">
                                 <p className="nav-label text-[0.5rem] text-gold/40 mb-2">METADATA</p>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                   {Object.entries(log.metadata).map(([key, val]) => (
                                     <div key={key}>
                                       <p className="nav-label text-[0.5rem] text-ice/30 mb-0.5">
@@ -329,7 +354,7 @@ export default function AuditLogs() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-6 py-4"
+                <div className="flex items-center justify-between px-4 md:px-6 py-4"
                   style={{ borderTop: '1px solid rgba(201,168,76,0.1)' }}>
                   <span className="nav-label text-[0.55rem] text-ice/30">
                     PAGE {page} OF {totalPages} · {total} RECORDS
@@ -338,15 +363,17 @@ export default function AuditLogs() {
                     <motion.button whileTap={{ scale: 0.95 }}
                       disabled={page <= 1}
                       onClick={() => setPage(p => Math.max(1, p - 1))}
-                      className="w-7 h-7 rounded-sm flex items-center justify-center transition-colors disabled:opacity-30"
-                      style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)' }}>
+                      className="w-8 h-8 rounded-sm flex items-center justify-center transition-colors disabled:opacity-30"
+                      style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)' }}
+                      aria-label="Previous page">
                       <ChevronLeft size={12} className="text-gold" />
                     </motion.button>
                     <motion.button whileTap={{ scale: 0.95 }}
                       disabled={page >= totalPages}
                       onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      className="w-7 h-7 rounded-sm flex items-center justify-center transition-colors disabled:opacity-30"
-                      style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)' }}>
+                      className="w-8 h-8 rounded-sm flex items-center justify-center transition-colors disabled:opacity-30"
+                      style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)' }}
+                      aria-label="Next page">
                       <ChevronRight size={12} className="text-gold" />
                     </motion.button>
                   </div>

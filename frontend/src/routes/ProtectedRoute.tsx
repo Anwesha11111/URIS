@@ -12,7 +12,7 @@
  * ─────
  *  allowRoles  — array of roles that may access this route.
  *                If omitted, any authenticated user is allowed.
- *  adminOnly   — shorthand for allowRoles={[ROLES.ADMIN]}.
+ *  adminOnly   — shorthand for allowRoles={ADMIN_ROLES}.
  *                Kept for backward compatibility.
  *
  * Usage
@@ -20,12 +20,12 @@
  *  // Any authenticated user
  *  <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
  *
- *  // Admin only (shorthand)
+ *  // Admin-tier only (shorthand — covers all lead/admin roles)
  *  <Route path="/admin" element={<ProtectedRoute adminOnly><AdminOverview /></ProtectedRoute>} />
  *
- *  // Explicit role list (scalable — add ROLES.TEAM_LEAD when ready)
+ *  // Explicit role list
  *  <Route path="/reports" element={
- *    <ProtectedRoute allowRoles={[ROLES.ADMIN]}>
+ *    <ProtectedRoute allowRoles={[ROLES.CORE_ADMIN, ROLES.TECHNICAL_LEAD]}>
  *      <Reports />
  *    </ProtectedRoute>
  *  } />
@@ -33,7 +33,7 @@
 
 import { Navigate } from 'react-router-dom'
 import { useAuthStore, selectIsAuthenticated, selectUser } from '../store/authStore'
-import { ROLES, type Role } from '../constants/roles'
+import { ADMIN_ROLES, type Role } from '../constants/roles'
 
 interface ProtectedRouteProps {
   children:    React.ReactNode
@@ -43,8 +43,8 @@ interface ProtectedRouteProps {
    */
   allowRoles?: Role[]
   /**
-   * Shorthand for allowRoles={[ROLES.ADMIN]}.
-   * @deprecated Prefer allowRoles for clarity.
+   * Shorthand for allowRoles={ADMIN_ROLES} — covers all lead/admin roles.
+   * @deprecated Prefer allowRoles for explicit control.
    */
   adminOnly?:  boolean
 }
@@ -58,7 +58,7 @@ export default function ProtectedRoute({
   const user            = useAuthStore(selectUser)
   const token           = useAuthStore(s => s.token)
 
-  // Not logged in → send to login
+  // Not logged in → send to login.
   // Check both isAuthenticated and token directly to handle the Zustand
   // persist rehydration race: login() sets token synchronously but
   // isAuthenticated may lag one render cycle on initial hydration.
@@ -67,7 +67,7 @@ export default function ProtectedRoute({
   }
 
   // Resolve the effective allowed roles
-  const effectiveRoles: Role[] = allowRoles ?? (adminOnly ? [ROLES.ADMIN] : [])
+  const effectiveRoles: Role[] = allowRoles ?? (adminOnly ? ADMIN_ROLES : [])
 
   // If a role restriction is set, enforce it
   if (effectiveRoles.length > 0) {

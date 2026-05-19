@@ -83,7 +83,10 @@ function CountdownTimer() {
 }
 
 export default function Availability() {
-  const isAdmin = useAuthStore(s => s.user?.role === 'admin')
+  const isAdmin = useAuthStore(s => {
+    const role = s.user?.role || ''
+    return role === 'core_admin' || role.includes('lead') || role.includes('manager') || role === 'admin'
+  })
   const navigate = useNavigate()
 
   useEffect(() => {

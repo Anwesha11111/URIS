@@ -175,8 +175,8 @@ async function seed() {
 
   // ── 3. Interns ────────────────────────────────────────────────────────────
   const monday = thisMonday();
-  const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6); // +6 = Sunday (spec requires exactly 7 days)
 
   for (const def of INTERN_DEFS) {
 
@@ -211,7 +211,7 @@ async function seed() {
       create: {
         internId:          intern.id,
         weekStart:         monday,
-        weekEnd:           friday,
+        weekEnd:           sunday,
         maxFreeBlockHours: def.maxFreeBlockHours,
         busyBlocks:        def.busyBlocks,
       },

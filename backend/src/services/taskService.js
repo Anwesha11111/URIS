@@ -52,7 +52,15 @@ async function syncTasksFromPlane() {
       const assigneeId = issue.assignees?.[0] ?? null;
       if (!assigneeId) continue;
 
-      await prisma.intern.upsert({ where: { id: assigneeId }, update: {}, create: { id: assigneeId } });
+      // Only sync tasks for interns that already exist in URIS.
+      // Do NOT create bare Intern records from Plane UUIDs — Plane assignee IDs
+      // are not URIS intern IDs. Creating phantom interns breaks every query
+      // that joins Intern → User (dashboard, alerts, digests, etc.).
+      const existingIntern = await prisma.intern.findUnique({ where: { id: assigneeId } });
+      if (!existingIntern) {
+        logger.warn({ planeAssigneeId: assigneeId, issueId: issue.id }, 'syncTasksFromPlane — no matching URIS intern for Plane assignee, skipping');
+        continue;
+      }
 
       await prisma.task.upsert({
         where: { planeTaskId: issue.id },
@@ -113,7 +121,12 @@ async function syncSingleIssueFromPlane(issueId) {
       return { synced: 0 };
     }
 
-    await prisma.intern.upsert({ where: { id: assigneeId }, update: {}, create: { id: assigneeId } });
+    // Only sync for interns that already exist in URIS — do not create phantom records.
+    const existingIntern = await prisma.intern.findUnique({ where: { id: assigneeId } });
+    if (!existingIntern) {
+      logger.warn({ planeAssigneeId: assigneeId, issueId }, 'syncSingleIssueFromPlane — no matching URIS intern for Plane assignee, skipping');
+      return { synced: 0 };
+    }
 
     await prisma.task.upsert({
       where: { planeTaskId: issue.id },
@@ -174,6 +187,7 @@ async function detectAndMarkStaleTasks() {
   const staleTasks = await prisma.task.findMany({
     where: {
       status:        { not: 'completed' },
+      deletedAt:     null,                    // fix #3: exclude soft-deleted tasks
       lastUpdatedAt: { lt: twoDaysAgo },
       deadline:      { lte: fiveDaysAhead, not: null }
     }
@@ -205,8 +219,9 @@ async function generateDeadlineAlerts() {
 
   const urgentTasks = await prisma.task.findMany({
     where: {
-      status:   { notIn: ['completed', 'stale'] },
-      deadline: { lte: in48Hours, gte: now },
+      status:    { notIn: ['completed', 'stale'] },
+      deletedAt: null,                              // fix #4: exclude soft-deleted tasks
+      deadline:  { lte: in48Hours, gte: now },
     },
   });
 
@@ -235,13 +250,22 @@ async function generateDeadlineAlerts() {
 }
 
 async function generateAvailabilityReminders() {
-  const monday = new Date();
-  const day = monday.getUTCDay();
+  // Build the Monday of the current week using pure UTC arithmetic
+  // to avoid timezone-dependent results when the server is not in UTC.
+  const now = new Date();
+  const monday = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  ));
+  const day  = monday.getUTCDay(); // 0 = Sun
   const diff = day === 0 ? -6 : 1 - day;
   monday.setUTCDate(monday.getUTCDate() + diff);
-  monday.setUTCHours(0, 0, 0, 0);
 
+  // Phase 6: Only generate reminders for interns whose user account is active.
+  // Inactive/archived/removed users should not appear in operational workflows.
   const allInterns = await prisma.intern.findMany({
+    where: { user: { status: 'active' } },
     select: { id: true, user: { select: { name: true, email: true } } },
   });
 
@@ -306,7 +330,9 @@ async function generateTaskReminders() {
 }
 
 async function getTasksOverviewForAllInterns() {
-  const interns = await prisma.intern.findMany({ 
+  // Phase 6: Only include interns whose user account is active in operational overviews.
+  const interns = await prisma.intern.findMany({
+    where: { user: { status: 'active' } },
     include: { 
       tasks: {
         where: { deletedAt: null }
@@ -395,7 +421,9 @@ async function getTaskFilter(user) {
 }
 
 async function generateFormReminders() {
+  // Phase 6: Only generate form reminders for interns with active user accounts.
   const allInterns = await prisma.intern.findMany({
+    where: { user: { status: 'active' } },
     select: { id: true, user: { select: { name: true, email: true } } },
   });
 
@@ -411,7 +439,7 @@ async function generateFormReminders() {
       data: {
         internId: intern.id,
         type:     'form_reminder',
-        severity: 'info',
+        severity: 'warning',
         message:  `Please fill out your 3-day update form (Tasks, Availability, and Report Attachment): ${formLink}`,
       },
     });

@@ -42,7 +42,15 @@ async function loginUser(req, res, next) {
       return validationError(res, errors[0]);
     }
 
-    const result = await login({ email, password });
+    // Extract client IP — respect X-Forwarded-For when behind a proxy/load balancer
+    const ipAddress = (
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      'unknown'
+    );
+    const userAgent = req.headers['user-agent'] || null;
+
+    const result = await login({ email, password, ipAddress, userAgent });
 
     return ok(res, result, 'Login successful.');
   } catch (err) {
@@ -54,15 +62,32 @@ async function loginUser(req, res, next) {
  * POST /auth/logout
  *
  * JWT is stateless — logout is client-side (clear the token).
- * This endpoint exists solely to record the logout event for activity tracking.
+ * This endpoint exists to record the logout event for audit and activity tracking.
  * Requires a valid token so we know who is logging out.
+ *
+ * Phase 4: Also records IP address and user-agent for security audit trail.
  */
 async function logoutUser(req, res) {
   const userId = req.user?.id;
+
+  // Extract client context for the audit record
+  const ipAddress = (
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req.socket?.remoteAddress ||
+    'unknown'
+  );
+  const userAgent = req.headers['user-agent'] || null;
+
   if (userId) {
+    // Fire-and-forget — never block the logout response on these writes
     void trackActivity(userId, ACTIVITY_TYPES.LOGOUT);
-    void logAction(userId, AUDIT_ACTIONS.LOGOUT, AUDIT_ENTITIES.USER, userId, {});
+    void logAction(userId, AUDIT_ACTIONS.LOGOUT, AUDIT_ENTITIES.USER, userId, {
+      ipAddress,
+      userAgent,
+      source: 'client_initiated',
+    });
   }
+
   return ok(res, null, 'Logged out.');
 }
 
