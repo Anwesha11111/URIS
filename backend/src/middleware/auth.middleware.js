@@ -71,6 +71,22 @@ function requireRole(...roles) {
 
   return (req, res, next) => {
     if (!req.user || !allowed.has(req.user.role)) {
+      const { logAction } = require('../utils/auditLogger');
+      
+      if (req.user) {
+        void logAction(
+          req.user.id, 
+          'UNAUTHORIZED_ACCESS', 
+          'SYSTEM', 
+          null, 
+          {
+            attemptedRole: req.user.role,
+            requiredRoles: roles,
+            path: req.originalUrl,
+            method: req.method
+          }
+        );
+      }
       return forbidden(res, 'Access denied. Insufficient permissions.');
     }
     next();

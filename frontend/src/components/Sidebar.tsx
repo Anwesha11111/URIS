@@ -5,17 +5,19 @@ import { useAuthStore, selectUser, selectIsAdmin } from '../store/authStore'
 import { useAlertStore } from '../store/alertStore'
 import TeamSwitcher from './TeamSwitcher'
 
+import { getPermissions } from '../utils/permissions'
+
 const allItems = [
-  { icon: LayoutDashboard, label: 'Overview',      to: '/dashboard',     adminOnly: false, internOnly: false },
-  { icon: CalendarDays,    label: 'Availability',  to: '/availability',  adminOnly: false, internOnly: true  },
-  { icon: ClipboardList,   label: 'Tasks',         to: '/tasks',         adminOnly: false, internOnly: false },
-  { icon: Bell,            label: 'Notifications', to: '/notifications', adminOnly: false, internOnly: true  },
-  { icon: Star,            label: 'Reviews',       to: '/review',        adminOnly: true,  internOnly: false },
-  { icon: Users,           label: 'Team',          to: '/team',          adminOnly: true,  internOnly: false },
-  { icon: Bell,            label: 'Alerts',        to: '/alerts',        adminOnly: true,  internOnly: false },
-  { icon: ShieldCheck,     label: 'Admin',         to: '/admin',         adminOnly: true,  internOnly: false },
-  { icon: ScrollText,      label: 'Audit Logs',    to: '/audit-logs',    adminOnly: true,  internOnly: false },
-  { icon: LayoutDashboard, label: 'Portfolio',     to: '/portfolio-edit', adminOnly: false, internOnly: true  },
+  { icon: LayoutDashboard, label: 'Overview',      to: '/dashboard' },
+  { icon: CalendarDays,    label: 'Availability',  to: '/availability' },
+  { icon: ClipboardList,   label: 'Tasks',         to: '/tasks' },
+  { icon: Bell,            label: 'Notifications', to: '/notifications' },
+  { icon: Star,            label: 'Reviews',       to: '/review' },
+  { icon: Users,           label: 'Team',          to: '/team' },
+  { icon: Bell,            label: 'Alerts',        to: '/alerts' },
+  { icon: ShieldCheck,     label: 'Admin',         to: '/admin' },
+  { icon: ScrollText,      label: 'Audit Logs',    to: '/audit-logs' },
+  { icon: LayoutDashboard, label: 'Portfolio',     to: '/portfolio-edit' },
 ]
 
 export default function Sidebar() {
@@ -28,11 +30,9 @@ export default function Sidebar() {
   // Read unread count from shared store — no local fetch
   const unread = useAlertStore(s => s.unread)
 
-  const items = allItems.filter(i => {
-    if (i.adminOnly && !isAdmin) return false
-    if (i.internOnly && isAdmin) return false
-    return true
-  })
+  const permissions = getPermissions(user?.role || '')
+  
+  const items = allItems.filter(i => permissions.modules.includes(i.to))
 
   return (
     <motion.aside

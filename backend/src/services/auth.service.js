@@ -32,9 +32,9 @@ async function register({ name, email, password, role }) {
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-  // Core Admins and Leads start as 'pending' — an existing Core Admin must approve them.
-  // Interns are immediately 'active'.
-  const status = (prismaRole === 'CORE_ADMIN' || prismaRole.includes('LEAD')) ? 'pending' : 'active';
+  // All new registrations (Admins, Leads, Interns) start as 'pending'.
+  // They must be approved by an existing Admin or Lead via the dashboard.
+  const status = 'pending';
 
   // Derive a display name: use the provided name if non-empty, otherwise fall
   // back to the email prefix so existing behaviour is preserved.

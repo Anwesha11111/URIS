@@ -84,8 +84,8 @@ export const useAuthStore = create<AuthState>()(
 
       // ── Derived ─────────────────────────────────────────────────────────────
       isAdmin: () => {
-        const role = get().user?.role
-        return role === 'admin'
+        const role = get().user?.role || ''
+        return role === 'core_admin' || role.includes('lead') || role.includes('manager') || role === 'admin'
       },
 
       // ── Aliases ─────────────────────────────────────────────────────────────

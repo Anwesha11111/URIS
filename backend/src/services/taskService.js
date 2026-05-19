@@ -279,6 +279,32 @@ async function generateAvailabilityReminders() {
   return created;
 }
 
+async function generateTaskReminders() {
+  const activeTasks = await prisma.task.findMany({
+    where: { status: 'active', deletedAt: null },
+  });
+
+  let created = 0;
+  for (const task of activeTasks) {
+    const existing = await prisma.alert.findFirst({
+      where: { taskId: task.id, type: 'task_reminder', resolved: false },
+    });
+    if (existing) continue;
+
+    await prisma.alert.create({
+      data: {
+        internId: task.internId,
+        taskId:   task.id,
+        type:     'task_reminder',
+        severity: 'warning',
+        message:  `Reminder: Please review and update your progress for task "${task.title}".`,
+      },
+    });
+    created++;
+  }
+  return created;
+}
+
 async function getTasksOverviewForAllInterns() {
   const interns = await prisma.intern.findMany({ 
     include: { 
@@ -379,5 +405,6 @@ module.exports = {
   getTLIBand, 
   generateDeadlineAlerts, 
   generateAvailabilityReminders,
+  generateTaskReminders,
   getTaskFilter
 };

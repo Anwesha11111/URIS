@@ -20,7 +20,7 @@
 
 const cron = require('node-cron');
 const logger = require('../utils/logger');
-const { syncTasksFromPlane, detectAndMarkStaleTasks, generateDeadlineAlerts, generateAvailabilityReminders } = require('./taskService');
+const { syncTasksFromPlane, detectAndMarkStaleTasks, generateDeadlineAlerts, generateAvailabilityReminders, generateTaskReminders } = require('./taskService');
 const { generateBlockerAlerts } = require('./alertService');
 const { generateWeeklyDigest } = require('./digestService');
 
@@ -28,11 +28,13 @@ const DEFAULT_SYNC_CRON         = '*/15 * * * *';
 const DEFAULT_DIGEST_CRON       = '0 8 * * 1';   // Monday 08:00 UTC
 const DEFAULT_DEADLINE_CRON     = '0 * * * *';   // Every hour
 const DEFAULT_AVAILABILITY_CRON = '0 9 * * 1';   // Monday 09:00 UTC
+const DEFAULT_TASK_REMINDER_CRON = '0 9 * * 0,4'; // Thursday and Sunday 09:00 UTC
 
 let _syncTask         = null;
 let _digestTask       = null;
 let _deadlineTask     = null;
 let _availabilityTask = null;
+let _taskReminderTask = null;
 
 function _startSyncJob() {
   const expression = process.env.SYNC_INTERVAL_CRON || DEFAULT_SYNC_CRON;
@@ -104,6 +106,7 @@ function start() {
   _startDigestJob();
   _startDeadlineJob();
   _startAvailabilityReminderJob();
+  _startTaskReminderJob();
 }
 
 function stop() {
@@ -111,6 +114,7 @@ function stop() {
   if (_digestTask)       { _digestTask.stop();       _digestTask       = null; }
   if (_deadlineTask)     { _deadlineTask.stop();     _deadlineTask     = null; }
   if (_availabilityTask) { _availabilityTask.stop(); _availabilityTask = null; }
+  if (_taskReminderTask) { _taskReminderTask.stop(); _taskReminderTask = null; }
   logger.info('All scheduled jobs stopped');
 }
 
@@ -144,6 +148,23 @@ function _startAvailabilityReminderJob() {
       logger.info({ count }, 'generateAvailabilityReminders completed');
     } catch (err) {
       logger.error({ err }, 'generateAvailabilityReminders threw unexpectedly');
+    }
+  });
+}
+
+function _startTaskReminderJob() {
+  const expression = process.env.TASK_REMINDER_CRON || DEFAULT_TASK_REMINDER_CRON;
+  if (!cron.validate(expression)) {
+    logger.error({ expression }, 'TASK_REMINDER_CRON is not valid — task reminder job not started');
+    return;
+  }
+  logger.info({ expression }, 'Starting task reminder job');
+  _taskReminderTask = cron.schedule(expression, async () => {
+    try {
+      const count = await generateTaskReminders();
+      logger.info({ count }, 'generateTaskReminders completed');
+    } catch (err) {
+      logger.error({ err }, 'generateTaskReminders threw unexpectedly');
     }
   });
 }

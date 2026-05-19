@@ -32,7 +32,7 @@ export default function Register() {
       }
 
       login(data.token!, data.user)
-      navigate(data.user.role.includes('INTERN') ? '/availability' : '/dashboard')
+      navigate(data.user.role.includes('intern') ? '/availability' : '/dashboard')
     } catch (err: unknown) {
       setError(extractErrorMessage(err, 'Registration failed. Please try again.'))
     } finally {
@@ -56,10 +56,10 @@ export default function Register() {
             <h2 className="font-display font-black text-2xl text-ice-gradient mb-3">Access Requested</h2>
             <div className="gold-rule w-16 mx-auto mb-4" />
             <p className="font-body text-sm text-ice/50 mb-2">
-              Your admin account has been created and is pending approval.
+              Your account has been created and is pending approval.
             </p>
             <p className="font-body text-sm text-ice/40 mb-8">
-              An existing admin will review your request. You'll be able to log in once approved.
+              An existing admin or lead will review your request. You'll be able to log in once approved.
             </p>
             <Link to="/login">
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}

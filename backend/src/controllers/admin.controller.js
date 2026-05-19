@@ -122,12 +122,32 @@ async function updateTaskStatus(req, res, next) {
 
 async function getAdminOverview(req, res, next) {
   try {
+    const { getTaskFilter } = require('../services/taskService');
+    const filter = await getTaskFilter(req.user);
+    const { ROLES } = require('../constants/roles');
+    
+    let internFilter = {};
+    let alertFilter = { resolved: false };
+    
+    if (req.user.role !== ROLES.CORE_ADMIN && req.user.role !== ROLES.OPERATIONS_LEAD) {
+      const allowedTasks = await prisma.task.findMany({ where: filter, select: { id: true, internId: true } });
+      const allowedTaskIds = allowedTasks.map(t => t.id);
+      const allowedInternIds = [...new Set(allowedTasks.map(t => t.internId))];
+      
+      internFilter = { id: { in: allowedInternIds } };
+      alertFilter.OR = [
+        { taskId: { in: allowedTaskIds } },
+        { internId: { in: allowedInternIds } }
+      ];
+    }
+
     const [totalInterns, activeTasks, openAlerts, completedLast30, allInterns, alerts] = await Promise.all([
-      prisma.intern.count(),
-      prisma.task.count({ where: { status: 'active' } }),
-      prisma.alert.count({ where: { resolved: false } }),
-      prisma.task.count({ where: { status: 'completed', lastUpdatedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } } }),
+      prisma.intern.count({ where: internFilter }),
+      prisma.task.count({ where: { status: 'active', ...filter } }),
+      prisma.alert.count({ where: alertFilter }),
+      prisma.task.count({ where: { status: 'completed', lastUpdatedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, ...filter } }),
       prisma.intern.findMany({
+        where: internFilter,
         take:    100,
         include: {
           user:        { select: { email: true, name: true } },
@@ -138,6 +158,7 @@ async function getAdminOverview(req, res, next) {
             select: { quality: true, timeliness: true, initiative: true },
           },
           tasks: {
+            where: filter,
             select: { status: true, complexity: true, progressPct: true },
           },
           // Fetch the most recent capacity score written by the new pipeline
@@ -149,7 +170,7 @@ async function getAdminOverview(req, res, next) {
         },
       }),
       prisma.alert.findMany({
-        where:   { resolved: false },
+        where:   alertFilter,
         orderBy: { createdAt: 'desc' },
         take:    50,
       }),

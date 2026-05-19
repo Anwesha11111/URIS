@@ -4,7 +4,8 @@ import { ChevronDown, ChevronUp, AlertOctagon, Clock, Flag, Plus, X, Loader2, Al
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getAllTasks, createTask, updateTaskProgress, adminControlTask, getReviewForTask, deleteTask, type Task, type TaskReview } from '../services/tasks.service'
-import { useAuthStore } from '../store/authStore'
+import { useAuthStore, selectUser } from '../store/authStore'
+import { getPermissions } from '../utils/permissions'
 import { extractErrorMessage } from '../services/error'
 
 import { getAdminOverview, type InternRow } from '../services/dashboard.service'
@@ -35,7 +36,8 @@ export default function Tasks() {
   const [newTask, setNewTask] = useState({ title: '', internId: '', complexity: '3', status: 'backlog', planeTaskId: '' })
   const [creating, setCreating]   = useState(false)
   const [createError, setCreateError] = useState('')
-  const isAdmin = useAuthStore(s => s.isAdmin())
+  const user = useAuthStore(selectUser)
+  const permissions = getPermissions(user?.role || '')
 
   // Intern progress update state
   const [editingTaskId, setEditingTaskId]   = useState<string | null>(null)
@@ -76,10 +78,10 @@ export default function Tasks() {
     try {
       const [tasksData, overviewData] = await Promise.all([
         getAllTasks(),
-        isAdmin ? getAdminOverview() : Promise.resolve({ interns: [] })
+        permissions.canAssign !== 'NO' ? getAdminOverview() : Promise.resolve({ interns: [] })
       ])
       setTasks(tasksData)
-      if (isAdmin && 'interns' in overviewData) {
+      if (permissions.canAssign !== 'NO' && 'interns' in overviewData) {
         setInterns(overviewData.interns)
       }
       setError('')
@@ -90,7 +92,7 @@ export default function Tasks() {
     }
   }
 
-  useEffect(() => { void fetchData() }, [isAdmin])
+  useEffect(() => { void fetchData() }, [permissions.canAssign])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -212,7 +214,7 @@ export default function Tasks() {
                     color: filter === f ? '#c9a84c' : 'rgba(184,212,240,0.4)',
                   }}>{f.toUpperCase()}</motion.button>
               ))}
-              {isAdmin && (
+              {permissions.canAssign !== 'NO' && (
                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                   onClick={() => setShowCreate(true)}
                   className="btn-gold px-4 py-1.5 rounded-sm flex items-center gap-1.5 text-[0.65rem]">
@@ -280,8 +282,8 @@ export default function Tasks() {
                         onClick={() => {
                           const next = isOpen ? null : task.id
                           setExpanded(next)
-                          // Fetch review when intern expands a completed task
-                          if (!isAdmin && task.status === 'completed' && next) {
+                          // Fetch review when expanding a completed task
+                          if (task.status === 'completed' && next) {
                             void fetchReview(task.id)
                           }
                         }}>
@@ -353,7 +355,7 @@ export default function Tasks() {
                                 </p>
                               </div>
                             </div>
-                            {task.note && (
+                            {permissions.canSeeNotes && task.note && (
                               <div className="px-5 pb-4">
                                 <p className="nav-label text-[0.5rem] text-gold/40 mb-2">PROGRESS NOTE</p>
                                 <p className="font-body text-sm text-ice/50 italic">"{task.note}"</p>
@@ -395,7 +397,7 @@ export default function Tasks() {
                             )}
 
                             {/* Admin controls panel */}
-                            {isAdmin && task.status !== 'completed' && (
+                            {permissions.canAssign !== 'NO' && task.status !== 'completed' && (
                               <div className="px-5 pb-5" style={{ borderTop: '1px solid rgba(201,168,76,0.08)' }}>
                                 {adminControlTaskId === task.id ? (
                                   <div className="pt-4 space-y-3">
@@ -477,7 +479,7 @@ export default function Tasks() {
                             )}
 
                             {/* Intern progress update panel */}
-                            {!isAdmin && task.status !== 'completed' && (
+                            {permissions.canSeeDetailedTask === 'OWN_TASKS' && task.status !== 'completed' && (
                               <div className="px-5 pb-5" style={{ borderTop: '1px solid rgba(201,168,76,0.08)' }}>
                                 {editingTaskId === task.id ? (
                                   <div className="pt-4 space-y-4">
@@ -551,8 +553,8 @@ export default function Tasks() {
                                 )}
                               </div>
                             )}
-                            {/* Intern: review panel for completed tasks */}
-                            {!isAdmin && task.status === 'completed' && (
+                            {/* Review panel for completed tasks */}
+                            {task.status === 'completed' && (
                               <div className="px-5 pb-5" style={{ borderTop: '1px solid rgba(201,168,76,0.08)' }}>
                                 <div className="pt-4">
                                   <p className="nav-label text-[0.55rem] text-gold/40 mb-3">TASK REVIEW</p>

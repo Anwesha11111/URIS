@@ -23,6 +23,6 @@ router.get('/all-task-ids',   verifyToken, requireRole(...CAN_REVIEW), getReview
 // Intern — view all their own reviews
 router.get('/mine',           verifyToken, requireRole(...INTERN_ROLES), getMyReviews);
 // Intern — view review for a specific task
-router.get('/task/:taskId',   verifyToken, requireRole(...INTERN_ROLES), getReviewForTask);
+router.get('/task/:taskId',   verifyToken, requireRole(...INTERN_ROLES, ...CAN_REVIEW), getReviewForTask);
 
 module.exports = router;

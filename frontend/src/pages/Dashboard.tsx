@@ -6,7 +6,8 @@ import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getAdminOverview, type AdminOverview } from '../services/dashboard.service'
 import { extractErrorMessage } from '../services/error'
-import { useAuthStore, selectIsAdmin } from '../store/authStore'
+import { useAuthStore } from '../store/authStore'
+import { getPermissions } from '../utils/permissions'
 import InternDashboard from './InternDashboard'
 
 function BandDot({ score }: { score: number }) {
@@ -52,11 +53,12 @@ function LoadingSkeleton() {
 }
 
 export default function Dashboard() {
-  const isAdmin = useAuthStore(selectIsAdmin)
+  const user = useAuthStore(s => s.user)
+  const permissions = getPermissions(user?.role || '')
 
   // Route to the correct dashboard based on role.
   // This keeps a single /dashboard URL while serving role-appropriate content.
-  if (!isAdmin) return <InternDashboard />
+  if (!permissions.modules.includes('/dashboard')) return <InternDashboard />
 
   return <AdminCommandDashboard />
 }

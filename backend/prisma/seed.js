@@ -133,6 +133,38 @@ async function seed() {
   });
   console.log(`✓ Admin:  ${admin.email}`);
 
+  // ── 1.5. Other Demo Roles ──────────────────────────────────────────────────
+  const demoRoles = [
+    { email: 'techlead@uris.com', name: 'Tech Lead', role: 'TECHNICAL_LEAD' },
+    { email: 'opslead@uris.com', name: 'Ops Lead', role: 'OPERATIONS_LEAD' },
+    { email: 'researchlead@uris.com', name: 'Research Lead', role: 'RESEARCH_LEAD' },
+    { email: 'opm@uris.com', name: 'Program Manager', role: 'OPERATIONS_PROGRAM_MANAGER' },
+    { email: 'opsintern@uris.com', name: 'Ops Intern', role: 'OPERATIONS_INTERN' },
+    { email: 'researchintern@uris.com', name: 'Research Intern', role: 'RESEARCH_INTERN' },
+    { email: 'observerlead@uris.com', name: 'Observer Lead', role: 'OBSERVER_TEAM_LEAD' },
+    { email: 'collablead@uris.com', name: 'Collab Lead', role: 'COLLABORATOR_LEAD' },
+    { email: 'orenda@uris.com', name: 'Orenda Member', role: 'ORENDA_MEMBER' },
+    { email: 'pastemployee@uris.com', name: 'Past Employee', role: 'PAST_EMPLOYEE' },
+  ];
+
+  for (const r of demoRoles) {
+    await prisma.user.upsert({
+      where:  { email: r.email },
+      update: { name: r.name, role: r.role },
+      create: { email: r.email, password: hash, name: r.name, role: r.role },
+    });
+    // Create Intern record for intern roles so they don't break dashboard
+    if (r.role.includes('INTERN')) {
+      const user = await prisma.user.findUnique({ where: { email: r.email } });
+      await prisma.intern.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: { userId: user.id },
+      });
+    }
+    console.log(`✓ ${r.name}:  ${r.email} (${r.role})`);
+  }
+
   // ── 2. Team ────────────────────────────────────────────────────────────────
   const team = await prisma.team.upsert({
     where:  { name: 'AI Team Alpha' },
@@ -372,7 +404,10 @@ async function seed() {
   // ── Summary ────────────────────────────────────────────────────────────────
   console.log('\n✅  Seed complete!\n');
   console.log('Demo credentials (password: 123456 for all):');
-  console.log('  admin@uris.com   → ADMIN');
+  console.log('  admin@uris.com   → CORE_ADMIN');
+  console.log('  techlead@uris.com → TECHNICAL_LEAD');
+  console.log('  opslead@uris.com → OPERATIONS_LEAD');
+  console.log('  ... other roles are seeded as well ...');
   console.log('  rahul@uris.com   → INTERN  (capacity 82, credibility 88)');
   console.log('  priya@uris.com   → INTERN  (capacity 65, credibility 78)');
   console.log('  arjun@uris.com   → INTERN  (capacity 91, credibility 94)\n');
