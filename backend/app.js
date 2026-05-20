@@ -37,6 +37,12 @@ const { ipBlockMiddleware } = require('./src/middleware/ipBlock.middleware');
 
 const app = express();
 
+// ── Trust proxy ───────────────────────────────────────────────────────────────
+// Render (and most cloud platforms) sit behind a reverse proxy that sets
+// X-Forwarded-For. Without this, express-rate-limit throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+// and req.ip returns the proxy IP instead of the real client IP.
+app.set('trust proxy', 1);
+
 // ── Production startup guard ──────────────────────────────────────────────────
 // DATABASE_URL must always be set — Prisma will crash with an unhelpful error
 // if it is missing. Check early so the failure message is clear.

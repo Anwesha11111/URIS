@@ -28,7 +28,6 @@ model Intern {
   createdAt         DateTime           @default(now())
   overrideScore     Float?
   reservedUntil     DateTime?
-  skillTags         String[]           @default([])
   availabilitySlots AvailabilitySlot[]
   capacityScore     CapacityScore?
   credibility       CredibilityScore?
