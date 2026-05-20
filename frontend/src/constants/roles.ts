@@ -16,10 +16,27 @@
 export const ROLES = Object.freeze({
   INTERN: 'intern',
   ADMIN:  'admin',
-  // Future roles — uncomment when backend supports them:
-  // TEAM_LEAD: 'team_lead',
-  // MANAGER:   'manager',
+  CORE_ADMIN: 'core_admin',
+  TECHNICAL_LEAD: 'technical_lead',
+  OPERATIONS_LEAD: 'operations_lead',
+  RESEARCH_LEAD: 'research_lead',
+  OPERATIONS_PROGRAM_MANAGER: 'operations_program_manager',
+  TECHNICAL_INTERN: 'technical_intern',
+  OPERATIONS_INTERN: 'operations_intern',
+  RESEARCH_INTERN: 'research_intern',
+  ORENDA_MEMBER: 'orenda_member',
+  OBSERVER_TEAM_LEAD: 'observer_team_lead',
+  COLLABORATOR_LEAD: 'collaborator_lead',
+  PAST_EMPLOYEE: 'past_employee',
 } as const)
 
 /** Union type of all valid frontend role strings. */
 export type Role = typeof ROLES[keyof typeof ROLES]
+
+export const ADMIN_ROLES = [
+  'core_admin',
+  'technical_lead',
+  'operations_lead',
+  'research_lead',
+  'operations_program_manager',
+] as const
