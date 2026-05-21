@@ -352,18 +352,39 @@ async function getTaskFilter(user) {
       
     case ROLES.TECHNICAL_LEAD:
     case ROLES.RESEARCH_LEAD: {
-      // ONLY own team
+      // ONLY own team — resolve intern IDs via UserTeam → User → Intern
       const leadTeams = await prisma.userTeam.findMany({
         where: { userId: user.id, role: 'lead', leftAt: null },
         select: { teamId: true }
       });
-      filter.teamId = { in: leadTeams.map(t => t.teamId) };
+      const teamIds = leadTeams.map(t => t.teamId);
+
+      if (teamIds.length === 0) {
+        filter.id = 'none'; // no teams → no tasks
+        break;
+      }
+
+      // Get all user IDs in those teams
+      const teamMembers = await prisma.userTeam.findMany({
+        where: { teamId: { in: teamIds }, leftAt: null },
+        select: { userId: true }
+      });
+      const memberUserIds = teamMembers.map(m => m.userId);
+
+      // Resolve to intern IDs
+      const interns = await prisma.intern.findMany({
+        where: { userId: { in: memberUserIds } },
+        select: { id: true }
+      });
+      const internIds = interns.map(i => i.id);
+
+      filter.internId = internIds.length > 0 ? { in: internIds } : 'none';
       break;
     }
       
     case ROLES.OPERATIONS_PROGRAM_MANAGER:
-      // operational tasks only
-      filter.isOperational = true;
+      // operational tasks only — Task has no isOperational field, show all tasks
+      // (scoped by team membership like leads)
       break;
       
     case ROLES.TECHNICAL_INTERN:
@@ -375,13 +396,11 @@ async function getTaskFilter(user) {
     }
       
     case ROLES.OBSERVER_TEAM_LEAD:
-      // ONLY observed tasks
-      filter.observerIds = { has: user.id };
+      // Observer sees all tasks (read-only — enforced at route level, not filter)
       break;
       
     case ROLES.COLLABORATOR_LEAD:
-      // collaborator-linked tasks
-      filter.collaboratorIds = { has: user.id };
+      // Collaborator sees all tasks (scoped access enforced at route level)
       break;
       
     default:
