@@ -428,6 +428,7 @@ function AccessMatrixTab({ matrix, onSave }: { matrix: AccessMatrixResponse | nu
   ]
 
   function enterEditMode() {
+    if (!matrix) return
     // Seed edit state from current matrix
     const seed: Record<string, string[]> = {}
     for (const r of matrix.matrix) {
