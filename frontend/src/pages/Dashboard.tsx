@@ -7,7 +7,6 @@ import Starfield from '../components/Starfield'
 import { getAdminOverview, type AdminOverview } from '../services/dashboard.service'
 import { extractErrorMessage } from '../services/error'
 import { useAuthStore } from '../store/authStore'
-import { getPermissions } from '../utils/permissions'
 import InternDashboard from './InternDashboard'
 
 function BandDot({ score }: { score: number }) {
@@ -53,7 +52,6 @@ function LoadingSkeleton() {
 }
 
 export default function Dashboard() {
-  const user = useAuthStore(s => s.user)
   const isAdmin = useAuthStore(s => s.isAdmin())
 
   // Route to the correct dashboard based on role.
