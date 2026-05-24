@@ -72,7 +72,7 @@ function layout({ title, previewText, body }) {
                 </tr>
               </table>
               <div style="margin-top:16px;">
-                <span style="font-family:Georgia,'Times New Roman',serif;font-weight:900;font-size:36px;letter-spacing:0.08em;background:linear-gradient(180deg,#e8f0fb 0%,#b8d4f0 50%,#ffffff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;color:#e8f0fb;">URIS</span>
+                <span style="font-family:Georgia,'Times New Roman',serif;font-weight:900;font-size:36px;letter-spacing:0.08em;color:#e8f0fb;">URIS</span>
               </div>
               <!-- Gold rule -->
               <div style="height:1px;background:linear-gradient(90deg,transparent,#c9a84c,#e2c76e,#c9a84c,transparent);margin:10px auto;width:80px;"></div>
