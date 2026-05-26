@@ -34,6 +34,9 @@ const {
   getAssignmentReadiness,
   getAlertIntelligence,
   getPerformanceTrends,
+  getIntegrationIntelligence,
+  getUnifiedIntelligence,
+  getOpenProjectIntelligence,
 } = require('../controllers/analytics.controller');
 const { verifyToken, requireRole } = require('../middleware/auth.middleware');
 const { ROLES } = require('../constants/roles');
@@ -61,5 +64,8 @@ router.get('/task-risks',                   ...auth, getTaskRisks);
 router.get('/assignment-readiness',         ...auth, getAssignmentReadiness);
 router.get('/alert-intelligence',           ...auth, getAlertIntelligence);
 router.get('/performance-trends',           ...auth, getPerformanceTrends);
+router.get('/integration-intelligence',     ...auth, getIntegrationIntelligence);
+router.get('/unified',                      ...auth, getUnifiedIntelligence);
+router.get('/openproject-intelligence',     ...auth, getOpenProjectIntelligence);
 
 module.exports = router;

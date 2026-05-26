@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { LayoutDashboard, CalendarDays, ClipboardList, Star, Users, Bell, LogOut, ChevronRight, ShieldCheck, ScrollText, TrendingUp, Shield, Menu, X, UserCircle, Settings, Wifi } from 'lucide-react'
 import { useAuthStore, selectUser, selectIsAdmin } from '../store/authStore'
 import { useAlertStore } from '../store/alertStore'
+import { useRealtimeStore } from '../store/realtimeStore'
 import TeamSwitcher from './TeamSwitcher'
 
 import { getPermissions } from '../utils/permissions'
@@ -37,6 +38,10 @@ export default function Sidebar() {
   // Read unread count from shared store — no local fetch
   const unread = useAlertStore(s => s.unread)
 
+  // Realtime store — live socket status and critical alert count
+  const { status: socketStatus, counters } = useRealtimeStore()
+  const isLive = socketStatus === 'connected'
+
   const permissions = getPermissions(user?.role || '')
   const items = allItems.filter(i => permissions.modules.includes(i.to))
 
@@ -46,6 +51,10 @@ export default function Sidebar() {
         const active    = loc.pathname === item.to
         const showBadge = (item.to === '/notifications' && !isAdmin && unread > 0)
                        || (item.to === '/alerts' && isAdmin && unread > 0)
+        // Live pulse dot on Intelligence when socket is connected
+        const showLiveDot = item.to === '/intelligence' && isLive
+        // Critical alert pulse on Alerts/Notifications
+        const showCritical = (item.to === '/alerts' || item.to === '/notifications') && counters.criticalAlerts > 0
         return (
           <motion.div key={item.to} initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.12 + i * 0.05 }}>
             <Link to={item.to} className={`sidebar-item ${active ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>
@@ -54,11 +63,20 @@ export default function Sidebar() {
               {showBadge && (
                 <motion.span key={unread} initial={{ scale: 0.5 }} animate={{ scale: 1 }}
                   className="ml-auto flex items-center justify-center min-w-[16px] h-4 px-0.5 rounded-full font-bold text-[0.46rem]"
-                  style={{ background: '#f87171', color: '#fff', boxShadow: '0 0 6px #f8717166' }}>
+                  style={{ background: showCritical ? '#f87171' : '#f87171', color: '#fff', boxShadow: '0 0 6px #f8717166' }}>
                   {unread > 9 ? '9+' : unread}
                 </motion.span>
               )}
-              {active && !showBadge && (
+              {showLiveDot && !showBadge && (
+                <motion.span
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: '#4ade80' }}
+                  title="Live"
+                />
+              )}
+              {active && !showBadge && !showLiveDot && (
                 <ChevronRight size={9} style={{ marginLeft: 'auto', color: 'rgba(201,168,76,0.5)' }} />
               )}
             </Link>

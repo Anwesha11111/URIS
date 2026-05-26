@@ -16,6 +16,178 @@
 
 const prisma = require('../utils/prisma');
 const { getRpiWindowStart } = require('./performanceEngine');
+const {
+  calculateTaskTLI,
+  calculateInternTLI,
+  calculateEffectiveTLI,
+  determineLoadBand,
+} = require('./tliEngine');
+const { generateReassignmentRecommendation } = require('./reassignmentEngine');
+
+// Reassignment recommendation-only payload for the Intelligence dashboard.
+// Note: This is derived on-the-fly from existing tables/signals.
+async function getReassignmentRecommendations() {
+  // Candidate pool: all interns (filtering is handled by reassignmentEngine).
+  const interns = await prisma.intern.findMany({
+    include: {
+      user: { select: { name: true, email: true } },
+      tasks: {
+        where: { status: { notIn: ['completed', 'cancelled'] } },
+        select: { status: true, hasBlocker: true, blockerType: true, lastUpdatedAt: true, deadline: true },
+      },
+      scoreHistory: {
+        where: { type: 'capacity' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { score: true },
+      },
+      credibility: { select: { score: true } },
+    },
+  });
+
+  const now = new Date();
+  const nowMs = now.getTime();
+
+  // Precompute owner contexts from interns.
+  const ownerContexts = interns.map(intern => {
+    const capacityScore = intern.scoreHistory[0] ? Math.round(intern.scoreHistory[0].score) : 0;
+    const credScore = intern.credibility ? Math.round(intern.credibility.score * 100) : 50;
+
+    const activeTasks = intern.tasks.filter(t => t.status === 'active');
+    const rawTli = calculateInternTLI(activeTasks);
+    const effectiveTli = calculateEffectiveTLI(rawTli, capacityScore, credScore);
+
+    // stale/blocker signals are per-intern proxy: max across tasks
+    const staleDays = activeTasks.length
+      ? Math.max(
+          ...activeTasks.map(t => Math.floor((nowMs - new Date(t.lastUpdatedAt).getTime()) / (24 * 60 * 60 * 1000)))
+        )
+      : 0;
+
+    // blocker escalation proxy: hours since last updated for blocked tasks
+    const blockedTasks = activeTasks.filter(t => t.hasBlocker);
+    const blockerEscalationHours = blockedTasks.length
+      ? Math.max(...blockedTasks.map(t => (nowMs - new Date(t.lastUpdatedAt).getTime()) / (1000 * 60 * 60)))
+      : 0;
+
+    const unresolvedAlertCount = 0; // derived later from Alert table if available
+
+    const owner = {
+      internId: intern.id,
+      name: intern.user?.name || intern.user?.email?.split('@')[0] || intern.id,
+      capacityScore,
+      effectiveTli,
+      credibilityScore: credScore,
+      blockerEscalationHours,
+      unresolvedAlertCount,
+      // status/inactive/blocked fields are derived from existing signals
+      status: 'active',
+      hasBlocker: blockedTasks.length > 0,
+      blockerType: blockedTasks[0]?.blockerType,
+    };
+
+    return { owner, ownerTask: { id: `owner-${intern.id}` , staleDays } };
+  });
+
+  // If alert table exists, compute unresolved alert counts per intern.
+  // (Schema has Alert model in the repo; this is still wrapped for safety.)
+  let alerts = [];
+  try {
+    alerts = await prisma.alert.findMany({ where: { resolved: false }, select: { internId: true } });
+  } catch {
+    alerts = [];
+  }
+  const alertsByIntern = {};
+  for (const a of alerts) {
+    alertsByIntern[a.internId] = (alertsByIntern[a.internId] || 0) + 1;
+  }
+
+  // Candidate pool for replacements.
+  // We enrich candidates with availability/creditability/performance approximations.
+  // AvailabilityScore: reuse capacity score bucket scaled to 0..100.
+  const candidates = interns.map(intern => {
+    const capacityScore = intern.scoreHistory[0] ? Math.round(intern.scoreHistory[0].score) : 0;
+    const credScore = intern.credibility ? Math.round(intern.credibility.score * 100) : 50;
+
+    const activeTasks = intern.tasks.filter(t => t.status === 'active');
+    const rawTli = calculateInternTLI(activeTasks);
+    const effectiveTli = calculateEffectiveTLI(rawTli, capacityScore, credScore);
+
+    const blockedTasks = activeTasks.filter(t => t.hasBlocker);
+    const staleDays = activeTasks.length
+      ? Math.max(...activeTasks.map(t => Math.floor((nowMs - new Date(t.lastUpdatedAt).getTime()) / (24 * 60 * 60 * 1000))))
+      : 0;
+
+    const loadBand = determineLoadBand(effectiveTli);
+    const unresolvedAlertCount = alertsByIntern[intern.id] || 0;
+
+    return {
+      internId: intern.id,
+      name: intern.user?.name || intern.user?.email?.split('@')[0] || intern.id,
+      availabilityScore: capacityScore, // already 0..100
+      credibilityScore: credScore, // 0..100
+      performanceScore: 50, // no direct perf index from this query; keep neutral
+      effectiveTli,
+      loadBand,
+      status: intern.user?.status || 'active',
+      isInactive: false,
+      hasBlocker: blockedTasks.length > 0,
+      isBlocked: blockedTasks.length > 0,
+      blockerType: blockedTasks[0]?.blockerType,
+      unresolvedAlertCount,
+      staleTasksDays: staleDays,
+    };
+  });
+
+  const overloadThreshold = OVERLOAD_THRESHOLD;
+  const lowCredibilityThreshold = LOW_CRED_THRESHOLD;
+  const results = [];
+
+  // Select failing owners by triggers.
+  for (const { owner, ownerTask } of ownerContexts) {
+    const riskTriggers = [];
+
+    if (owner.capacityScore < 20) riskTriggers.push('capacity');
+    if (owner.effectiveTli > overloadThreshold) riskTriggers.push('overload');
+    if (owner.blockerEscalationHours >= 96) riskTriggers.push('blocker');
+    if ((ownerTask.staleDays || 0) > 4) riskTriggers.push('stale');
+
+    const unresolvedAlertCount = alertsByIntern[owner.internId] || 0;
+    if (unresolvedAlertCount >= 5) riskTriggers.push('alerts');
+
+    if (riskTriggers.length === 0) continue;
+
+    // Update owner unresolvedAlertCount
+    owner.unresolvedAlertCount = unresolvedAlertCount;
+
+    // Candidate shortlist should exclude the owner itself.
+    const shortlistCandidates = candidates.filter(c => c.internId !== owner.internId);
+
+    const rec = generateReassignmentRecommendation({
+      owner,
+      ownerTask: { id: ownerTask.id, staleDays: ownerTask.staleDays || 0 },
+      candidates: shortlistCandidates,
+      overloadThreshold,
+      lowCredibilityThreshold,
+      deadlineUrgencyMultiplier: 1,
+      topK: 3,
+    });
+
+    results.push(rec);
+  }
+
+  // Sort recommendations by priority desc.
+  results.sort((a, b) => b.priority - a.priority);
+
+  return {
+    count: results.length,
+    recommendations: results.slice(0, 10),
+  };
+}
+
+
+
+
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +208,7 @@ const TREND_WEEKS            = parseInt(process.env.TREND_WEEKS)            || 8
  */
 async function getWorkloadDistribution() {
   const interns = await prisma.intern.findMany({
+
     include: {
       user: { select: { name: true, email: true } },
       tasks: {
@@ -59,10 +232,8 @@ async function getWorkloadDistribution() {
     const blockedTasks = intern.tasks.filter(t => t.hasBlocker);
     const overdueTasks = intern.tasks.filter(t => t.deadline && new Date(t.deadline) < now);
 
-    const tli = activeTasks.reduce(
-      (sum, t) => sum + t.complexity * (1 - t.progressPct / 100),
-      0
-    );
+    const rawTli = calculateInternTLI(activeTasks);
+
 
     const capacityScore = intern.scoreHistory[0]
       ? Math.round(intern.scoreHistory[0].score)
@@ -594,7 +765,22 @@ async function getTaskRiskIntelligence() {
     const riskFactors = [];
     let severity = 'low';
 
+    const effectiveTliInputs = {
+      capacityScore: t.intern?.scoreHistory?.[0]?.score ?? 0,
+      credibility: null,
+    };
+
+    const taskTli = calculateTaskTLI(t);
+    const rawTli = taskTli;
+    const effectiveTli = calculateEffectiveTLI(rawTli, effectiveTliInputs.capacityScore, effectiveTliInputs.credibility);
+    const loadBand = determineLoadBand(effectiveTli);
+
+    const tliRiskFactors = [
+      { factor: 'tli_load_band', detail: `TLI band: ${loadBand} (effectiveTli=${effectiveTli.toFixed(2)})` },
+    ];
+
     const isOverdue   = t.deadline && new Date(t.deadline) < now;
+
     const isImminent  = t.deadline && new Date(t.deadline) <= imminentThresh && !isOverdue;
     const isStale     = new Date(t.lastUpdatedAt) < staleThresh;
     const isBlocked   = t.hasBlocker;
@@ -608,6 +794,10 @@ async function getTaskRiskIntelligence() {
     if (isImminent)      { riskFactors.push({ factor: 'deadline_imminent', detail: `Due in ${Math.ceil((new Date(t.deadline) - now) / 86400000)}d` }); if (severity === 'low') severity = 'medium'; }
     if (isHighLoad)      { riskFactors.push({ factor: 'high_complexity_low_progress', detail: `Complexity ${t.complexity}, only ${t.progressPct}% done` }); if (severity === 'low') severity = 'medium'; }
     if (ownerOverloaded) { riskFactors.push({ factor: 'owner_low_capacity', detail: `Owner capacity: ${ownerCapacity}` }); if (severity === 'low') severity = 'medium'; }
+    if (loadBand === 'AMBER' && severity === 'low') severity = 'medium';
+    if (loadBand === 'RED' && severity !== 'critical') severity = 'high';
+    riskFactors.push(...tliRiskFactors);
+
 
     if (riskFactors.length === 0) continue;
 
@@ -695,13 +885,15 @@ async function getAssignmentReadiness() {
     const hasBlocker      = intern.tasks.some(t => t.hasBlocker);
     const submittedThisWeek = intern.availabilitySlots.length > 0;
 
-    const tli = activeTasks.reduce(
-      (sum, t) => sum + t.complexity * (1 - t.progressPct / 100), 0
-    );
+    const rawTli = calculateInternTLI(activeTasks);
+    const effectiveTli = calculateEffectiveTLI(rawTli, capacityScore, credScore);
+    const loadBand = determineLoadBand(effectiveTli);
+
 
     // Readiness score: weighted composite
     // Capacity 50%, credibility 25%, TLI penalty 15%, availability submission 10%
-    const tliPenalty      = Math.min(tli * 4, 40); // max 40pt penalty at TLI=10
+    const tliPenalty      = Math.min(effectiveTli * 4, 40); // max 40pt penalty at effectiveTli=10
+
     const availBonus      = submittedThisWeek ? 10 : 0;
     const readinessScore  = Math.max(0, Math.round(
       0.50 * capacityScore +
@@ -713,11 +905,12 @@ async function getAssignmentReadiness() {
     const reasons = [];
     if (capacityScore >= 70)    reasons.push('High capacity');
     if (credScore >= 70)        reasons.push('Reliable track record');
-    if (tli < 3)                reasons.push('Low current load');
+    if (effectiveTli < 3)      reasons.push('Low current load');
     if (submittedThisWeek)      reasons.push('Availability submitted');
     if (capacityScore < 30)     reasons.push('Low capacity — avoid assigning');
     if (hasBlocker)             reasons.push('Has active blocker');
-    if (tli > OVERLOAD_THRESHOLD) reasons.push('Overloaded — do not assign');
+    if (effectiveTli > OVERLOAD_THRESHOLD) reasons.push('Overloaded — do not assign');
+
 
     const recommendation =
       tli > OVERLOAD_THRESHOLD || capacityScore < 20 ? 'do_not_assign' :
@@ -940,7 +1133,7 @@ async function getPerformanceTrends() {
  * Used by the frontend analytics dashboard to avoid waterfall requests.
  */
 async function getFullAnalyticsDashboard() {
-  const [workload, scoreTrends, workloadTrend, sla, teamHealth, digest, support, taskRisks, assignmentReadiness, alertIntelligence, performanceTrends] = await Promise.all([
+  const [workload, scoreTrends, workloadTrend, sla, teamHealth, digest, support, taskRisks, assignmentReadiness, alertIntelligence, performanceTrends, reassignmentRecommendations] = await Promise.all([
     getWorkloadDistribution(),
     getScoreTrends(),
     getWorkloadTrend(),
@@ -952,10 +1145,26 @@ async function getFullAnalyticsDashboard() {
     getAssignmentReadiness(),
     getAlertIntelligence(),
     getPerformanceTrends(),
+    getReassignmentRecommendations(),
   ]);
 
-  return { workload, scoreTrends, workloadTrend, sla, teamHealth, digest, support, taskRisks, assignmentReadiness, alertIntelligence, performanceTrends };
+  return {
+    workload,
+    scoreTrends,
+    workloadTrend,
+    sla,
+    teamHealth,
+    digest,
+    support,
+    taskRisks,
+    assignmentReadiness,
+    alertIntelligence,
+    performanceTrends,
+    // Enterprise: operational reassignment recommendations (recommendation-only)
+    reassignmentRecommendations,
+  };
 }
+
 
 module.exports = {
   getWorkloadDistribution,
@@ -971,4 +1180,6 @@ module.exports = {
   getAssignmentReadiness,
   getAlertIntelligence,
   getPerformanceTrends,
+  // Enterprise reassignment recommendation payload
+  getReassignmentRecommendations,
 };

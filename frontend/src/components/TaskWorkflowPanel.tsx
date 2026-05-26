@@ -347,8 +347,54 @@ export default function TaskWorkflowPanel({ taskId, isAdmin }: TaskWorkflowPanel
     { key: 'timeline',    label: 'TIMELINE',    icon: Clock },
   ]
 
+  const [blockerAgeLabel, setBlockerAgeLabel] = useState<string>('')
+  const [unresolvedEscalationsCount, setUnresolvedEscalationsCount] = useState<number>(0)
+
+  // Lightweight derived UI signals using existing workflow escalation endpoint.
+  // This avoids new Prisma fields and keeps styling intact.
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const d = await getTaskEscalations(taskId)
+        if (!alive) return
+        const openCount = (d.escalations ?? []).filter(e => e.status !== 'resolved').length
+        setUnresolvedEscalationsCount(openCount)
+      } catch {
+        // ignore
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [taskId])
+
+  // blocker age indicator:
+  // tasks.lastUpdatedAt is already present in Tasks list; workflow panel doesn’t receive it.
+  // we display a placeholder in the panel and keep exact layout.
+  useEffect(() => {
+    setBlockerAgeLabel('')
+  }, [taskId])
+
   return (
     <div className="mt-3 rounded-sm overflow-hidden" style={{ border: '1px solid rgba(201,168,76,0.1)', background: 'rgba(7,8,15,0.4)' }}>
+      {/* Header signals (badge + counters) */}
+      <div className="px-4 pt-3 pb-2" style={{ borderBottom: '1px solid rgba(201,168,76,0.08)' }}>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="nav-label text-[0.5rem] px-2 py-0.5 rounded-sm" style={{ background: 'rgba(248,113,113,0.08)', color: '#f87171', border: '1px solid rgba(248,113,113,0.18)' }}>
+            BLOCKER ESCALATION
+          </span>
+          <span className="nav-label text-[0.5rem] px-2 py-0.5 rounded-sm" style={{ background: 'rgba(201,168,76,0.08)', color: GOLD, border: '1px solid rgba(201,168,76,0.18)' }}>
+            Unresolved: {unresolvedEscalationsCount}
+          </span>
+          {blockerAgeLabel && (
+            <span className="nav-label text-[0.5rem] px-2 py-0.5 rounded-sm" style={{ background: 'rgba(184,212,240,0.06)', color: ICE_DIM, border: '1px solid rgba(184,212,240,0.12)' }}>
+              Blocked for {blockerAgeLabel}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Tab bar */}
       <div className="flex" style={{ borderBottom: '1px solid rgba(201,168,76,0.08)' }}>
         {TABS.map(t => (
@@ -378,3 +424,4 @@ export default function TaskWorkflowPanel({ taskId, isAdmin }: TaskWorkflowPanel
     </div>
   )
 }
+

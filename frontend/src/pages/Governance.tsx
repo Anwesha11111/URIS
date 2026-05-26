@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Shield, CheckCircle, X, Clock, Loader2, AlertTriangle,
   ChevronDown, ChevronUp, Key, Users, TrendingUp, Lock, Edit2, Save, RotateCcw,
+  Activity, ShieldAlert, Radio,
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
@@ -11,9 +12,10 @@ import { ROLES } from '../constants/roles'
 import {
   listApprovals, approveRequest, rejectRequest, cancelApprovalRequest,
   getMyPermissions, getAllUsers, getRoleHistory, getAccessMatrix, updateAccessMatrix, getSecurityOverview,
-  submitPromotionRequest,
+  submitPromotionRequest, getGovernanceIntelligenceOverview,
   type ApprovalRequest, type PermissionsResponse,
   type GovernanceUser, type RoleHistoryRecord, type AccessMatrixResponse, type SecurityOverview,
+  type GovernanceIntelligenceOverview,
 } from '../services/governance.service'
 import { extractErrorMessage } from '../services/error'
 
@@ -797,6 +799,233 @@ function PermissionsTab({ perms }: { perms: PermissionsResponse | null }) {
   )
 }
 
+// ── Governance Intelligence Overview Panel ────────────────────────────────────
+
+function GovernanceScorePill({
+  label, score, statusLabel, color, icon: Icon,
+}: {
+  label: string; score: number; statusLabel: string; color: string; icon: React.ElementType
+}) {
+  return (
+    <div className="glass-card rounded-sm p-4 flex items-center gap-3"
+      style={{ border: `1px solid ${color}22` }}>
+      <div className="p-2 rounded-sm flex-shrink-0" style={{ background: `${color}15` }}>
+        <Icon size={14} style={{ color }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="nav-label text-[0.48rem] mb-0.5" style={{ color: ICE_DIM }}>{label}</p>
+        <div className="flex items-baseline gap-2">
+          <span className="font-display font-black text-2xl leading-none" style={{ color }}>{score}</span>
+          <span className="nav-label text-[0.45rem] px-1.5 py-0.5 rounded-full"
+            style={{ background: `${color}15`, color }}>
+            {statusLabel.toUpperCase()}
+          </span>
+        </div>
+        <div className="mt-1.5 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(184,212,240,0.08)' }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${score}%` }}
+            transition={{ duration: 0.9, ease: 'easeOut' }}
+            className="h-full rounded-full"
+            style={{ background: color }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function GovernanceIntelligencePanel({ data }: { data: GovernanceIntelligenceOverview }) {
+  const { enterpriseHealth, operationalRisk, teamStability, executiveSummary, liveSignals } = data
+
+  const ehColor  = enterpriseHealth.score >= 75 ? GREEN : enterpriseHealth.score >= 50 ? AMBER : RED
+  const orColor  = operationalRisk.score  >= 70 ? RED   : operationalRisk.score  >= 45 ? AMBER : GREEN
+  const tsColor  = teamStability.score    >= 75 ? GREEN : teamStability.score    >= 50 ? AMBER : RED
+
+  const hasUrgent   = executiveSummary.urgentActions.length > 0
+  const hasWarnings = executiveSummary.crossSystemWarnings.length > 0
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Radio size={12} style={{ color: GOLD }} />
+        <p className="nav-label text-[0.5rem]" style={{ color: `${GOLD}88` }}>ENTERPRISE INTELLIGENCE OVERVIEW</p>
+        <span className="nav-label text-[0.42rem] px-1.5 py-0.5 rounded-full ml-auto"
+          style={{ background: 'rgba(201,168,76,0.08)', color: `${GOLD}66` }}>
+          {new Date(data.computedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      </div>
+
+      {/* Three score cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+        <GovernanceScorePill label="ENTERPRISE HEALTH"  score={enterpriseHealth.score} statusLabel={enterpriseHealth.label} color={ehColor} icon={Activity} />
+        <GovernanceScorePill label="OPERATIONAL RISK"   score={operationalRisk.score}  statusLabel={operationalRisk.label}  color={orColor} icon={ShieldAlert} />
+        <GovernanceScorePill label="TEAM STABILITY"     score={teamStability.score}    statusLabel={teamStability.label}    color={tsColor} icon={Users} />
+      </div>
+
+      {/* Live signal counters */}
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-3">
+        {[
+          { label: 'UNRESOLVED ALERTS', value: liveSignals.totalUnresolvedAlerts,   color: liveSignals.totalUnresolvedAlerts > 0 ? AMBER : ICE_DIM },
+          { label: 'CRITICAL ALERTS',   value: liveSignals.unresolvedEscalations,   color: liveSignals.unresolvedEscalations > 0 ? RED : ICE_DIM },
+          { label: 'STALE TASKS',       value: liveSignals.staleTaskWarnings,        color: liveSignals.staleTaskWarnings > 0 ? AMBER : ICE_DIM },
+          { label: 'OVERLOAD WARNINGS', value: liveSignals.overloadWarnings,         color: liveSignals.overloadWarnings > 0 ? RED : ICE_DIM },
+          { label: 'REASSIGN RISK',     value: liveSignals.reassignmentInstability,  color: liveSignals.reassignmentInstability > 0 ? AMBER : ICE_DIM },
+          { label: 'INTEGRATION RISK',  value: liveSignals.integrationRiskCount,     color: liveSignals.integrationRiskCount > 0 ? GOLD : ICE_DIM },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="glass-card rounded-sm px-3 py-2 flex items-center justify-between gap-1"
+            style={{ border: value > 0 ? `1px solid ${color}22` : '1px solid rgba(184,212,240,0.06)' }}>
+            <p className="nav-label text-[0.42rem]" style={{ color: ICE_DIM }}>{label}</p>
+            <span className="font-display font-black text-base" style={{ color: value > 0 ? color : ICE_DIM }}>{value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Executive summary */}
+      <div className="glass-card rounded-sm p-4" style={{ border: '1px solid rgba(201,168,76,0.1)' }}>
+        <p className="nav-label text-[0.48rem] mb-1" style={{ color: `${GOLD}66` }}>EXECUTIVE SUMMARY</p>
+        <p className="font-body text-sm mb-2" style={{ color: ICE_DIM }}>{executiveSummary.headline}</p>
+
+        {/* Operational snapshot */}
+        <div className="flex flex-wrap gap-3 mb-2">
+          {[
+            { label: 'Interns',  value: executiveSummary.operationalSnapshot.totalInterns },
+            { label: 'Tasks',    value: executiveSummary.operationalSnapshot.activeTasks },
+            { label: 'Alerts',   value: executiveSummary.operationalSnapshot.unresolvedAlerts },
+            { label: 'Critical', value: executiveSummary.operationalSnapshot.criticalAlerts },
+            { label: 'Stale',    value: executiveSummary.operationalSnapshot.staleTasks },
+            { label: 'Blocked',  value: executiveSummary.operationalSnapshot.blockedTasks },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <span className="nav-label text-[0.45rem]" style={{ color: ICE_DIM }}>{label}:</span>
+              <span className="font-mono text-xs font-bold" style={{ color: 'rgba(184,212,240,0.7)' }}>{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Urgent actions */}
+        {hasUrgent && (
+          <div className="flex flex-wrap gap-1.5 mb-1.5">
+            {executiveSummary.urgentActions.slice(0, 4).map((a, i) => (
+              <span key={i} className="nav-label text-[0.44rem] px-2 py-0.5 rounded-sm"
+                style={{ background: 'rgba(248,113,113,0.08)', color: RED, border: '1px solid rgba(248,113,113,0.15)' }}>
+                ⚡ {a}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Cross-system warnings */}
+        {hasWarnings && (
+          <div className="flex flex-wrap gap-1.5">
+            {executiveSummary.crossSystemWarnings.map((w, i) => (
+              <span key={i} className="nav-label text-[0.44rem] px-2 py-0.5 rounded-sm"
+                style={{ background: 'rgba(245,158,11,0.08)', color: AMBER, border: '1px solid rgba(245,158,11,0.15)' }}>
+                ⚠ {w}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Explainability breakdown (collapsible) */}
+      <GovernanceExplainabilitySection
+        enterpriseHealth={enterpriseHealth}
+        operationalRisk={operationalRisk}
+        teamStability={teamStability}
+      />
+    </motion.div>
+  )
+}
+
+function GovernanceExplainabilitySection({ enterpriseHealth, operationalRisk, teamStability }: {
+  enterpriseHealth: GovernanceIntelligenceOverview['enterpriseHealth']
+  operationalRisk:  GovernanceIntelligenceOverview['operationalRisk']
+  teamStability:    GovernanceIntelligenceOverview['teamStability']
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="mt-2">
+      <button onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 nav-label text-[0.48rem] transition-colors"
+        style={{ color: ICE_DIM }}>
+        {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+        {open ? 'HIDE EXPLAINABILITY' : 'SHOW EXPLAINABILITY BREAKDOWN'}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden mt-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                { title: 'Enterprise Health', data: enterpriseHealth, color: enterpriseHealth.score >= 75 ? GREEN : enterpriseHealth.score >= 50 ? AMBER : RED },
+                { title: 'Operational Risk',  data: operationalRisk,  color: operationalRisk.score  >= 70 ? RED   : operationalRisk.score  >= 45 ? AMBER : GREEN },
+                { title: 'Team Stability',    data: teamStability,    color: teamStability.score    >= 75 ? GREEN : teamStability.score    >= 50 ? AMBER : RED },
+              ].map(({ title, data, color }) => (
+                <div key={title} className="glass-card rounded-sm p-4" style={{ border: `1px solid ${color}18` }}>
+                  <p className="nav-label text-[0.5rem] mb-2" style={{ color }}>{title.toUpperCase()}</p>
+
+                  {/* Component scores */}
+                  <div className="space-y-1.5 mb-3">
+                    {Object.entries(data.components).map(([key, val]) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <p className="nav-label text-[0.44rem] flex-1" style={{ color: ICE_DIM }}>
+                          {key.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
+                        </p>
+                        <div className="w-16 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(184,212,240,0.08)' }}>
+                          <div className="h-full rounded-full" style={{ width: `${val}%`, background: color }} />
+                        </div>
+                        <span className="font-mono text-[0.5rem] w-6 text-right" style={{ color }}>{val}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Reasoning */}
+                  <div className="space-y-1">
+                    <p className="nav-label text-[0.44rem]" style={{ color: ICE_DIM }}>
+                      <span style={{ color: `${GOLD}88` }}>Workload: </span>{data.explainability.workloadReasoning}
+                    </p>
+                    <p className="nav-label text-[0.44rem]" style={{ color: ICE_DIM }}>
+                      <span style={{ color: `${GOLD}88` }}>Credibility: </span>{data.explainability.credibilityReasoning}
+                    </p>
+                    <p className="nav-label text-[0.44rem]" style={{ color: ICE_DIM }}>
+                      <span style={{ color: `${GOLD}88` }}>Integration: </span>{data.explainability.integrationReasoning}
+                    </p>
+                  </div>
+
+                  {/* Detected risks */}
+                  {data.explainability.detectedRisks.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {data.explainability.detectedRisks.map((r, i) => (
+                        <span key={i} className="nav-label text-[0.42rem] px-1.5 py-0.5 rounded-sm"
+                          style={{ background: 'rgba(248,113,113,0.07)', color: 'rgba(248,113,113,0.6)', border: '1px solid rgba(248,113,113,0.12)' }}>
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Contributing systems */}
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {data.explainability.contributingSystems.map(s => (
+                      <span key={s} className="nav-label text-[0.42rem] px-1.5 py-0.5 rounded-sm"
+                        style={{ background: 'rgba(201,168,76,0.06)', color: `${GOLD}66`, border: `1px solid ${GOLD}18` }}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Governance() {
   const user    = useAuthStore(selectUser)
@@ -811,6 +1040,7 @@ export default function Governance() {
   const [roleHistory, setRoleHistory] = useState<RoleHistoryRecord[]>([])
   const [accessMatrix, setAccessMatrix] = useState<AccessMatrixResponse | null>(null)
   const [security, setSecurity] = useState<SecurityOverview | null>(null)
+  const [intelligenceOverview, setIntelligenceOverview] = useState<GovernanceIntelligenceOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [msg, setMsg]         = useState<{ ok: boolean; text: string } | null>(null)
@@ -829,6 +1059,7 @@ export default function Governance() {
             getRoleHistory({ limit: 100 }).then(d => setRoleHistory(d.records)),
             getAccessMatrix().then(setAccessMatrix),
             getSecurityOverview().then(setSecurity),
+            getGovernanceIntelligenceOverview().then(setIntelligenceOverview).catch(() => {}),
           )
         }
         await Promise.all(promises)
@@ -917,6 +1148,11 @@ export default function Governance() {
           {!loading && (
             <>
               {msg && <div className="mb-4"><FeedbackBanner ok={msg.ok} text={msg.text} /></div>}
+
+              {/* Enterprise Intelligence Overview — admin only, shown above tabs */}
+              {isAdmin && intelligenceOverview && (
+                <GovernanceIntelligencePanel data={intelligenceOverview} />
+              )}
 
               <div className="flex flex-wrap gap-1 mb-6 glass-card rounded-sm p-1 overflow-x-auto">
                 {visibleTabs.map(t => (

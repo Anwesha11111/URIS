@@ -81,10 +81,18 @@ export const useAuthStore = create<AuthState>()(
       // ── Actions ─────────────────────────────────────────────────────────────
       login: (token, user) => {
         set({ token, user, isAuthenticated: true })
+        // Connect realtime socket after login
+        import('../store/realtimeStore')
+          .then(({ useRealtimeStore }) => useRealtimeStore.getState().connect(token))
+          .catch(() => { /* non-fatal */ })
       },
 
       logout: () => {
         set({ token: null, user: null, isAuthenticated: false })
+        // Disconnect realtime socket on logout
+        import('../store/realtimeStore')
+          .then(({ useRealtimeStore }) => useRealtimeStore.getState().disconnect())
+          .catch(() => { /* non-fatal */ })
         // Clear team context on logout — dynamic import avoids circular deps
         import('../store/teamStore')
           .then(({ useTeamStore }) => useTeamStore.getState().clearTeams())
@@ -118,6 +126,12 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.isAuthenticated = !!state.token
+          // Reconnect socket if a valid token exists after page refresh
+          if (state.token) {
+            import('../store/realtimeStore')
+              .then(({ useRealtimeStore }) => useRealtimeStore.getState().connect(state.token!))
+              .catch(() => { /* non-fatal */ })
+          }
         }
       },
     }

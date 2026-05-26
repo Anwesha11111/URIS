@@ -19,6 +19,7 @@ const {
   getAccessMatrix,
   updateAccessMatrix,
   getSecurityOverview,
+  getGovernanceIntelligenceOverview,
 } = require('../controllers/approval.controller');
 const { verifyToken, requireRole } = require('../middleware/auth.middleware');
 const { requirePermission }        = require('../middleware/permission.middleware');
@@ -48,5 +49,8 @@ router.put('/access-matrix',            ...adminOnly, updateAccessMatrix);
 
 // ── Security oversight ────────────────────────────────────────────────────────
 router.get('/security',                 ...adminOnly, getSecurityOverview);
+
+// ── Unified intelligence overview (admin) ─────────────────────────────────────
+router.get('/intelligence-overview',    ...adminOnly, getGovernanceIntelligenceOverview);
 
 module.exports = router;

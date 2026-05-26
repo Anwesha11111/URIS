@@ -20,13 +20,16 @@ model User {
   dateOfBirth         DateTime?
   joiningDate         DateTime?
   passwordChangedAt   DateTime?
+  effectiveTli        Float                @default(0)
+  loadBand            LoadBand             @default(GREEN)
+  tli                 Float                @default(0)
   activities          Activity[]
   auditLogs           AuditLog[]
+  googleToken         GoogleToken?
   intern              Intern?
-  teams               UserTeam[]
   passwordResetTokens PasswordResetToken[]
   observedTasks       TaskObserver[]
-  googleToken         GoogleToken?
+  teams               UserTeam[]
 }
 
 model GoogleToken {
@@ -49,8 +52,8 @@ model Intern {
   reservedUntil          DateTime?
   gdocUrl                String?
   lastGdocReminderSentAt DateTime?
-  gdocLastModified       DateTime?
   gdocIsStale            Boolean            @default(false)
+  gdocLastModified       DateTime?
   gdocMetaRefreshedAt    DateTime?
   availabilitySlots      AvailabilitySlot[]
   capacityScore          CapacityScore?
@@ -90,26 +93,27 @@ model AvailabilitySlot {
 }
 
 model Task {
-  id            String    @id @default(uuid())
-  planeTaskId   String    @unique
-  internId      String
-  title         String
-  description   String?
-  note          String?
-  complexity    Float
-  progressPct   Int       @default(0)
-  status        String    @default("active")
-  hasBlocker    Boolean   @default(false)
-  blockerType   String?
-  skills        String[]
-  deadline      DateTime?
-  lastUpdatedAt DateTime
-  createdAt     DateTime  @default(now())
-  alerts        Alert[]
-  reviews       Review[]
-  intern        Intern    @relation(fields: [internId], references: [id])
-  collaborators TaskCollaborator[]
-  observers     TaskObserver[]
+  id             String             @id @default(uuid())
+  planeTaskId    String             @unique
+  internId       String
+  title          String
+  complexity     Float?             @default(1)
+  progressPct    Int                @default(0)
+  status         String             @default("active")
+  hasBlocker     Boolean            @default(false)
+  blockerType    String?
+  skills         String[]
+  deadline       DateTime?
+  lastUpdatedAt  DateTime
+  createdAt      DateTime           @default(now())
+  description    String?
+  note           String?
+  estimatedHours Float?             @default(1)
+  alerts         Alert[]
+  reviews        Review[]
+  intern         Intern             @relation(fields: [internId], references: [id])
+  collaborators  TaskCollaborator[]
+  observers      TaskObserver[]
 }
 
 model TaskCollaborator {
@@ -222,8 +226,8 @@ model Team {
   name          String             @unique
   description   String?
   createdAt     DateTime           @default(now())
-  members       UserTeam[]
   collaborating TaskCollaborator[]
+  members       UserTeam[]
 }
 
 model UserTeam {
@@ -377,4 +381,10 @@ enum Role {
   COLLABORATOR_LEAD
   ORENDA_MEMBER
   PAST_EMPLOYEE
+}
+
+enum LoadBand {
+  GREEN
+  AMBER
+  RED
 }

@@ -22,6 +22,8 @@ const {
   getAlertIntelligence: getAlertIntelligenceData,
   getPerformanceTrends: getPerformanceTrendsData,
 } = require('../services/analyticsService');
+const { computeIntegrationIntelligence } = require('../services/integrationIntelligenceEngine');
+const { aggregateUnifiedIntelligence }   = require('../services/unifiedIntelligenceEngine');
 const { ok, validationError } = require('../utils/respond');
 const { isUUID } = require('../utils/validate');
 
@@ -31,8 +33,32 @@ const { isUUID } = require('../utils/validate');
  */
 async function getDashboard(req, res, next) {
   try {
-    const data = await getFullAnalyticsDashboard();
-    return ok(res, data, 'Analytics dashboard fetched.');
+    const [data, integrationIntelligence] = await Promise.all([
+      getFullAnalyticsDashboard(),
+      computeIntegrationIntelligence({}).catch(() => []),
+    ]);
+
+    // Build summary from integration intelligence rows
+    const iiRows = integrationIntelligence ?? [];
+    const iiSummary = {
+      total: iiRows.length,
+      highRisk:    iiRows.filter(r => r.risk?.severity === 'high').length,
+      warningRisk: iiRows.filter(r => r.risk?.severity === 'warning').length,
+      avgDocActivityScore: iiRows.length
+        ? Math.round(iiRows.reduce((s, r) => s + (r.documentActivityScore ?? 0), 0) / iiRows.length)
+        : null,
+      avgIntegrationScore: iiRows.length
+        ? Math.round(iiRows.reduce((s, r) => s + (r.integrationIntelligenceScore ?? 0), 0) / iiRows.length)
+        : null,
+    };
+
+    return ok(res, {
+      ...data,
+      integrationIntelligence: {
+        rows:    iiRows,
+        summary: iiSummary,
+      },
+    }, 'Analytics dashboard fetched.');
   } catch (err) {
     next(err);
   }
@@ -212,4 +238,58 @@ module.exports = {
   getAssignmentReadiness,
   getAlertIntelligence,
   getPerformanceTrends,
+  getIntegrationIntelligence,
+  getUnifiedIntelligence,
+  getOpenProjectIntelligence,
 };
+
+/**
+ * GET /analytics/integration-intelligence
+ * Per-intern integration intelligence scores with explainability payloads.
+ */
+async function getIntegrationIntelligence(req, res, next) {
+  try {
+    const rows = await computeIntegrationIntelligence({});
+    const summary = {
+      total: rows.length,
+      highRisk:    rows.filter(r => r.risk?.severity === 'high').length,
+      warningRisk: rows.filter(r => r.risk?.severity === 'warning').length,
+      avgDocActivityScore: rows.length
+        ? Math.round(rows.reduce((s, r) => s + (r.documentActivityScore ?? 0), 0) / rows.length)
+        : null,
+      avgIntegrationScore: rows.length
+        ? Math.round(rows.reduce((s, r) => s + (r.integrationIntelligenceScore ?? 0), 0) / rows.length)
+        : null,
+    };
+    return ok(res, { rows, summary }, 'Integration intelligence fetched.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /analytics/unified
+ * Unified enterprise intelligence: EnterpriseHealth, OperationalRisk, TeamStability.
+ */
+async function getUnifiedIntelligence(req, res, next) {
+  try {
+    const data = await aggregateUnifiedIntelligence();
+    return ok(res, data, 'Unified intelligence fetched.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /analytics/openproject-intelligence
+ * OpenProject operational intelligence signals: milestones, sync health, detected patterns.
+ */
+async function getOpenProjectIntelligence(req, res, next) {
+  try {
+    const { computeOPIntelligenceSignals } = require('../services/openproject.intelligence');
+    const data = await computeOPIntelligenceSignals();
+    return ok(res, data, 'OpenProject intelligence fetched.');
+  } catch (err) {
+    next(err);
+  }
+}

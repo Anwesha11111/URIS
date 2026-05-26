@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   CheckCircle, AlertTriangle, XCircle, Loader2,
-  RefreshCw, Wifi, WifiOff, Clock,
+  RefreshCw, Wifi, WifiOff, Clock, Activity, ShieldAlert, Flag, GitBranch,
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getIntegrationStatus, type IntegrationAudit, type IntegrationInfo } from '../services/admin.service'
+import { getOpenProjectIntelligence, type OpenProjectIntelligenceData, type OPMilestone, type OPDetectedPattern } from '../services/analytics.service'
 
 // ── Design tokens (match index.css exactly) ───────────────────────────────────
 const GOLD    = '#c9a84c'
@@ -140,6 +141,192 @@ function IntegrationCard({ integration, index }: { integration: IntegrationInfo;
   )
 }
 
+// ── OpenProject Intelligence Panel ───────────────────────────────────────────
+
+const SIGNAL_LABELS: Record<string, string> = {
+  assignmentChurn01:      'Assignment Churn',
+  milestoneInstability01: 'Milestone Instability',
+  delayedUpdates01:       'Delayed Updates',
+  blockerFrequency01:     'Blocker Frequency',
+  sprintInstability01:    'Sprint Instability',
+}
+
+function SignalBar({ label, value01, color }: { label: string; value01: number; color: string }) {
+  const pct = Math.round(value01 * 100)
+  return (
+    <div className="flex items-center gap-3">
+      <p className="nav-label text-[0.48rem] w-36 flex-shrink-0" style={{ color: ICE_DIM }}>{label}</p>
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(184,212,240,0.08)' }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="h-full rounded-full"
+          style={{ background: color }}
+        />
+      </div>
+      <span className="font-mono text-xs w-8 text-right flex-shrink-0" style={{ color }}>{pct}%</span>
+    </div>
+  )
+}
+
+function MilestoneRow({ m }: { m: OPMilestone }) {
+  const color = m.isOverdue ? RED : m.percentDone >= 100 ? GREEN : AMBER
+  return (
+    <div className="flex items-center justify-between gap-3 py-2 border-b last:border-0"
+      style={{ borderColor: 'rgba(184,212,240,0.06)' }}>
+      <div className="flex-1 min-w-0">
+        <p className="font-body text-xs text-frost/80 truncate">{m.subject}</p>
+        <p className="nav-label text-[0.44rem] mt-0.5" style={{ color: ICE_DIM }}>
+          {m.dueDate
+            ? `Due ${new Date(m.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
+            : 'No due date'}
+          {' · '}{m.status}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="w-16 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(184,212,240,0.08)' }}>
+          <div className="h-full rounded-full" style={{ width: `${m.percentDone}%`, background: color }} />
+        </div>
+        <span className="font-mono text-xs w-8 text-right" style={{ color }}>{m.percentDone}%</span>
+        {m.isOverdue && (
+          <span className="nav-label text-[0.44rem] px-1.5 py-0.5 rounded-full"
+            style={{ background: 'rgba(248,113,113,0.12)', color: RED }}>OVERDUE</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PatternBadge({ p }: { p: OPDetectedPattern }) {
+  const color = p.severity === 'high' ? RED : AMBER
+  return (
+    <div className="flex items-start gap-2 p-3 rounded-sm"
+      style={{ background: `${color}08`, border: `1px solid ${color}18` }}>
+      <AlertTriangle size={11} style={{ color, flexShrink: 0, marginTop: 1 }} />
+      <div>
+        <p className="nav-label text-[0.48rem]" style={{ color }}>
+          {p.pattern.replace(/_/g, ' ').toUpperCase()}
+        </p>
+        <p className="font-body text-xs mt-0.5" style={{ color: ICE_DIM }}>{p.detail}</p>
+      </div>
+    </div>
+  )
+}
+
+function OpenProjectPanel({ data }: { data: OpenProjectIntelligenceData }) {
+  if (!data.available) {
+    return (
+      <div className="glass-card rounded-sm p-5 mt-6"
+        style={{ border: '1px solid rgba(184,212,240,0.08)' }}>
+        <div className="flex items-center gap-2 mb-2">
+          <GitBranch size={14} style={{ color: ICE_DIM }} />
+          <p className="nav-label text-[0.5rem]" style={{ color: ICE_DIM }}>OPENPROJECT INTELLIGENCE</p>
+        </div>
+        <p className="font-body text-xs" style={{ color: ICE_DIM }}>
+          {data.reason ?? 'OpenProject not configured or unreachable.'}
+        </p>
+      </div>
+    )
+  }
+
+  const healthColor = (data.opHealthScore ?? 0) >= 75 ? GREEN
+    : (data.opHealthScore ?? 0) >= 50 ? AMBER : RED
+
+  const signals = data.signals
+  const signalEntries = Object.entries(signals) as [string, number][]
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      className="glass-card rounded-sm p-5 mt-6"
+      style={{ border: `1px solid ${healthColor}22` }}>
+
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-sm" style={{ background: `${healthColor}15` }}>
+            <GitBranch size={13} style={{ color: healthColor }} />
+          </div>
+          <div>
+            <p className="nav-label text-[0.5rem]" style={{ color: `${GOLD}88` }}>OPENPROJECT INTELLIGENCE</p>
+            <p className="font-body text-xs" style={{ color: ICE_DIM }}>
+              {data.raw?.totalWPs ?? 0} work packages · {data.raw?.totalMilestones ?? 0} milestones
+            </p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="font-display font-black text-2xl leading-none" style={{ color: healthColor }}>
+            {data.opHealthScore ?? '—'}
+          </p>
+          <p className="nav-label text-[0.44rem]" style={{ color: ICE_DIM }}>OP HEALTH</p>
+        </div>
+      </div>
+
+      {/* Signal bars */}
+      <div className="space-y-2 mb-4">
+        {signalEntries.map(([key, val]) => {
+          const color = val > 0.5 ? RED : val > 0.25 ? AMBER : GREEN
+          return (
+            <SignalBar
+              key={key}
+              label={SIGNAL_LABELS[key] ?? key}
+              value01={val}
+              color={color}
+            />
+          )
+        })}
+      </div>
+
+      {/* Raw counters */}
+      {data.raw && (
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {[
+            { label: 'OVERDUE MILESTONES', value: data.raw.overdueMilestones, color: data.raw.overdueMilestones > 0 ? RED : GREEN },
+            { label: 'BLOCKED WPs',        value: data.raw.blockerCount,       color: data.raw.blockerCount > 0 ? AMBER : GREEN },
+            { label: 'DELAYED WPs',        value: data.raw.delayedCount,       color: data.raw.delayedCount > 0 ? AMBER : GREEN },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-sm p-2 text-center"
+              style={{ background: 'rgba(184,212,240,0.04)', border: '1px solid rgba(184,212,240,0.08)' }}>
+              <p className="font-display font-black text-xl" style={{ color }}>{value}</p>
+              <p className="nav-label text-[0.42rem] mt-0.5" style={{ color: ICE_DIM }}>{label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Detected patterns */}
+      {(data.detectedPatterns?.length ?? 0) > 0 && (
+        <div className="mb-4">
+          <p className="nav-label text-[0.48rem] mb-2" style={{ color: `${GOLD}66` }}>DETECTED PATTERNS</p>
+          <div className="space-y-2">
+            {data.detectedPatterns!.map((p, i) => <PatternBadge key={i} p={p} />)}
+          </div>
+        </div>
+      )}
+
+      {/* Milestone timeline */}
+      {(data.raw?.milestones?.length ?? 0) > 0 && (
+        <div>
+          <p className="nav-label text-[0.48rem] mb-2" style={{ color: `${GOLD}66` }}>MILESTONE TIMELINE</p>
+          <div className="glass-card rounded-sm px-3 py-1"
+            style={{ border: '1px solid rgba(184,212,240,0.06)' }}>
+            {data.raw!.milestones.map(m => <MilestoneRow key={m.opId} m={m} />)}
+          </div>
+        </div>
+      )}
+
+      {/* All clear */}
+      {(data.detectedPatterns?.length ?? 0) === 0 && (
+        <div className="flex items-center gap-2 p-3 rounded-sm"
+          style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.12)' }}>
+          <CheckCircle size={12} style={{ color: GREEN }} />
+          <p className="font-body text-xs" style={{ color: GREEN }}>No operational patterns detected — OpenProject is healthy.</p>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Integrations() {
@@ -147,6 +334,8 @@ export default function Integrations() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [opData, setOpData]   = useState<OpenProjectIntelligenceData | null>(null)
+  const [opLoading, setOpLoading] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -160,6 +349,12 @@ export default function Integrations() {
     } finally {
       setLoading(false)
     }
+    // Load OP intelligence in parallel (non-blocking)
+    setOpLoading(true)
+    getOpenProjectIntelligence()
+      .then(setOpData)
+      .catch(() => setOpData({ available: false, reason: 'Failed to load OpenProject intelligence.', signals: { assignmentChurn01: 0, milestoneInstability01: 0, delayedUpdates01: 0, blockerFrequency01: 0, sprintInstability01: 0 } }))
+      .finally(() => setOpLoading(false))
   }
 
   useEffect(() => { void load() }, [])
@@ -267,6 +462,16 @@ export default function Integrations() {
                   <IntegrationCard key={integration.id} integration={integration} index={i} />
                 ))}
               </div>
+
+              {/* OpenProject Intelligence Panel */}
+              {opLoading && (
+                <div className="flex items-center gap-2 mt-6 p-4 glass-card rounded-sm"
+                  style={{ border: '1px solid rgba(184,212,240,0.08)' }}>
+                  <Loader2 size={14} className="animate-spin" style={{ color: GOLD }} />
+                  <p className="nav-label text-[0.5rem]" style={{ color: ICE_DIM }}>Loading OpenProject intelligence...</p>
+                </div>
+              )}
+              {!opLoading && opData && <OpenProjectPanel data={opData} />}
 
               {/* Legend */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}

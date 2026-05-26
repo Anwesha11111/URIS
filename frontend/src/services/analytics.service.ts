@@ -312,6 +312,151 @@ export interface AnalyticsDashboard {
   assignmentReadiness:  AssignmentReadinessData
   alertIntelligence:    AlertIntelligenceData
   performanceTrends:    PerformanceTrendsData
+  integrationIntelligence?: IntegrationIntelligenceData
+}
+
+// ── Integration Intelligence ──────────────────────────────────────────────────
+
+export interface IntegrationIntelligenceRow {
+  internId:                       string
+  integrationIntelligenceScore:   number
+  documentActivityScore:          number
+  collaborationScore:             number
+  deliveryReliabilityScore:       number
+  calendarLoadScore:              number
+  communicationResponsivenessScore: number
+  documentActivity: {
+    lastDocumentUpdate:          string | null
+    editFrequencyPerWeek:        number
+    updateConsistencyScore:      number
+    recentActivityMultiplier:    number
+    inactivityDurationDays:      number | null
+    staleDocumentationRisk:      boolean
+    missingProgressUpdatesRisk:  boolean
+    lowActivityPeriods:          boolean
+  } | null
+  calendarLoad: {
+    neutrality: string
+  } | null
+  collaboration: {
+    neutrality: string
+  } | null
+  deliveryReliability: {
+    neutrality: string
+  } | null
+  risk: {
+    category: string | null
+    severity: 'high' | 'warning' | 'info'
+  }
+  explain: {
+    integrationIntelligence: {
+      operationalImpact: string
+      detectedPatterns:  string[]
+    }
+  }
+}
+
+export interface IntegrationIntelligenceSummary {
+  total:               number
+  highRisk:            number
+  warningRisk:         number
+  avgDocActivityScore: number | null
+  avgIntegrationScore: number | null
+}
+
+export interface IntegrationIntelligenceData {
+  rows:    IntegrationIntelligenceRow[]
+  summary: IntegrationIntelligenceSummary
+}
+
+// ── Unified Intelligence ──────────────────────────────────────────────────────
+
+export interface UnifiedScoreComponent {
+  score:  number
+  label:  string
+  components: Record<string, number>
+  explainability: {
+    contributingSystems: string[]
+    weightingBreakdown:  Record<string, number>
+    workloadReasoning:   string
+    credibilityReasoning: string
+    integrationReasoning: string
+    detectedRisks:       string[]
+  }
+}
+
+export interface UnifiedLiveSignals {
+  unresolvedEscalations:   number
+  overloadWarnings:        number
+  staleTaskWarnings:       number
+  reassignmentInstability: number
+  integrationRiskCount:    number
+  totalUnresolvedAlerts:   number
+}
+
+export interface UnifiedIntelligenceData {
+  computedAt:      string
+  enterpriseHealth: UnifiedScoreComponent
+  operationalRisk:  UnifiedScoreComponent
+  teamStability:    UnifiedScoreComponent
+  executiveSummary: {
+    headline:             string
+    urgentActions:        string[]
+    crossSystemWarnings:  string[]
+    operationalSnapshot: {
+      totalInterns:     number
+      activeTasks:      number
+      unresolvedAlerts: number
+      criticalAlerts:   number
+      staleTasks:       number
+      blockedTasks:     number
+    }
+  }
+  liveSignals: UnifiedLiveSignals
+}
+
+// ── OpenProject Intelligence ──────────────────────────────────────────────────
+
+export interface OPSignals {
+  assignmentChurn01:      number
+  milestoneInstability01: number
+  delayedUpdates01:       number
+  blockerFrequency01:     number
+  sprintInstability01:    number
+}
+
+export interface OPMilestone {
+  opId:        number
+  subject:     string
+  dueDate:     string | null
+  status:      string
+  percentDone: number
+  isOverdue:   boolean
+  updatedAt:   string
+}
+
+export interface OPDetectedPattern {
+  pattern:  string
+  detail:   string
+  severity: 'high' | 'warning' | 'info'
+}
+
+export interface OpenProjectIntelligenceData {
+  available:      boolean
+  reason?:        string
+  opHealthScore?: number
+  signals:        OPSignals
+  raw?: {
+    totalWPs:                number
+    overdueMilestones:       number
+    totalMilestones:         number
+    assignmentChurnCount:    number
+    delayedCount:            number
+    blockerCount:            number
+    sprintInstabilityCount:  number
+    milestones:              OPMilestone[]
+  }
+  detectedPatterns?: OPDetectedPattern[]
 }
 
 // ── API calls ─────────────────────────────────────────────────────────────────
@@ -334,3 +479,6 @@ export const getTaskRisksData       = (): Promise<TaskRiskData>                 
 export const getAssignmentReadiness = (): Promise<AssignmentReadinessData>       => wrap(api.get('/analytics/assignment-readiness'))
 export const getAlertIntelligence   = (): Promise<AlertIntelligenceData>         => wrap(api.get('/analytics/alert-intelligence'))
 export const getPerformanceTrends   = (): Promise<PerformanceTrendsData>         => wrap(api.get('/analytics/performance-trends'))
+export const getIntegrationIntelligence = (): Promise<IntegrationIntelligenceData> => wrap(api.get('/analytics/integration-intelligence'))
+export const getUnifiedIntelligence = (): Promise<UnifiedIntelligenceData>       => wrap(api.get('/analytics/unified'))
+export const getOpenProjectIntelligence = (): Promise<OpenProjectIntelligenceData> => wrap(api.get('/analytics/openproject-intelligence'))

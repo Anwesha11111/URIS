@@ -196,16 +196,18 @@ app.get('/test-email', async (req, res) => {
 
 app.use(errorHandler);
 
-const prisma    = require('./src/utils/prisma');
-const scheduler = require('./src/services/scheduler');
+const prisma          = require('./src/utils/prisma');
+const scheduler       = require('./src/services/scheduler');
+const realtimeEngine  = require('./src/services/realtimeEngine');
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   logger.info({ port: PORT }, 'Server running');
 
-  // Start the periodic sync scheduler after the HTTP server is ready.
+  // Initialise Socket.IO realtime engine on the same http.Server.
   // Skipped in test environments to avoid background jobs interfering with tests.
   if (process.env.NODE_ENV !== 'test') {
+    realtimeEngine.init(server, ALLOWED_ORIGINS);
     scheduler.start();
   }
 });

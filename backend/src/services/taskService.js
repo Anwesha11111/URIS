@@ -178,20 +178,56 @@ async function detectAndMarkStaleTasks() {
     }
   });
 
+  // Credibility nudge ("slightly"): reduce by up to 2 points (0..100 scale)
+  const CREDIBILITY_DECREMENT_POINTS = parseFloat(process.env.STALE_CREDIBILITY_DECREMENT_POINTS) || 2;
+
+  // Escalation: if deadline is within 24h of now, severity becomes critical.
+  const ESCALATE_WITHIN_HOURS = parseInt(process.env.STALE_ESCALATE_WITHIN_HOURS) || 24;
+
+  const nowMs = Date.now();
+
   for (const task of staleTasks) {
     await prisma.task.update({ where: { id: task.id }, data: { status: 'stale' } });
+
+    const hoursSinceUpdate = (nowMs - new Date(task.lastUpdatedAt).getTime()) / (1000 * 60 * 60);
+    const hoursUntilDeadline = task.deadline ? (new Date(task.deadline).getTime() - nowMs) / (1000 * 60 * 60) : null;
+
+    const isEscalationWindow = hoursUntilDeadline != null && hoursUntilDeadline <= ESCALATE_WITHIN_HOURS;
+    const severity = isEscalationWindow ? 'critical' : 'warning';
+
+    // Create (or keep) stale alert; re-create only if none exists unresolved.
     const existing = await prisma.alert.findFirst({
       where: { taskId: task.id, type: 'stale_task', resolved: false }
     });
+
     if (!existing) {
       await prisma.alert.create({
         data: {
           internId: task.internId,
           type:     'stale_task',
           taskId:   task.id,
-          message:  `Your task "${task.title}" has not been updated in 2+ days and the deadline is approaching. Please update your progress.`
+          severity,
+          message: isEscalationWindow
+            ? `ESCALATION: Task "${task.title}" is stale and due within ${Math.max(0, Math.round(hoursUntilDeadline))}h. Please update progress immediately.`
+            : `Task "${task.title}" has not been updated for ${Math.round(hoursSinceUpdate)}h and the deadline is approaching. Please update your progress.`,
         }
       });
+    }
+
+    // Credibility decrement (small): adjust CredibilityScore.score (0..1)
+    try {
+      const existingCred = await prisma.credibilityScore.findUnique({ where: { internId: task.internId } });
+      if (existingCred?.score != null) {
+        // existingCred.score is 0..1; decrement points/100
+        const dec = CREDIBILITY_DECREMENT_POINTS / 100;
+        const nextScore = Math.max(0, existingCred.score - dec);
+        await prisma.credibilityScore.update({
+          where: { internId: task.internId },
+          data:  { score: parseFloat(nextScore.toFixed(3)), computedAt: new Date() },
+        });
+      }
+    } catch (e) {
+      logger.warn({ taskId: task.id, internId: task.internId, err: e?.message }, 'Failed to decrement credibility for stale task');
     }
   }
   return staleTasks.length;

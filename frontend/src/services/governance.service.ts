@@ -193,3 +193,73 @@ export function submitPromotionRequest(params: {
     payload:    { newRole: params.newRole, reason: params.reason ?? '' },
   })
 }
+
+// ── Unified Intelligence Overview ─────────────────────────────────────────────
+
+export interface GovernanceIntelligenceOverview {
+  computedAt:      string
+  enterpriseHealth: {
+    score:  number
+    label:  string
+    components: Record<string, number>
+    explainability: {
+      contributingSystems: string[]
+      weightingBreakdown:  Record<string, number>
+      workloadReasoning:   string
+      credibilityReasoning: string
+      integrationReasoning: string
+      detectedRisks:       string[]
+    }
+  }
+  operationalRisk: {
+    score:  number
+    label:  string
+    components: Record<string, number>
+    explainability: {
+      contributingSystems: string[]
+      weightingBreakdown:  Record<string, number>
+      workloadReasoning:   string
+      credibilityReasoning: string
+      integrationReasoning: string
+      detectedRisks:       string[]
+    }
+  }
+  teamStability: {
+    score:  number
+    label:  string
+    components: Record<string, number>
+    explainability: {
+      contributingSystems: string[]
+      weightingBreakdown:  Record<string, number>
+      workloadReasoning:   string
+      credibilityReasoning: string
+      integrationReasoning: string
+      detectedRisks:       string[]
+    }
+  }
+  executiveSummary: {
+    headline:             string
+    urgentActions:        string[]
+    crossSystemWarnings:  string[]
+    operationalSnapshot: {
+      totalInterns:     number
+      activeTasks:      number
+      unresolvedAlerts: number
+      criticalAlerts:   number
+      staleTasks:       number
+      blockedTasks:     number
+    }
+  }
+  liveSignals: {
+    unresolvedEscalations:   number
+    overloadWarnings:        number
+    staleTaskWarnings:       number
+    reassignmentInstability: number
+    integrationRiskCount:    number
+    totalUnresolvedAlerts:   number
+  }
+}
+
+export function getGovernanceIntelligenceOverview(): Promise<GovernanceIntelligenceOverview> {
+  return wrap(api.get('/governance/intelligence-overview'))
+}

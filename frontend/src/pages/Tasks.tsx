@@ -27,6 +27,17 @@ function statusPct(s: string): number {
   return 0
 }
 
+function formatHoursRemaining(ms: number): string {
+  if (!Number.isFinite(ms)) return '—'
+  const mins = Math.max(0, Math.floor(ms / 60_000))
+  const hours = Math.floor(mins / 60)
+  const remMins = mins % 60
+  if (hours <= 0) return `${remMins}m`;
+  if (remMins === 0) return `${hours}h`;
+  return `${hours}h ${remMins}m`;
+}
+
+
 export default function Tasks() {
   const [tasks, setTasks]     = useState<Task[]>([])
   const [interns, setInterns] = useState<InternRow[]>([])
@@ -311,6 +322,27 @@ export default function Tasks() {
                               {skill.toUpperCase()}
                             </span>
                             {task.isStale && <span className="nav-label text-[0.5rem] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-sm flex items-center gap-1"><Clock size={8} />STALE</span>}
+                            {task.isStale && task.deadline && (
+                              (() => {
+                                const now = Date.now()
+                                const deadlineMs = new Date(task.deadline).getTime() - now
+                                const within48h = deadlineMs <= 48 * 60 * 60 * 1000 && deadlineMs > 0
+                                const within24h = deadlineMs <= 24 * 60 * 60 * 1000 && deadlineMs > 0
+                                const color = within24h ? '#f87171' : within48h ? '#f59e0b' : 'rgba(184,212,240,0.3)'
+                                const bg = within24h
+                                  ? 'rgba(248,113,113,0.12)'
+                                  : within48h
+                                    ? 'rgba(245,158,11,0.12)'
+                                    : 'rgba(184,212,240,0.08)'
+
+                                return (
+                                  <span className="nav-label text-[0.5rem] px-1.5 py-0.5 rounded-sm flex items-center gap-1"
+                                    style={{ background: bg, color, border: `1px solid ${within24h ? 'rgba(248,113,113,0.25)' : within48h ? 'rgba(245,158,11,0.25)' : 'rgba(184,212,240,0.12)'}` }}>
+                                    <Clock size={8} />ESCALATES {formatHoursRemaining(deadlineMs)}
+                                  </span>
+                                )
+                              })()
+                            )}
                             {hasBlocker && <span className="nav-label text-[0.5rem] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded-sm flex items-center gap-1"><Flag size={8} />BLOCKED</span>}
                           </div>
                           <p className="font-body text-sm text-frost/85 truncate">{task.title}</p>

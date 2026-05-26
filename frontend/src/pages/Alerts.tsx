@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, AlertOctagon, Bell, Clock, Check, Loader2, Flag, Star, ClipboardList, Pause, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, AlertOctagon, Bell, Clock, Check, Loader2, Flag, Star, ClipboardList, Pause, ShieldAlert, Wifi, WifiOff } from 'lucide-react'
 import Sidebar   from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { useAlertStore } from '../store/alertStore'
+import { useRealtimeStore } from '../store/realtimeStore'
 
 // ── Type meta ─────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,8 @@ function timeAgo(iso?: string): string {
 
 export default function Alerts() {
   const { alerts, resolvedAlerts, loading, unread, resolve, resolveAll, refresh } = useAlertStore()
+  const { status: socketStatus, counters } = useRealtimeStore()
+  const isLive = socketStatus === 'connected'
   const [filter, setFilter]       = useState<'all' | 'critical' | 'warning'>('all')
   const [resolvingIds, setResolvingIds] = useState<Set<string>>(new Set())
   const [clearing, setClearing]   = useState(false)
@@ -106,6 +109,25 @@ export default function Alerts() {
                   </>
                 )}
               </div>
+              {/* Live socket indicator */}
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm"
+                style={{ background: isLive ? 'rgba(74,222,128,0.08)' : 'rgba(184,212,240,0.04)', border: `1px solid ${isLive ? 'rgba(74,222,128,0.2)' : 'rgba(184,212,240,0.08)'}` }}>
+                {isLive
+                  ? <><motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="w-1 h-1 rounded-full bg-green-400" /><Wifi size={9} style={{ color: '#4ade80' }} /><span className="nav-label text-[0.48rem]" style={{ color: '#4ade80' }}>LIVE</span></>
+                  : <><WifiOff size={9} style={{ color: 'rgba(184,212,240,0.25)' }} /><span className="nav-label text-[0.48rem]" style={{ color: 'rgba(184,212,240,0.25)' }}>OFFLINE</span></>
+                }
+              </div>
+              {/* Live critical counter from socket */}
+              {isLive && counters.criticalAlerts > 0 && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm"
+                  style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}>
+                  <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 0.8, repeat: Infinity }}
+                    className="w-1 h-1 rounded-full bg-red-400" />
+                  <span className="nav-label text-[0.48rem]" style={{ color: '#f87171' }}>
+                    {counters.criticalAlerts} CRITICAL
+                  </span>
+                </div>
+              )}
               {alerts.length > 0 && (
                 <motion.button whileTap={{ scale: 0.96 }} onClick={handleClearAll} disabled={clearing}
                   className="nav-label text-[0.6rem] px-3 py-1.5 rounded-sm transition-all disabled:opacity-40"

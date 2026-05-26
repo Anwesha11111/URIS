@@ -15,22 +15,35 @@ async function generateBlockerAlerts() {
     const hoursBlocked = (Date.now() - new Date(task.lastUpdatedAt).getTime()) / (1000 * 60 * 60);
     if (hoursBlocked < 48) continue;
 
+    // Idempotent generation: do not create duplicate unresolved escalation alerts.
     const existing = await prisma.alert.findFirst({
       where: { taskId: task.id, type: 'blocker_escalation', resolved: false },
     });
     if (existing) continue;
 
     const isEscalated = hoursBlocked >= 96;
-    const severity    = isEscalated ? 'critical' : 'warning';
-    const message     = isEscalated
-      ? `ESCALATED: Task "${task.title}" has been blocked for ${Math.round(hoursBlocked)} hours. Lead attention required.`
-      : `Task "${task.title}" has been blocked for ${Math.round(hoursBlocked)} hours. Blocking party notified.`;
 
+    // 48h => medium severity (blocker party)
+    // 96h => high severity (lead/admin) + operational risk messaging
+    const severity = isEscalated ? 'high' : 'medium';
+
+    const message = isEscalated
+      ? `ESCALATED (96h): Task "${task.title}" has been blocked for ${Math.round(hoursBlocked)} hours. Lead/Admin escalation required. Marking operational risk.`
+      : `BLOCKER ESCALATION (48h): Task "${task.title}" has been blocked for ${Math.round(hoursBlocked)} hours. Notifying blocker party.`;
+
+    // Note: no new Prisma fields yet. We express escalation indicators + operational risk via the alert message.
     await prisma.alert.create({
-      data: { internId: task.internId, type: 'blocker_escalation', taskId: task.id, message, severity },
+      data: {
+        internId: task.internId,
+        type: 'blocker_escalation',
+        taskId: task.id,
+        message,
+        severity,
+      },
     });
     created++;
   }
+
 
   return created;
 }

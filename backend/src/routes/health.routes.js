@@ -81,6 +81,25 @@ async function checkPlane() {
   );
 }
 
+/** Ping OpenProject by fetching the /api/v3 root. */
+async function checkOpenProject() {
+  const base   = process.env.OPENPROJECT_BASE_URL;
+  const apiKey = process.env.OPENPROJECT_API_KEY;
+
+  if (!base || !apiKey) {
+    return { ok: false, reason: 'not configured' };
+  }
+
+  const auth = Buffer.from(`apikey:${apiKey}`).toString('base64');
+  return probe(
+    axios.get(`${base.replace(/\/$/, '')}/api/v3`, {
+      headers:       { Authorization: `Basic ${auth}` },
+      validateStatus: (s) => s < 500,
+    }),
+    4000,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
@@ -179,10 +198,11 @@ router.get('/', async (req, res) => {
  * No auth required — status data only, no secrets exposed.
  */
 router.get('/integrations', async (req, res) => {
-  const [db, nextcloud, plane] = await Promise.all([
+  const [db, nextcloud, plane, openproject] = await Promise.all([
     checkDatabase(),
     checkNextcloud(),
     checkPlane(),
+    checkOpenProject(),
   ]);
 
   // Google: check env vars + DB token count
@@ -211,6 +231,18 @@ router.get('/integrations', async (req, res) => {
     process.env.PLANE_WORKSPACE_SLUG &&
     process.env.PLANE_PROJECT_ID
   );
+
+  // OpenProject: env vars
+  const opEnvOk = !!(
+    process.env.OPENPROJECT_BASE_URL &&
+    process.env.OPENPROJECT_API_KEY
+  );
+
+  // OpenProject: count tasks with OP work package IDs (stored as "op:NNN" in note field)
+  let opSyncedCount = 0;
+  try {
+    opSyncedCount = await prisma.task.count({ where: { note: { contains: 'op:' } } });
+  } catch { /* graceful */ }
 
   // Nextcloud: env vars
   const nextcloudEnvOk = !!(
@@ -290,6 +322,29 @@ router.get('/integrations', async (req, res) => {
       notes:       db.ok ? 'Prisma ORM · Connected' : db.reason ?? 'disconnected',
       features:    ['Prisma ORM', 'Connection pooling', 'All models'],
       frontendVisible: false,
+    },
+    {
+      id:          'openproject',
+      name:        'OpenProject',
+      status:      openproject.ok ? 'connected' : opEnvOk ? 'partial' : 'not_configured',
+      envOk:       opEnvOk,
+      operational: openproject.ok,
+      notes:       openproject.ok
+        ? `${opSyncedCount} task(s) synced · Webhook: /webhooks/openproject`
+        : opEnvOk ? (openproject.reason ?? 'unreachable') : 'OPENPROJECT_BASE_URL / API_KEY missing',
+      features:    [
+        'Work package create/update',
+        'Assignee sync',
+        'Deadline sync',
+        'Status sync',
+        'Milestone sync',
+        'Blocker sync (comments)',
+        'Comment/activity sync',
+        'Inbound webhook',
+        'Intelligence signals (assignment churn, milestone instability)',
+        '30-min outbound sync · 6h intelligence refresh',
+      ],
+      frontendVisible: true,
     },
   ];
 

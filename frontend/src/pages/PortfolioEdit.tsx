@@ -82,7 +82,9 @@ export default function PortfolioEdit() {
     )
   }
 
-  const portfolioUrl = `${window.location.origin}/portfolio/${data?.slug}`
+  const portfolioUrl = data?.slug
+    ? `${window.location.origin}/portfolio/${data.slug}`
+    : null
 
   return (
     <div className="min-h-screen bg-navy-950 text-frost">
@@ -181,14 +183,20 @@ export default function PortfolioEdit() {
             <div className="space-y-6">
               <div className="glass-card rounded-sm p-6 text-center">
                 <p className="nav-label text-[0.55rem] text-gold/40 mb-4 uppercase">Your QR Code</p>
-                <div className="bg-white p-4 rounded-sm inline-block mb-4 shadow-xl shadow-gold/5">
-                  <QRCodeSVG value={portfolioUrl} size={150} level="H" />
-                </div>
-                <p className="font-body text-xs text-ice/40 px-4 mb-4">Scan this to view your professional portfolio from any device.</p>
-                <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" 
-                  className="flex items-center justify-center gap-2 text-gold hover:text-white transition-all text-xs font-bold">
-                  <Globe size={12} /> VIEW PUBLIC PAGE
-                </a>
+                {portfolioUrl ? (
+                  <>
+                    <div className="bg-white p-4 rounded-sm inline-block mb-4 shadow-xl shadow-gold/5">
+                      <QRCodeSVG value={portfolioUrl} size={150} level="H" />
+                    </div>
+                    <p className="font-body text-xs text-ice/40 px-4 mb-4">Scan this to view your professional portfolio from any device.</p>
+                    <a href={portfolioUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 text-gold hover:text-white transition-all text-xs font-bold">
+                      <Globe size={12} /> VIEW PUBLIC PAGE
+                    </a>
+                  </>
+                ) : (
+                  <p className="font-body text-xs text-ice/30 px-4">Save your portfolio to generate a public link.</p>
+                )}
               </div>
 
               <div className="glass-card rounded-sm p-5 space-y-4">

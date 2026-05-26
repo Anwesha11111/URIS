@@ -132,7 +132,7 @@ async function getPermissionsForRoleEndpoint(req, res) {
   return ok(res, { role, permissions }, 'Role permissions fetched.');
 }
 
-module.exports = { list, request, approve, reject, cancel, getMyPermissions, getPermissionsForRoleEndpoint, getAllUsers, getRoleHistory, getAccessMatrix, updateAccessMatrix, getSecurityOverview };
+module.exports = { list, request, approve, reject, cancel, getMyPermissions, getPermissionsForRoleEndpoint, getAllUsers, getRoleHistory, getAccessMatrix, updateAccessMatrix, getSecurityOverview, getGovernanceIntelligenceOverview };
 
 // ── GET /governance/users ─────────────────────────────────────────────────────
 
@@ -318,6 +318,23 @@ async function updateAccessMatrix(req, res, next) {
     });
 
     return ok(res, { overrides: merged }, 'Access matrix updated successfully.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ── GET /governance/intelligence-overview ─────────────────────────────────────
+
+/**
+ * Returns the unified enterprise intelligence overview for the Governance page.
+ * Aggregates EnterpriseHealth, OperationalRisk, TeamStability, and executive summary.
+ * Admin-only. Degrades gracefully if the unified engine fails.
+ */
+async function getGovernanceIntelligenceOverview(req, res, next) {
+  try {
+    const { aggregateUnifiedIntelligence } = require('../services/unifiedIntelligenceEngine');
+    const data = await aggregateUnifiedIntelligence();
+    return ok(res, data, 'Governance intelligence overview fetched.');
   } catch (err) {
     next(err);
   }
