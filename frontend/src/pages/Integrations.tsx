@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   CheckCircle, AlertTriangle, XCircle, Loader2,
-  RefreshCw, Wifi, WifiOff, Clock, Activity, ShieldAlert, Flag, GitBranch,
+  RefreshCw, Wifi, WifiOff, Clock, GitBranch,
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'

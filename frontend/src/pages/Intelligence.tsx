@@ -963,7 +963,7 @@ function IntegrationTab({ data }: { data: IntegrationIntelligenceData }) {
           <div className="space-y-3">
             {rows
               .filter(r => r.risk?.severity !== 'info')
-              .sort((a, b) => (a.risk?.severity === 'high' ? -1 : 1))
+              .sort((a, _b) => (a.risk?.severity === 'high' ? -1 : 1))
               .map(row => (
                 <motion.div key={row.internId} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
                   className="p-4 rounded-sm"

@@ -519,3 +519,5 @@ function _startOPIntelligenceJob() {
     logger.info({ runId }, 'OpenProject intelligence job finished');
   });
 }
+
+module.exports = { start, stop };
