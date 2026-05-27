@@ -663,6 +663,26 @@ const resetPassword = Joi.object({
   query:  Joi.object(),
 });
 
+// ── Document ───────────────────────────────────────────────────────────────────
+
+const submitDocument = Joi.object({
+  body: Joi.object({
+    title:       Joi.string().trim().min(1).max(200).required().messages({
+      'string.min':   'title must not be empty',
+      'string.max':   'title must not exceed 200 characters',
+      'any.required': 'title is required',
+    }),
+    description: Joi.string().max(1000).optional().allow('', null).messages({
+      'string.max': 'description must not exceed 1000 characters',
+    }),
+    weekStart:   isoDate.optional().messages({
+      'date.base': 'weekStart must be a valid date',
+    }),
+  }).required(),
+  params: Joi.object(),
+  query:  Joi.object(),
+});
+
 // ── Exports ────────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -697,6 +717,8 @@ module.exports = {
     getPerformance,
     // score
     getScoreHistory,
+    // document
+    submitDocument,
     // alerts
     resolveAlert,
     getAlerts,

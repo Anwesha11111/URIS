@@ -29,6 +29,7 @@ const governanceRoutes   = require('./src/routes/governance.routes');
 const workflowRoutes     = require('./src/routes/workflow.routes');
 const profileRoutes      = require('./src/routes/profile.routes');
 const googleRoutes       = require('./src/routes/google.routes');
+const documentRoutes     = require('./src/routes/document.routes');
 
 const healthRoutes       = require('./src/routes/health.routes');
 const webhookRoutes      = require('./src/routes/webhook.routes');
@@ -148,6 +149,7 @@ app.use('/operational',  operationalRoutes);
 app.use('/archive',      archiveRoutes);
 app.use('/profile',      profileRoutes);
 app.use('/google',       googleRoutes);   // Google data: /google/worklog, /google/calendar
+app.use('/document',     documentRoutes); // Document submission: /document/submit, /document/mine, /document/lead/:internId
 // Serve uploaded profile pictures — /tmp in production (Render), local in dev
 const uploadDir = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
