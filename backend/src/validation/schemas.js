@@ -647,7 +647,11 @@ const changePassword = Joi.object({
 });
 
 const forgotPassword = Joi.object({
-  body:   Joi.object({ email: Joi.string().email().required() }).required(),
+  body: Joi.object({
+    email:    Joi.string().email().required().messages({ 'any.required': 'Email is required' }),
+    role:     Joi.string().max(50).optional().messages({ 'string.max': 'Role must not exceed 50 characters' }),
+    leadEmail: Joi.string().email().optional().allow('', null).messages({ 'string.email': 'Lead email must be a valid email address' }),
+  }).required(),
   params: Joi.object(),
   query:  Joi.object(),
 });
@@ -680,6 +684,89 @@ const submitDocument = Joi.object({
     }),
   }).required(),
   params: Joi.object(),
+  query:  Joi.object(),
+});
+
+// ── Chat ───────────────────────────────────────────────────────────────────────
+
+const sendFriendRequest = Joi.object({
+  body: Joi.object({
+    receiverId: uuid.required().messages({ 'any.required': 'receiverId is required' }),
+  }).required(),
+  params: Joi.object(),
+  query:  Joi.object(),
+});
+
+const acceptFriendRequest = Joi.object({
+  body:   Joi.object(),
+  params: Joi.object({
+    id: uuid.required().messages({ 'any.required': 'friendRequestId is required' }),
+  }).required(),
+  query: Joi.object(),
+});
+
+const rejectFriendRequest = Joi.object({
+  body:   Joi.object(),
+  params: Joi.object({
+    id: uuid.required().messages({ 'any.required': 'friendRequestId is required' }),
+  }).required(),
+  query: Joi.object(),
+});
+
+const createPrivateChat = Joi.object({
+  body:   Joi.object(),
+  params: Joi.object({
+    friendId: uuid.required().messages({ 'any.required': 'friendId is required' }),
+  }).required(),
+  query:  Joi.object(),
+});
+
+const createGroupChat = Joi.object({
+  body: Joi.object({
+    name:          Joi.string().trim().min(1).max(100).required().messages({
+      'string.min':   'name must not be empty',
+      'string.max':   'name must not exceed 100 characters',
+      'any.required': 'name is required',
+    }),
+    participantIds: Joi.array()
+      .items(uuid)
+      .min(2)
+      .max(50)
+      .required()
+      .messages({
+        'array.min':    'Group chat must have at least 2 participants',
+        'array.max':    'Group chat must not exceed 50 participants',
+        'any.required': 'participantIds is required',
+      }),
+  }).required(),
+  params: Joi.object(),
+  query:  Joi.object(),
+});
+
+const getMessages = Joi.object({
+  body:   Joi.object(),
+  params: Joi.object({
+    chatId: uuid.required().messages({ 'any.required': 'chatId is required' }),
+  }).required(),
+  query: Joi.object({
+    page:  Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(50).messages({
+      'number.max': 'limit must not exceed 100',
+    }),
+  }),
+});
+
+const sendMessage = Joi.object({
+  body: Joi.object({
+    content: Joi.string().trim().min(1).max(5000).required().messages({
+      'string.min':   'content must not be empty',
+      'string.max':   'content must not exceed 5000 characters',
+      'any.required': 'content is required',
+    }),
+  }).required(),
+  params: Joi.object({
+    chatId: uuid.required().messages({ 'any.required': 'chatId is required' }),
+  }).required(),
   query:  Joi.object(),
 });
 
@@ -719,6 +806,14 @@ module.exports = {
     getScoreHistory,
     // document
     submitDocument,
+    // chat
+    sendFriendRequest,
+    acceptFriendRequest,
+    rejectFriendRequest,
+    createPrivateChat,
+    createGroupChat,
+    getMessages,
+    sendMessage,
     // alerts
     resolveAlert,
     getAlerts,

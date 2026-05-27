@@ -131,7 +131,18 @@ async function getAdminOverview(req, res, next) {
     let internFilter = {};
     let alertFilter = { resolved: false };
     
-    if (req.user.role !== ROLES.CORE_ADMIN && req.user.role !== ROLES.OPERATIONS_LEAD) {
+    // Role-based filtering for leads
+    if (req.user.role === ROLES.TECHNICAL_LEAD) {
+      // Tech leads see only TECHNICAL_INTERNs
+      internFilter = { user: { role: 'TECHNICAL_INTERN' } };
+    } else if (req.user.role === ROLES.OPERATIONS_LEAD) {
+      // Ops leads see only OPERATIONS_INTERNs
+      internFilter = { user: { role: 'OPERATIONS_INTERN' } };
+    } else if (req.user.role === ROLES.RESEARCH_LEAD) {
+      // Research leads see only RESEARCH_INTERNs
+      internFilter = { user: { role: 'RESEARCH_INTERN' } };
+    } else if (req.user.role !== ROLES.CORE_ADMIN && req.user.role !== ROLES.OPERATIONS_PROGRAM_MANAGER) {
+      // Other leads/admins: filter by their assigned tasks
       const allowedTasks = await prisma.task.findMany({ where: filter, select: { id: true, internId: true } });
       const allowedTaskIds = allowedTasks.map(t => t.id);
       const allowedInternIds = [...new Set(allowedTasks.map(t => t.internId))];

@@ -15,8 +15,8 @@ async function changePassword(req, res, next) {
 
 async function forgotPassword(req, res, next) {
   try {
-    const { email } = req.body;
-    const result = await passwordService.requestPasswordReset(email);
+    const { email, role, leadEmail } = req.body;
+    const result = await passwordService.requestPasswordReset(email, role, leadEmail);
     return ok(res, null, result.message);
   } catch (err) {
     next(err);

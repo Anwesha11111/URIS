@@ -23,6 +23,33 @@ function validatePasswordLength(password) {
   }
 }
 
+function validatePasswordStrength(password) {
+  const errors = [];
+
+  // Check minimum length
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long.');
+  }
+
+  // Check for at least 2 capital letters
+  const capitalLetters = (password.match(/[A-Z]/g) || []).length;
+  if (capitalLetters < 2) {
+    errors.push('Password must contain at least 2 capital letters.');
+  }
+
+  // Check for at least 1 special character
+  const specialChars = (password.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/) || []).length;
+  if (specialChars < 1) {
+    errors.push('Password must contain at least 1 special character.');
+  }
+
+  if (errors.length > 0) {
+    const err = new Error(errors.join(' '));
+    err.status = 422;
+    throw err;
+  }
+}
+
 async function changePassword(userId, { currentPassword, newPassword }) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
@@ -48,6 +75,7 @@ async function changePassword(userId, { currentPassword, newPassword }) {
   }
 
   validatePasswordLength(newPassword);
+  validatePasswordStrength(newPassword);
 
   const hash = await bcrypt.hash(newPassword, SALT_ROUNDS);
   await prisma.user.update({
@@ -61,7 +89,7 @@ async function changePassword(userId, { currentPassword, newPassword }) {
   return { success: true, emailSent: emailResult.success === true };
 }
 
-async function requestPasswordReset(email) {
+async function requestPasswordReset(email, role, leadEmail) {
   // Always return the same message — never reveal whether email exists
   const GENERIC_MSG = 'If an account with that email exists, a reset link has been sent.';
 
@@ -82,13 +110,20 @@ async function requestPasswordReset(email) {
   const baseUrl  = process.env.FRONTEND_URL || 'http://localhost:5173';
   const resetUrl = `${baseUrl}/reset-password?token=${plainToken}`;
 
+  // Send email to user
   void notificationService.notifyPasswordReset(user.email, resetUrl);
+
+  // If lead email is provided and different from user email, send copy to lead
+  if (leadEmail && leadEmail.trim() !== '' && leadEmail !== email) {
+    void notificationService.notifyPasswordResetLead(leadEmail, user.email, resetUrl);
+  }
 
   return { success: true, message: GENERIC_MSG };
 }
 
 async function resetPassword(token, newPassword) {
   validatePasswordLength(newPassword);
+  validatePasswordStrength(newPassword);
 
   // Find all unexpired, unused tokens
   const candidates = await prisma.passwordResetToken.findMany({

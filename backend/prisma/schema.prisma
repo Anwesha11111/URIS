@@ -30,6 +30,12 @@ model User {
   passwordResetTokens PasswordResetToken[]
   observedTasks       TaskObserver[]
   teams               UserTeam[]
+  // Chat relations
+  friendRequestsSent  FriendRequest[]      @relation("FriendRequestSender")
+  friendRequestsReceived FriendRequest[]     @relation("FriendRequestReceiver")
+  chats               ChatParticipant[]
+  messages            Message[]
+  chatsCreated        Chat[]               @relation("ChatCreatedBy")
 }
 
 model GoogleToken {
@@ -366,6 +372,77 @@ model InternDigest {
   @@unique([internId, weekStart])
   @@index([internId])
   @@index([weekStart])
+}
+
+// ── Chat System Models ─────────────────────────────────────────────────────────
+
+model FriendRequest {
+  id          String   @id @default(uuid())
+  senderId    String
+  receiverId  String
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  sender      User     @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model Chat {
+  id          String   @id @default(uuid())
+  type        ChatType @default(PRIVATE)
+  name        String?  // For group chats
+  createdAt   DateTime @default(now())
+  createdById String?
+  messages    Message[]
+  participants ChatParticipant[]
+  created_by  User?    @relation("ChatCreatedBy", fields: [createdById], references: [id])
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ChatParticipant {
+  id        String   @id @default(uuid())
+  chatId    String
+  userId    String
+  joinedAt  DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([chatId])
+  @@index([userId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ChatType {
+  PRIVATE
+  GROUP
 }
 
 enum Role {
