@@ -1,195 +1,256 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
-import { Starfield } from "@/components/Starfield";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { api } from "@/lib/api";
-import { toast } from "sonner";
-import { Loader2, ArrowLeft, Mail, Briefcase, User } from "lucide-react";
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Mail, AlertTriangle, Check, Loader2 } from 'lucide-react'
+import Sidebar from '../components/Sidebar'
+import Starfield from '../components/Starfield'
+import api from '../services/api'
+import { useAuthStore, selectToken } from '../store/authStore'
+import { extractErrorMessage } from '../services/error'
 
-export const Route = createFileRoute("/forgot-password")({
-  component: ForgotPasswordPage,
-});
+export default function ForgotPasswordPage() {
+  const token = useAuthStore(selectToken)
+  const nav = useNavigate()
 
-function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("");
-  const [leadEmail, setLeadEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [email, setEmail] = useState('')
+  const [step, setStep] = useState<'email' | 'reset'>('email')
+  const [token2, setToken2] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await api.post("/auth/forgot-password", { email, role, leadEmail });
-      setSuccess(true);
-      toast.success("Reset link sent to your email");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to send reset link");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (token) {
+      nav('/dashboard')
     }
-  };
+  }, [token, nav])
 
-  if (success) {
-    return (
-      <div className="bg-hero relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-        <div className="absolute inset-0">
-          <Starfield density={90} />
-        </div>
+  const validatePassword = (pwd: string): string[] => {
+    const errors: string[] = []
+    if (pwd.length < 8) errors.push('At least 8 characters')
+    if (!/[A-Z]{2,}/.test(pwd)) errors.push('At least 2 uppercase letters')
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) errors.push('At least 1 special character')
+    return errors
+  }
 
-        <div className="relative z-10 w-full max-w-md">
-          <div className="rounded-lg border border-border/60 bg-card/50 p-8 text-center shadow-card backdrop-blur-md">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-              <Mail className="h-8 w-8 text-green-500" />
-            </div>
-            <h2 className="font-display text-3xl tracking-display text-foreground">Check Your Email</h2>
-            <p className="mt-4 text-sm text-muted-foreground">
-              We've sent a password reset link to <strong className="text-foreground">{email}</strong>.
-              {leadEmail && leadEmail !== email && (
-                <span className="block mt-2">
-                  A copy has also been sent to your lead: <strong className="text-foreground">{leadEmail}</strong>
-                </span>
-              )}
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Please check your inbox and click the link to reset your password.
-            </p>
-            <div className="mt-8">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  setSuccess(false);
-                  setEmail("");
-                  setRole("");
-                  setLeadEmail("");
-                }}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Forgot Password
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  const handleRequestReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) {
+      setError('Please enter your email')
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError('')
+      await api.post('/password/request-reset', { email })
+      setSuccess('Reset link sent to your email')
+      setStep('reset')
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to send reset email'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!newPassword || !confirmPassword) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    const pwdErrors = validatePassword(newPassword)
+    if (pwdErrors.length > 0) {
+      setError(`Password must have: ${pwdErrors.join(', ')}`)
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError('')
+      await api.post('/password/reset', {
+        token: token2,
+        newPassword
+      })
+      setSuccess('Password reset successfully! Redirecting to login...')
+      setTimeout(() => nav('/login'), 2000)
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to reset password'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="bg-hero relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      <div className="absolute inset-0">
-        <Starfield density={90} />
-      </div>
+    <div className="min-h-screen bg-navy-950 text-frost flex items-center justify-center">
+      <Starfield />
+      <div className="relative z-10 w-full max-w-md px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card rounded-sm p-8"
+        >
+          <div className="mb-8">
+            <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-2">SECURITY</p>
+            <h1 className="font-display font-black text-2xl text-ice-gradient">Reset Password</h1>
+            <div className="gold-rule w-8 mt-2" />
+          </div>
 
-      <div className="relative z-10 w-full max-w-md">
-        <div className="mb-10 text-center">
-          <h1 className="font-display text-5xl tracking-display text-gradient sm:text-6xl">
-            STEMONEF
-          </h1>
-          <p className="mt-2 text-xs tracking-display text-gold">
-            INTELLIGENCE SYSTEM
-          </p>
-          <div className="divider-gold mx-auto mt-6 w-32" />
-        </div>
+          {step === 'email' ? (
+            <form onSubmit={handleRequestReset} className="space-y-4">
+              <p className="font-body text-sm text-ice/60 mb-6">
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
 
-        <div className="rounded-lg border border-border/60 bg-card/50 p-8 shadow-card backdrop-blur-md">
-          <h2 className="font-display text-2xl tracking-display text-foreground">Forgot Password</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Enter your details and we'll send you a link to reset your password.
-          </p>
-
-          <form onSubmit={submit} className="mt-6 space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs tracking-display text-gold/80">
-                EMAIL ADDRESS
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
+              <div className="space-y-2">
+                <label className="nav-label text-[0.55rem] text-gold/40">EMAIL ADDRESS</label>
+                <input
                   type="email"
-                  required
-                  autoComplete="email"
+                  placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 border-border/60 bg-input/60 text-foreground"
-                  placeholder="your.email@company.com"
+                  className="uris-input w-full"
+                  disabled={loading}
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role" className="text-xs tracking-display text-gold/80">
-                YOUR ROLE
-              </Label>
-              <div className="relative">
-                <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger className="pl-10 border-border/60 bg-input/60 text-foreground">
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="technical_intern">Technical Intern</SelectItem>
-                    <SelectItem value="operations_intern">Operations Intern</SelectItem>
-                    <SelectItem value="research_intern">Research Intern</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="lead">Lead</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="leadEmail" className="text-xs tracking-display text-gold/80">
-                LEAD EMAIL (Optional)
-              </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="leadEmail"
-                  type="email"
-                  autoComplete="email"
-                  value={leadEmail}
-                  onChange={(e) => setLeadEmail(e.target.value)}
-                  className="pl-10 border-border/60 bg-input/60 text-foreground"
-                  placeholder="lead.email@company.com (optional)"
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                If provided, the lead will also receive the reset link.
-              </p>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary font-medium tracking-wide text-primary-foreground hover:bg-primary/90 hover:shadow-glow"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                "Send Reset Link"
+              {error && (
+                <div className="flex items-center gap-2 py-2 px-3 rounded-sm bg-red-500/10 border border-red-500/20">
+                  <AlertTriangle size={14} className="text-red-400" />
+                  <p className="text-[0.55rem] text-red-400/70">{error}</p>
+                </div>
               )}
-            </Button>
-          </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-muted-foreground">
-              Remember your password?{" "}
-              <a href="/login" className="text-primary hover:underline">
-                Sign in
-              </a>
-            </p>
-          </div>
-        </div>
+              {success && (
+                <div className="flex items-center gap-2 py-2 px-3 rounded-sm bg-signal/10 border border-signal/20">
+                  <Check size={14} className="text-signal" />
+                  <p className="text-[0.55rem] text-signal/70">{success}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-gold w-full py-2 rounded-sm text-[0.6rem] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    SENDING...
+                  </>
+                ) : (
+                  <>
+                    <Mail size={12} />
+                    SEND RESET LINK
+                  </>
+                )}
+              </button>
+
+              <p className="text-center text-[0.55rem] text-ice/40 mt-4">
+                Remember your password?{' '}
+                <button
+                  type="button"
+                  onClick={() => nav('/login')}
+                  className="text-gold/80 hover:text-gold transition-colors"
+                >
+                  Back to login
+                </button>
+              </p>
+            </form>
+          ) : (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <label className="nav-label text-[0.55rem] text-gold/40">RESET TOKEN</label>
+                <input
+                  type="text"
+                  placeholder="Paste token from your email"
+                  value={token2}
+                  onChange={(e) => setToken2(e.target.value)}
+                  className="uris-input w-full"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="nav-label text-[0.55rem] text-gold/40">NEW PASSWORD</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="uris-input w-full"
+                  disabled={loading}
+                />
+                {newPassword && (
+                  <p className="text-[0.5rem] text-ice/40">
+                    Requirements: 8+ chars, 2+ caps, 1+ special char
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="nav-label text-[0.55rem] text-gold/40">CONFIRM PASSWORD</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="uris-input w-full"
+                  disabled={loading}
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-start gap-2 py-2 px-3 rounded-sm bg-red-500/10 border border-red-500/20">
+                  <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-[0.55rem] text-red-400/70">{error}</p>
+                </div>
+              )}
+
+              {success && (
+                <div className="flex items-center gap-2 py-2 px-3 rounded-sm bg-signal/10 border border-signal/20">
+                  <Check size={14} className="text-signal" />
+                  <p className="text-[0.55rem] text-signal/70">{success}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-gold w-full py-2 rounded-sm text-[0.6rem] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    RESETTING...
+                  </>
+                ) : (
+                  'RESET PASSWORD'
+                )}
+              </button>
+
+              <p className="text-center text-[0.55rem] text-ice/40 mt-4">
+                <button
+                  type="button"
+                  onClick={() => { setStep('email'); setError(''); setSuccess('') }}
+                  className="text-gold/80 hover:text-gold transition-colors"
+                >
+                  Start over
+                </button>
+              </p>
+            </form>
+          )}
+        </motion.div>
       </div>
     </div>
-  );
+  )
 }

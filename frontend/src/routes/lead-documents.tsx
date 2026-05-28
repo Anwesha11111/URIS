@@ -1,273 +1,134 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/lib/auth-store";
-import { toast } from "sonner";
-import { FileText, Download, User, Mail, Briefcase, Calendar, Clock } from "lucide-react";
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { File, Download, AlertTriangle, FileText } from 'lucide-react'
+import Sidebar from '../components/Sidebar'
+import Starfield from '../components/Starfield'
+import api from '../services/api'
+import { useAuthStore, selectToken } from '../store/authStore'
+import { extractErrorMessage } from '../services/error'
 
-export const Route = createFileRoute("/lead-documents")({
-  beforeLoad: () => {
-    const { token, user } = useAuthStore.getState();
-    if (!token) throw redirect({ to: "/login" });
-    if (user && user.role !== "admin" && user.role !== "lead")
-      throw redirect({ to: "/dashboard" });
-  },
-  component: LeadDocumentsPage,
-});
-
-interface Document {
-  id: number;
-  title: string;
-  description: string | null;
-  fileUrl: string;
-  fileName: string;
-  fileSize: number;
-  weekStart: string | null;
-  submittedAt: string;
-  intern: {
-    id: number;
-    user: {
-      name: string;
-      email: string;
-      role: string;
-    };
-  };
+interface DocumentSubmission {
+  id: string
+  internId: string
+  internName: string
+  fileName: string
+  fileUrl: string
+  submissionDay: 'MONDAY' | 'THURSDAY'
+  submittedAt: string
 }
 
-interface Intern {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  tasks: Array<{
-    id: number;
-    title: string;
-    status: string;
-    complexity: number;
-    skills: string[];
-    progressPct: number;
-    deadline: string | null;
-  }>;
-}
+export default function LeadDocumentsPage() {
+  const token = useAuthStore(selectToken)
+  const nav = useNavigate()
 
-function LeadDocumentsPage() {
-  const [selectedInternId, setSelectedInternId] = useState<string>("");
-  const [interns, setInterns] = useState<Intern[]>([]);
+  const [documents, setDocuments] = useState<DocumentSubmission[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [filterDay, setFilterDay] = useState<'ALL' | 'MONDAY' | 'THURSDAY'>('ALL')
 
-  const documentsQuery = useQuery({
-    queryKey: ["lead-documents", selectedInternId],
-    queryFn: async () => {
-      if (!selectedInternId) return null;
-      const { data } = await api.get(`/document/lead/${selectedInternId}`);
-      return data;
-    },
-    enabled: !!selectedInternId,
-  });
+  useEffect(() => {
+    if (!token) {
+      nav('/login')
+      return
+    }
+    loadDocuments()
+  }, [token, nav])
 
-  const internsQuery = useQuery({
-    queryKey: ["interns-list"],
-    queryFn: async () => {
-      const { data } = await api.get("/admin/overview");
-      return data.interns || [];
-    },
-  });
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  if (internsQuery.isLoading) {
-    return (
-      <AppShell>
-        <div className="flex min-h-[400px] items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-border border-t-primary" />
-            <p className="text-sm text-muted-foreground">Loading interns...</p>
-          </div>
-        </div>
-      </AppShell>
-    );
+  const loadDocuments = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get('/documents/all-submissions')
+      setDocuments(res.data || [])
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to load documents'))
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleInternSelect = (internId: string) => {
-    setSelectedInternId(internId);
-  };
+  const filteredDocuments = filterDay === 'ALL'
+    ? documents
+    : documents.filter(doc => doc.submissionDay === filterDay)
 
   return (
-    <AppShell>
-      <PageHeader
-        eyebrow="COMMAND"
-        title="Intern Documents"
-        description="View and download reports submitted by your interns."
-      />
+    <div className="min-h-screen bg-navy-950 text-frost">
+      <Starfield />
+      <Sidebar />
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-8">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">DOCUMENTATION</p>
+            <h1 className="font-display font-black text-3xl text-ice-gradient">Intern Documents</h1>
+            <div className="gold-rule w-14 mt-2" />
+            <p className="font-body text-sm text-ice/40 mt-3">
+              View and manage documents submitted by interns
+            </p>
+          </motion.div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Intern Selector */}
-        <div className="lg:col-span-1">
-          <Card className="border-border/60 bg-card/50 shadow-card backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Select Intern</CardTitle>
-              <CardDescription>Choose an intern to view their documents</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="internSelect" className="text-xs">
-                  Intern Name
-                </Label>
-                <select
-                  id="internSelect"
-                  value={selectedInternId}
-                  onChange={(e) => handleInternSelect(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Select an intern...</option>
-                  {internsQuery.data?.map((intern: any) => (
-                    <option key={intern.id} value={intern.id}>
-                      {intern.name}
-                    </option>
-                  ))}
-                </select>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="glass-card rounded-sm p-6">
+
+            <div className="flex items-center justify-between mb-6">
+              <p className="nav-label text-[0.6rem] text-gold/60">FILTER BY DAY</p>
+              <div className="flex gap-2">
+                {(['ALL', 'MONDAY', 'THURSDAY'] as const).map(day => (
+                  <button
+                    key={day}
+                    onClick={() => setFilterDay(day)}
+                    className={`px-3 py-1.5 rounded-sm text-[0.55rem] transition-all ${
+                      filterDay === day
+                        ? 'bg-gold/20 border border-gold/40 text-gold'
+                        : 'bg-navy-900/50 border border-gold/10 text-ice/50'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              {selectedInternId && documentsQuery.data && (
-                <div className="mt-6 space-y-4">
-                  <div className="rounded-lg border border-border/30 bg-background/50 p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <User className="h-4 w-4 text-primary" />
-                      <h4 className="font-medium text-foreground">Intern Details</h4>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <User className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-foreground">{documentsQuery.data.intern.name}</span>
+            {loading ? (
+              <p className="text-sm text-ice/40">Loading documents...</p>
+            ) : error ? (
+              <div className="flex items-center gap-2 py-3 px-4 rounded-sm bg-red-500/10 border border-red-500/20">
+                <AlertTriangle size={14} className="text-red-400" />
+                <p className="text-[0.55rem] text-red-400/70">{error}</p>
+              </div>
+            ) : filteredDocuments.length === 0 ? (
+              <p className="text-sm text-ice/40">No documents found</p>
+            ) : (
+              <div className="space-y-3">
+                {filteredDocuments.map(doc => (
+                  <div key={doc.id} className="flex items-center justify-between rounded-sm border border-gold/10 bg-navy-900/40 p-4">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-gold/10 text-gold flex-shrink-0">
+                        <FileText size={18} />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{documentsQuery.data.intern.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{documentsQuery.data.intern.role.toUpperCase()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {documentsQuery.data.intern.tasks.length > 0 && (
-                    <div className="rounded-lg border border-border/30 bg-background/50 p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                        <h4 className="font-medium text-foreground">Active Tasks</h4>
-                      </div>
-                      <div className="space-y-2">
-                        {documentsQuery.data.intern.tasks.map((task: any) => (
-                          <div
-                            key={task.id}
-                            className="rounded border border-border/30 bg-background/50 p-2"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">{task.title}</span>
-                              <span className={`rounded px-2 py-0.5 text-[10px] font-medium ${
-                                task.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-gray-500/10 text-gray-500'
-                              }`}>
-                                {task.status.toUpperCase()}
-                              </span>
-                            </div>
-                            {task.deadline && (
-                              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                                <Calendar className="h-3 w-3" />
-                                <span>Deadline: {new Date(task.deadline).toLocaleDateString()}</span>
-                              </div>
-                            )}
-                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>Complexity: {task.complexity}</span>
-                              {task.skills.length > 0 && (
-                                <>
-                                  <span>•</span>
-                                  <span>{task.skills.join(", ")}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Documents List */}
-        <div className="lg:col-span-2">
-          <Card className="border-border/60 bg-card/50 shadow-card backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Submitted Documents</CardTitle>
-              <CardDescription>Reports submitted by the selected intern</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!selectedInternId ? (
-                <p className="text-sm text-muted-foreground">Select an intern to view their documents.</p>
-              ) : documentsQuery.isLoading ? (
-                <p className="text-sm text-muted-foreground">Loading documents...</p>
-              ) : documentsQuery.data?.documents?.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No documents submitted yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {documentsQuery.data?.documents?.map((doc: Document) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-start justify-between rounded-lg border border-border/30 bg-background/50 p-4"
-                    >
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <FileText className="h-4 w-4 text-primary shrink-0" />
-                          <h4 className="font-medium text-foreground">{doc.title}</h4>
-                          {doc.weekStart && (
-                            <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-medium text-gold/70">
-                              Week of {new Date(doc.weekStart).toLocaleDateString()}
-                            </span>
-                          )}
+                        <p className="font-body font-semibold text-ice truncate">{doc.internName}</p>
+                        <div className="flex gap-3 mt-1">
+                          <span className="text-[0.5rem] text-ice/40 truncate">{doc.fileName}</span>
+                          <span className="text-[0.5rem] text-gold/50 flex-shrink-0">{doc.submissionDay}</span>
+                          <span className="text-[0.5rem] text-ice/30 flex-shrink-0">{new Date(doc.submittedAt).toLocaleDateString()}</span>
                         </div>
-                        {doc.description && (
-                          <p className="text-sm text-muted-foreground mb-2">{doc.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {new Date(doc.submittedAt).toLocaleDateString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
-                            {formatFileSize(doc.fileSize)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={doc.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center rounded-md border border-border/60 bg-background px-3 py-2 text-xs font-medium hover:bg-accent"
-                        >
-                          <Download className="mr-1 h-3 w-3" />
-                          Download
-                        </a>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <a
+                      href={doc.fileUrl}
+                      download
+                      className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem] flex items-center gap-1 flex-shrink-0 ml-3"
+                    >
+                      <Download size={12} />
+                      DOWNLOAD
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
         </div>
-      </div>
-    </AppShell>
-  );
+      </main>
+    </div>
+  )
 }

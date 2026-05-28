@@ -1,195 +1,164 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
-import { api } from "@/lib/api";
+import { useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { ExternalLink, AlertTriangle, Loader2 } from 'lucide-react'
+import Sidebar from '../components/Sidebar'
+import Starfield from '../components/Starfield'
+import api from '../services/api'
+import { useAuthStore, selectToken } from '../store/authStore'
+import { extractErrorMessage } from '../services/error'
 
-export const Route = createFileRoute("/portfolio/$slug")({
-  component: PortfolioPage,
-});
+interface PortfolioData {
+  id: string
+  internId: string
+  internName: string
+  profilePicture?: string
+  bio?: string
+  skills?: string[]
+  experience?: string
+  portfolioUrl?: string
+  githubUrl?: string
+  linkedinUrl?: string
+  createdAt: string
+}
 
-function PortfolioPage() {
-  const { slug } = Route.useParams();
+export default function PortfolioPage() {
+  const { slug } = useParams()
+  const token = useAuthStore(selectToken)
+  const nav = useNavigate()
 
-  const portfolio = useQuery({
-    queryKey: ["portfolio", slug],
-    queryFn: async () => (await api.get(`/portfolio/${slug}`)).data,
-  });
+  const [portfolio, setPortfolio] = useState<PortfolioData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  if (portfolio.isLoading) {
-    return (
-      <AppShell>
-        <div className="flex min-h-[400px] items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-border border-t-primary" />
-            <p className="text-sm text-muted-foreground">Loading portfolio...</p>
-          </div>
-        </div>
-      </AppShell>
-    );
+  useEffect(() => {
+    if (!token) {
+      nav('/login')
+      return
+    }
+    if (slug) loadPortfolio()
+  }, [token, slug, nav])
+
+  const loadPortfolio = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get(`/portfolio/${slug}`)
+      setPortfolio(res.data)
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to load portfolio'))
+    } finally {
+      setLoading(false)
+    }
   }
-
-  if (!portfolio.data) {
-    return (
-      <AppShell>
-        <div className="flex min-h-[400px] items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-foreground">Portfolio not found</h2>
-            <p className="mt-2 text-muted-foreground">The requested portfolio does not exist.</p>
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
-
-  const { name, email, role, bio, profilePic, contactNumber, linkedinUrl, skills, completedTasks, portfolioUrl } = portfolio.data;
 
   return (
-    <AppShell>
-      <PageHeader
-        eyebrow={`INTERNSHIP PORTFOLIO`}
-        title={name || "Unknown Intern"}
-        description={role || "Intern"}
-      />
-
-      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Profile Section */}
-        <div className="lg:col-span-1">
-          <div className="rounded-lg border border-border/60 bg-card/50 p-6 shadow-card backdrop-blur-sm">
-            <div className="flex flex-col items-center text-center">
-              <div className="mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-border/30 bg-muted">
-                {profilePic ? (
-                  <img
-                    src={profilePic}
-                    alt={name || "Profile"}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-muted/50">
-                    <span className="text-4xl font-display text-gold/50">
-                      {name?.[0]?.toUpperCase() || "?"}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <h2 className="font-display text-2xl text-foreground">{name}</h2>
-              <p className="text-sm text-muted-foreground">{email}</p>
-              <p className="mt-2 text-xs tracking-display text-gold/70">{role.toUpperCase()}</p>
+    <div className="min-h-screen bg-navy-950 text-frost">
+      <Starfield />
+      <Sidebar />
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 size={24} className="text-gold animate-spin" />
             </div>
-
-            {bio && (
-              <div className="mt-6">
-                <h3 className="text-xs tracking-display text-gold/80">BIO</h3>
-                <div className="divider-gold mb-4 w-16" />
-                <p className="text-sm text-muted-foreground">{bio}</p>
-              </div>
-            )}
-
-            {(contactNumber || linkedinUrl) && (
-              <div className="mt-6 space-y-3">
-                {contactNumber && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 text-muted-foreground"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                      />
-                    </svg>
-                    <span className="text-sm text-muted-foreground">{contactNumber}</span>
+          ) : error ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="glass-card rounded-sm p-6 flex items-center gap-3">
+              <AlertTriangle size={16} className="text-red-400" />
+              <p className="text-sm text-red-400/70">{error}</p>
+            </motion.div>
+          ) : portfolio ? (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              {/* Header */}
+              <div className="glass-card rounded-sm p-8">
+                <div className="flex items-start gap-6 mb-6">
+                  {portfolio.profilePicture && (
+                    <img
+                      src={portfolio.profilePicture}
+                      alt={portfolio.internName}
+                      className="w-20 h-20 rounded-sm object-cover border border-gold/20"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <p className="nav-label text-[0.55rem] text-gold/40 mb-1">INTERN PORTFOLIO</p>
+                    <h1 className="font-display font-black text-3xl text-ice-gradient">{portfolio.internName}</h1>
+                    <div className="gold-rule w-12 mt-2" />
                   </div>
+                </div>
+
+                {portfolio.bio && (
+                  <p className="font-body text-sm text-ice/60 mb-4">{portfolio.bio}</p>
                 )}
-                {linkedinUrl && (
-                  <a
-                    href={linkedinUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-primary hover:underline"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
+
+                <div className="flex gap-3 flex-wrap">
+                  {portfolio.portfolioUrl && (
+                    <a
+                      href={portfolio.portfolioUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem] flex items-center gap-1"
                     >
-                      <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                    </svg>
-                    <span className="text-sm text-muted-foreground truncate">{linkedinUrl}</span>
-                  </a>
-                )}
+                      <ExternalLink size={12} />
+                      PORTFOLIO
+                    </a>
+                  )}
+                  {portfolio.githubUrl && (
+                    <a
+                      href={portfolio.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem] flex items-center gap-1"
+                    >
+                      <ExternalLink size={12} />
+                      GITHUB
+                    </a>
+                  )}
+                  {portfolio.linkedinUrl && (
+                    <a
+                      href={portfolio.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem] flex items-center gap-1"
+                    >
+                      <ExternalLink size={12} />
+                      LINKEDIN
+                    </a>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Skills and Tasks Section */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Skills */}
-          {skills && skills.length > 0 && (
-            <div className="rounded-lg border border-border/60 bg-card/50 p-6 shadow-card backdrop-blur-sm">
-              <h3 className="text-xs tracking-display text-gold/80">SKILLS</h3>
-              <div className="divider-gold mb-4 w-16" />
-              <div className="flex flex-wrap gap-2">
-                {skills.map((skill: string, idx: number) => (
-                  <span
-                    key={idx}
-                    className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Completed Tasks */}
-          {completedTasks && completedTasks.length > 0 && (
-            <div className="rounded-lg border border-border/60 bg-card/50 p-6 shadow-card backdrop-blur-sm">
-              <h3 className="text-xs tracking-display text-gold/80">COMPLETED TASKS</h3>
-              <div className="divider-gold mb-4 w-16" />
-              <div className="space-y-3">
-                {completedTasks.map((task: any) => (
-                  <div
-                    key={task.id}
-                    className="rounded border border-border/30 bg-background/50 p-4"
-                  >
-                    <div className="flex items-start justify-between">
-                      <h4 className="font-medium text-foreground">{task.title}</h4>
-                      <span className="rounded bg-muted px-2 py-1 text-[10px] font-medium tracking-display text-gold/70">
-                        {task.complexity?.toUpperCase() || "N/A"}
+              {/* Skills */}
+              {portfolio.skills && portfolio.skills.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                  className="glass-card rounded-sm p-6">
+                  <p className="nav-label text-[0.6rem] text-gold/60 mb-4">SKILLS</p>
+                  <div className="flex flex-wrap gap-2">
+                    {portfolio.skills.map((skill, i) => (
+                      <span
+                        key={i}
+                        className="inline-block px-3 py-1.5 rounded-sm bg-gold/10 border border-gold/20 text-[0.55rem] text-gold/80"
+                      >
+                        {skill}
                       </span>
-                    </div>
-                    {task.skills && task.skills.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {task.skills.map((s: string, i: number) => (
-                          <span
-                            key={i}
-                            className="text-[10px] text-muted-foreground"
-                          >
-                            • {s}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {task.deadline && (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                    Deadline: {new Date(task.deadline).toLocaleDateString()}
-                  </p>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </motion.div>
+              )}
+
+              {/* Experience */}
+              {portfolio.experience && (
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                  className="glass-card rounded-sm p-6">
+                  <p className="nav-label text-[0.6rem] text-gold/60 mb-4">EXPERIENCE</p>
+                  <p className="font-body text-sm text-ice/60 whitespace-pre-wrap">{portfolio.experience}</p>
+                </motion.div>
+              )}
+            </motion.div>
+          ) : (
+            <p className="text-sm text-ice/40">No portfolio data found</p>
           )}
         </div>
-      </div>
-    </AppShell>
-  );
+      </main>
+    </div>
+  )
 }

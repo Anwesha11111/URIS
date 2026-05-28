@@ -1,291 +1,206 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/lib/auth-store";
-import { toast } from "sonner";
-import { Upload, FileText, Calendar, Clock, Download, X } from "lucide-react";
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Upload, File, Loader2, AlertTriangle, Check } from 'lucide-react'
+import Sidebar from '../components/Sidebar'
+import Starfield from '../components/Starfield'
+import api from '../services/api'
+import { useAuthStore, selectToken } from '../store/authStore'
+import { extractErrorMessage } from '../services/error'
 
-export const Route = createFileRoute("/documents")({
-  beforeLoad: () => {
-    const { token } = useAuthStore.getState();
-    if (!token) throw redirect({ to: "/login" });
-  },
-  component: DocumentsPage,
-});
-
-interface Document {
-  id: number;
-  title: string;
-  description: string | null;
-  fileUrl: string;
-  fileName: string;
-  fileSize: number;
-  weekStart: string | null;
-  submittedAt: string;
-  intern: {
-    id: number;
-    user: {
-      name: string;
-      email: string;
-      role: string;
-    };
-  };
+interface DocumentSubmission {
+  id: string
+  internId: string
+  fileName: string
+  fileUrl: string
+  submissionDay: 'MONDAY' | 'THURSDAY'
+  submittedAt: string
 }
 
-function DocumentsPage() {
-  const qc = useQueryClient();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [weekStart, setWeekStart] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+export default function DocumentsPage() {
+  const token = useAuthStore(selectToken)
+  const nav = useNavigate()
 
-  const documents = useQuery({
-    queryKey: ["documents-mine"],
-    queryFn: async () => (await api.get("/document/mine")).data,
-  });
+  const [documents, setDocuments] = useState<DocumentSubmission[]>([])
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [selectedDay, setSelectedDay] = useState<'MONDAY' | 'THURSDAY'>('MONDAY')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
-  const submit = useMutation({
-    mutationFn: async () => {
-      if (!file) {
-        throw new Error("Please select a file");
-      }
+  useEffect(() => {
+    if (!token) {
+      nav('/login')
+      return
+    }
+    loadDocuments()
+  }, [token, nav])
 
-      const formData = new FormData();
-      formData.append("title", title);
-      if (description) formData.append("description", description);
-      if (weekStart) formData.append("weekStart", weekStart);
-      formData.append("document", file);
-
-      return (await api.post("/document/submit", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })).data;
-    },
-    onSuccess: () => {
-      toast.success("Document submitted successfully");
-      setTitle("");
-      setDescription("");
-      setWeekStart("");
-      setFile(null);
-      qc.invalidateQueries({ queryKey: ["documents-mine"] });
-    },
-    onError: (e: any) =>
-      toast.error(e?.response?.data?.message ?? "Failed to submit document"),
-  });
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
+  const loadDocuments = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get('/documents/my-submissions')
+      setDocuments(res.data || [])
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to load documents'))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+    if (e.target.files) {
+      setSelectedFile(e.target.files[0])
     }
-  };
+  }
 
-  const removeFile = () => {
-    setFile(null);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedFile) {
+      setError('Please select a file')
+      return
+    }
+
+    const formData = new FormData()
+    formData.append('file', selectedFile)
+    formData.append('submissionDay', selectedDay)
+
+    try {
+      setUploading(true)
+      setError('')
+      await api.post('/documents/submit', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setSuccess('Document submitted successfully')
+      setSelectedFile(null)
+      await loadDocuments()
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to submit document'))
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
-    <AppShell>
-      <PageHeader
-        eyebrow="DOCUMENTS"
-        title="Report Submissions"
-        description="Submit your Monday/Thursday reports and view your submission history."
-      />
+    <div className="min-h-screen bg-navy-950 text-frost">
+      <Starfield />
+      <Sidebar />
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">DOCUMENTATION</p>
+            <h1 className="font-display font-black text-3xl text-ice-gradient">Submit Documents</h1>
+            <div className="gold-rule w-14 mt-2" />
+            <p className="font-body text-sm text-ice/40 mt-3">
+              Submit your documents every Monday and Thursday
+            </p>
+          </motion.div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Submit Document Form */}
-        <div className="lg:col-span-1">
-          <Card className="border-border/60 bg-card/50 shadow-card backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Submit Report</CardTitle>
-              <CardDescription>Upload your weekly report</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            {/* Upload Form */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="lg:col-span-1 glass-card rounded-sm p-6">
+              <p className="nav-label text-[0.6rem] text-gold/60 mb-4">UPLOAD DOCUMENT</p>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-xs">
-                    Report Title
-                  </Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g., Week of May 26 Report"
-                    required
-                  />
+                  <label className="nav-label text-[0.55rem] text-gold/40">SUBMISSION DAY</label>
+                  <select
+                    value={selectedDay}
+                    onChange={(e) => setSelectedDay(e.target.value as 'MONDAY' | 'THURSDAY')}
+                    className="uris-input w-full"
+                  >
+                    <option value="MONDAY">Monday</option>
+                    <option value="THURSDAY">Thursday</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-xs">
-                    Description (Optional)
-                  </Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Brief summary of this report..."
-                    rows={3}
+                  <label className="nav-label text-[0.55rem] text-gold/40">SELECT FILE</label>
+                  <input
+                    type="file"
+                    onChange={handleFileChange}
+                    className="uris-input w-full"
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="weekStart" className="text-xs">
-                    Week Start Date (Monday)
-                  </Label>
-                  <Input
-                    id="weekStart"
-                    type="date"
-                    value={weekStart}
-                    onChange={(e) => setWeekStart(e.target.value)}
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Select the Monday of the week this report covers
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">Document File</Label>
-                  {file ? (
-                    <div className="flex items-center justify-between rounded-md border border-border/60 bg-input/40 p-3">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <FileText className="h-5 w-5 text-primary shrink-0" />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{file.name}</p>
-                          <p className="truncate text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={removeFile}
-                        className="h-8 w-8 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <input
-                        id="file"
-                        type="file"
-                        accept=".pdf,.doc,.docx,.txt,.md"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                      <Label
-                        htmlFor="file"
-                        className="flex cursor-pointer items-center justify-center rounded-md border border-border/60 bg-input/40 py-8 text-center hover:bg-input/60"
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          <Upload className="h-8 w-8 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            Click to upload
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            PDF, DOC, DOCX, TXT, MD
-                          </span>
-                        </div>
-                      </Label>
-                    </div>
+                  {selectedFile && (
+                    <p className="text-[0.55rem] text-gold/60">Selected: {selectedFile.name}</p>
                   )}
                 </div>
 
-                <Button
+                {error && (
+                  <div className="flex items-center gap-2 py-2 px-3 rounded-sm bg-red-500/10 border border-red-500/20">
+                    <AlertTriangle size={14} className="text-red-400" />
+                    <p className="text-[0.55rem] text-red-400/70">{error}</p>
+                  </div>
+                )}
+
+                {success && (
+                  <div className="flex items-center gap-2 py-2 px-3 rounded-sm bg-signal/10 border border-signal/20">
+                    <Check size={14} className="text-signal" />
+                    <p className="text-[0.55rem] text-signal/70">{success}</p>
+                  </div>
+                )}
+
+                <button
                   type="submit"
-                  disabled={submit.isPending || !file}
-                  className="w-full"
+                  disabled={uploading || !selectedFile}
+                  className="btn-gold w-full py-2 rounded-sm text-[0.6rem] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {submit.isPending ? (
+                  {uploading ? (
                     <>
-                      <Upload className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
+                      <Loader2 size={12} className="animate-spin" />
+                      UPLOADING...
                     </>
                   ) : (
                     <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Submit Report
+                      <Upload size={12} />
+                      SUBMIT DOCUMENT
                     </>
                   )}
-                </Button>
+                </button>
               </form>
-            </CardContent>
-          </Card>
-        </div>
+            </motion.div>
 
-        {/* Document History */}
-        <div className="lg:col-span-2">
-          <Card className="border-border/60 bg-card/50 shadow-card backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Submission History</CardTitle>
-              <CardDescription>Your previously submitted reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {documents.isLoading ? (
-                <p className="text-sm text-muted-foreground">Loading...</p>
-              ) : documents.data?.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No documents submitted yet.</p>
+            {/* Submissions List */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="lg:col-span-2 glass-card rounded-sm p-6">
+              <p className="nav-label text-[0.6rem] text-gold/60 mb-4">MY SUBMISSIONS ({documents.length})</p>
+
+              {loading ? (
+                <p className="text-sm text-ice/40">Loading documents...</p>
+              ) : documents.length === 0 ? (
+                <p className="text-sm text-ice/40">No documents submitted yet</p>
               ) : (
                 <div className="space-y-3">
-                  {documents.data?.map((doc: Document) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-start justify-between rounded-lg border border-border/30 bg-background/50 p-4"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <FileText className="h-4 w-4 text-primary shrink-0" />
-                          <h4 className="font-medium text-foreground">{doc.title}</h4>
-                          {doc.weekStart && (
-                            <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-medium text-gold/70">
-                              Week of {new Date(doc.weekStart).toLocaleDateString()}
-                            </span>
-                          )}
+                  {documents.map(doc => (
+                    <div key={doc.id} className="flex items-center justify-between rounded-sm border border-gold/10 bg-navy-900/40 p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-gold/10 text-gold">
+                          <File size={18} />
                         </div>
-                        {doc.description && (
-                          <p className="text-sm text-muted-foreground mb-2">{doc.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {new Date(doc.submittedAt).toLocaleDateString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
-                            {formatFileSize(doc.fileSize)}
-                          </span>
+                        <div>
+                          <p className="font-body font-semibold text-ice">{doc.fileName}</p>
+                          <p className="text-[0.55rem] text-ice/40">{doc.submissionDay} • {new Date(doc.submittedAt).toLocaleDateString()}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={doc.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center rounded-md border border-border/60 bg-background px-3 py-2 text-xs font-medium hover:bg-accent"
-                        >
-                          <Download className="mr-1 h-3 w-3" />
-                          Download
-                        </a>
-                      </div>
+                      <a
+                        href={doc.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem]"
+                      >
+                        VIEW
+                      </a>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </motion.div>
+          </div>
         </div>
-      </div>
-    </AppShell>
-  );
+      </main>
+    </div>
+  )
 }
