@@ -1,232 +1,236 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/lib/auth-store";
-import { toast } from "sonner";
-import { MessageSquare, Users, Plus, Search, MoreVertical, X } from "lucide-react";
-
-export const Route = createFileRoute("/chat")({
-  beforeLoad: () => {
-    const { token } = useAuthStore.getState();
-    if (!token) throw redirect({ to: "/login" });
-  },
-  component: ChatPage,
-});
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore, selectToken, selectUser } from '../store/authStore'
+import Sidebar from '../components/Sidebar'
+import Starfield from '../components/Starfield'
+import api from '../services/api'
+import { MessageSquare, Users, Plus, Search, MoreVertical } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface Chat {
-  id: string;
-  type: 'PRIVATE' | 'GROUP';
-  name?: string;
-  createdAt: string;
+  id: string
+  type: 'PRIVATE' | 'GROUP'
+  name?: string
+  createdAt: string
   lastMessage?: {
-    content: string;
-    senderId: string;
-    senderName?: string;
-    createdAt: string;
-  };
+    content: string
+    senderId: string
+    senderName?: string
+    createdAt: string
+  }
 }
 
-function ChatPage() {
-  const qc = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState("");
+interface Friend {
+  id: string
+  name: string
+  email: string
+}
 
-  const chats = useQuery({
-    queryKey: ["chats"],
-    queryFn: async () => (await api.get("/chat/chats")).data,
-  });
+export default function ChatPage() {
+  const token = useAuthStore(selectToken)
+  const user = useAuthStore(selectUser)
+  const nav = useNavigate()
 
-  const friends = useQuery({
-    queryKey: ["friends"],
-    queryFn: async () => (await api.get("/chat/friends")).data,
-  });
+  const [chats, setChats] = useState<Chat[]>([])
+  const [friends, setFriends] = useState<Friend[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!token) {
+      nav('/login')
+      return
+    }
+    loadData()
+  }, [token, nav])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [chatsRes, friendsRes] = await Promise.all([
+        api.get('/chat/chats').catch(() => ({ data: [] })),
+        api.get('/chat/friends').catch(() => ({ data: [] }))
+      ])
+      setChats(chatsRes.data || [])
+      setFriends(friendsRes.data || [])
+    } catch (err) {
+      setError('Failed to load chats')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleCreatePrivateChat = async (friendId: string) => {
     try {
-      await api.post(`/chat/private/${friendId}`);
-      qc.invalidateQueries({ queryKey: ["chats"] });
-      toast.success("Chat started");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to create chat");
+      await api.post(`/chat/private/${friendId}`)
+      loadData()
+    } catch (err) {
+      setError('Failed to create chat')
+      console.error(err)
     }
-  };
+  }
 
-  const filteredChats = chats.data?.filter((chat: Chat) => {
-    if (!searchTerm) return true;
-    const chatName = chat.name?.toLowerCase() || '';
-    const lastMessage = chat.lastMessage?.content?.toLowerCase() || '';
-    return chatName.includes(searchTerm.toLowerCase()) || lastMessage.includes(searchTerm.toLowerCase());
-  }) || [];
+  const filteredChats = chats.filter(chat => {
+    if (!searchTerm) return true
+    const chatName = chat.name?.toLowerCase() || ''
+    const lastMessage = chat.lastMessage?.content?.toLowerCase() || ''
+    return chatName.includes(searchTerm.toLowerCase()) || lastMessage.includes(searchTerm.toLowerCase())
+  })
 
   return (
-    <AppShell>
-      <PageHeader
-        eyebrow="COMMUNICATION"
-        title="Chat"
-        description="Private messages and group conversations"
-      />
+    <div className="min-h-screen bg-navy-950 text-frost">
+      <Starfield />
+      <Sidebar />
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-8">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">COMMUNICATION</p>
+            <h1 className="font-display font-black text-3xl text-ice-gradient">Chat</h1>
+            <div className="gold-rule w-14 mt-2" />
+            <p className="font-body text-sm text-ice/40 mt-3">
+              Private messages and group conversations
+            </p>
+          </motion.div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Chat List */}
-        <div className="lg:col-span-2">
-          <Card className="border-border/60 bg-card/50 shadow-card backdrop-blur-sm">
-            <CardHeader className="border-b border-border/30">
-              <div className="flex items-center justify-between">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            {/* Chat List */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="lg:col-span-2 glass-card rounded-sm p-6">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <CardTitle className="text-lg">Conversations</CardTitle>
-                  <CardDescription>Your active chats</CardDescription>
+                  <p className="nav-label text-[0.6rem] text-gold/60 mb-1">CONVERSATIONS</p>
+                  <h2 className="font-display text-xl text-ice">Your active chats</h2>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.location.href = "/chat/find"}
+                  <button
+                    onClick={() => nav('/chat/find')}
+                    className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem] flex items-center gap-1"
                   >
-                    <Search className="mr-2 h-4 w-4" />
-                    Find People
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.location.href = "/chat/requests"}
+                    <Search size={12} />
+                    FIND PEOPLE
+                  </button>
+                  <button
+                    onClick={() => nav('/chat/requests')}
+                    className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem] flex items-center gap-1"
                   >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Requests
-                    {friends.data?.length ? (
-                      <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
-                        {friends.data.length}
-                      </span>
-                    ) : null}
-                  </Button>
+                    <MessageSquare size={12} />
+                    REQUESTS {friends.length > 0 && <span className="ml-1 rounded-full bg-gold/20 px-1.5 text-[0.45rem] text-gold">{friends.length}</span>}
+                  </button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
+
               <div className="mb-4">
                 <input
                   type="text"
                   placeholder="Search chats..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  className="uris-input w-full"
                 />
               </div>
 
-              {chats.isLoading ? (
-                <p className="text-sm text-muted-foreground">Loading chats...</p>
+              {loading ? (
+                <p className="text-sm text-ice/40">Loading chats...</p>
+              ) : error ? (
+                <p className="text-sm text-red-400/70">{error}</p>
               ) : filteredChats.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <MessageSquare className="mb-4 h-12 w-12 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">No conversations yet</p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Start by finding people to chat with
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => window.location.href = "/chat/find"}
+                  <MessageSquare className="mb-4 h-12 w-12 text-ice/30" />
+                  <p className="text-sm text-ice/40">No conversations yet</p>
+                  <p className="mt-2 text-xs text-ice/30">Start by finding people to chat with</p>
+                  <button
+                    onClick={() => nav('/chat/find')}
+                    className="btn-outline px-4 py-1.5 rounded-sm text-[0.55rem] mt-4"
                   >
-                    Find People
-                  </Button>
+                    FIND PEOPLE
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredChats.map((chat: Chat) => (
-                    <div
-                      key={chat.id}
-                      className="flex items-center justify-between rounded-lg border border-border/30 bg-background/50 p-4 hover:bg-accent/30"
-                    >
+                  {filteredChats.map(chat => (
+                    <div key={chat.id} className="flex items-center justify-between rounded-sm border border-gold/10 bg-navy-900/40 p-4 hover:bg-navy-900/60 transition-colors">
                       <div className="flex items-center gap-3">
                         {chat.type === 'PRIVATE' ? (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/10 text-gold">
                             <MessageSquare className="h-5 w-5" />
                           </div>
                         ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/10 text-gold">
                             <Users className="h-5 w-5" />
                           </div>
                         )}
                         <div>
-                          <h4 className="font-medium text-foreground">
+                          <p className="font-body font-semibold text-ice">
                             {chat.type === 'PRIVATE' ? 'Private Chat' : chat.name}
-                          </h4>
+                          </p>
                           {chat.lastMessage && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            <p className="text-[0.55rem] text-ice/40 truncate max-w-[200px]">
                               {chat.lastMessage.senderName}: {chat.lastMessage.content}
                             </p>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[0.5rem] text-ice/30">
                           {chat.lastMessage
                             ? new Date(chat.lastMessage.createdAt).toLocaleDateString()
                             : new Date(chat.createdAt).toLocaleDateString()}
                         </span>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
+                        <button className="p-1 hover:bg-gold/10 rounded">
+                          <MoreVertical className="h-4 w-4 text-ice/40" />
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </motion.div>
 
-        {/* Quick Actions */}
-        <div className="lg:col-span-1">
-          <Card className="border-border/60 bg-card/50 shadow-card backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-              <CardDescription>Start new conversations</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs">Start Private Chat</Label>
-                {friends.isLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading friends...</p>
-                ) : friends.data?.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No friends yet. Add people to chat.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {friends.data?.map((friend: any) => (
-                      <Button
-                        key={friend.id}
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => handleCreatePrivateChat(friend.id)}
-                      >
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        {friend.name}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {/* Quick Actions */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="lg:col-span-1 glass-card rounded-sm p-6">
+              <p className="nav-label text-[0.6rem] text-gold/60 mb-4">QUICK ACTIONS</p>
 
-              <div className="space-y-2">
-                <Label className="text-xs">Create Group Chat</Label>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => window.location.href = "/chat/find"}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Group
-                </Button>
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <p className="nav-label text-[0.55rem] text-gold/40">START PRIVATE CHAT</p>
+                  {loading ? (
+                    <p className="text-sm text-ice/40">Loading friends...</p>
+                  ) : friends.length === 0 ? (
+                    <p className="text-sm text-ice/40">No friends yet. Add people to chat.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {friends.map(friend => (
+                        <button
+                          key={friend.id}
+                          onClick={() => handleCreatePrivateChat(friend.id)}
+                          className="btn-outline w-full px-3 py-2 rounded-sm text-[0.55rem] flex items-center gap-2 text-left"
+                        >
+                          <MessageSquare size={12} />
+                          {friend.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-gold/10">
+                  <p className="nav-label text-[0.55rem] text-gold/40">CREATE GROUP CHAT</p>
+                  <button
+                    onClick={() => nav('/chat/find')}
+                    className="btn-outline w-full px-3 py-2 rounded-sm text-[0.55rem] flex items-center gap-2 justify-center"
+                  >
+                    <Plus size={12} />
+                    CREATE GROUP
+                  </button>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </motion.div>
+          </div>
         </div>
-      </div>
-    </AppShell>
-  );
+      </main>
+    </div>
+  )
 }

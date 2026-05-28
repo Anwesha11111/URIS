@@ -1,124 +1,142 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/lib/auth-store";
-import { toast } from "sonner";
-import { UserPlus, UserX, User } from "lucide-react";
-
-export const Route = createFileRoute("/chat/requests")({
-  beforeLoad: () => {
-    const { token } = useAuthStore.getState();
-    if (!token) throw redirect({ to: "/login" });
-  },
-  component: ChatRequestsPage,
-});
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore, selectToken, selectUser } from '../store/authStore'
+import Sidebar from '../components/Sidebar'
+import Starfield from '../components/Starfield'
+import api from '../services/api'
+import { UserPlus, UserX, User } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface FriendRequest {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
-  createdAt: string;
+  id: string
+  senderId: string
+  receiverId: string
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
+  createdAt: string
   sender: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-  };
+    id: string
+    name: string
+    email: string
+    role: string
+  }
 }
 
-function ChatRequestsPage() {
-  const qc = useQueryClient();
-  const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('pending');
+type FilterType = 'all' | 'pending' | 'accepted' | 'rejected'
 
-  const requests = useQuery({
-    queryKey: ["friend-requests"],
-    queryFn: async () => (await api.get("/chat/friend-requests")).data,
-  });
+export default function ChatRequestsPage() {
+  const token = useAuthStore(selectToken)
+  const user = useAuthStore(selectUser)
+  const nav = useNavigate()
+
+  const [requests, setRequests] = useState<FriendRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [filter, setFilter] = useState<FilterType>('pending')
+
+  useEffect(() => {
+    if (!token) {
+      nav('/login')
+      return
+    }
+    loadRequests()
+  }, [token, nav])
+
+  const loadRequests = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get('/chat/friend-requests')
+      setRequests(res.data || [])
+    } catch (err) {
+      setError('Failed to load friend requests')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleAccept = async (id: string) => {
     try {
-      await api.patch(`/chat/friend-requests/${id}/accept`);
-      qc.invalidateQueries({ queryKey: ["friend-requests"] });
-      qc.invalidateQueries({ queryKey: ["friends"] });
-      qc.invalidateQueries({ queryKey: ["chats"] });
-      toast.success("Friend request accepted");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to accept request");
+      await api.patch(`/chat/friend-requests/${id}/accept`)
+      loadRequests()
+    } catch (err) {
+      setError('Failed to accept request')
+      console.error(err)
     }
-  };
+  }
 
   const handleReject = async (id: string) => {
     try {
-      await api.patch(`/chat/friend-requests/${id}/reject`);
-      qc.invalidateQueries({ queryKey: ["friend-requests"] });
-      toast.success("Friend request rejected");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to reject request");
+      await api.patch(`/chat/friend-requests/${id}/reject`)
+      loadRequests()
+    } catch (err) {
+      setError('Failed to reject request')
+      console.error(err)
     }
-  };
+  }
 
-  const filteredRequests = requests.data?.filter((req: FriendRequest) => {
-    if (filter === 'all') return true;
-    return req.status === filter;
-  }) || [];
+  const filteredRequests = requests.filter(req => {
+    if (filter === 'all') return true
+    return req.status === filter.toUpperCase()
+  })
 
   return (
-    <AppShell>
-      <PageHeader
-        eyebrow="COMMUNICATION"
-        title="Friend Requests"
-        description="Manage your incoming friend requests"
-      />
+    <div className="min-h-screen bg-navy-950 text-frost">
+      <Starfield />
+      <Sidebar />
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">COMMUNICATION</p>
+            <h1 className="font-display font-black text-3xl text-ice-gradient">Friend Requests</h1>
+            <div className="gold-rule w-14 mt-2" />
+            <p className="font-body text-sm text-ice/40 mt-3">
+              Manage your incoming friend requests
+            </p>
+          </motion.div>
 
-      <div className="mt-6">
-        <Card className="border-border/60 bg-card/50 shadow-card backdrop-blur-sm">
-          <CardHeader className="border-b border-border/30">
-            <div className="flex items-center justify-between">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="glass-card rounded-sm p-6">
+            
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <CardTitle className="text-lg">Requests</CardTitle>
-                <CardDescription>Accept or reject friend requests</CardDescription>
+                <p className="nav-label text-[0.6rem] text-gold/60 mb-1">MANAGE REQUESTS</p>
+                <h2 className="font-display text-xl text-ice">Accept or reject friend requests</h2>
               </div>
               <div className="flex gap-2">
-                {(['all', 'pending', 'accepted', 'rejected'] as const).map((f) => (
-                  <Button
+                {(['all', 'pending', 'accepted', 'rejected'] as const).map(f => (
+                  <button
                     key={f}
-                    variant={filter === f ? "default" : "outline"}
-                    size="sm"
                     onClick={() => setFilter(f)}
-                    className="text-xs"
+                    className={`px-3 py-1.5 rounded-sm text-[0.55rem] transition-all ${
+                      filter === f
+                        ? 'bg-gold/20 border border-gold/40 text-gold'
+                        : 'bg-navy-900/50 border border-gold/10 text-ice/50'
+                    }`}
                   >
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </Button>
+                    {f.toUpperCase()}
+                  </button>
                 ))}
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {requests.isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading requests...</p>
+
+            {loading ? (
+              <p className="text-sm text-ice/40">Loading friend requests...</p>
+            ) : error ? (
+              <p className="text-sm text-red-400/70">{error}</p>
             ) : filteredRequests.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No requests found</p>
+              <p className="text-sm text-ice/40">No {filter !== 'all' ? filter : ''} requests found</p>
             ) : (
               <div className="space-y-3">
-                {filteredRequests.map((req: FriendRequest) => (
-                  <div
-                    key={req.id}
-                    className="flex items-center justify-between rounded-lg border border-border/30 bg-background/50 p-4"
-                  >
+                {filteredRequests.map(req => (
+                  <div key={req.id} className="flex items-center justify-between rounded-sm border border-gold/10 bg-navy-900/40 p-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/10 text-gold">
                         <User className="h-5 w-5" />
                       </div>
                       <div>
-                        <h4 className="font-medium text-foreground">{req.sender.name}</h4>
-                        <p className="text-xs text-muted-foreground">{req.sender.email}</p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="font-body font-semibold text-ice">{req.sender.name}</p>
+                        <p className="text-[0.55rem] text-ice/40">{req.sender.email}</p>
+                        <p className="text-[0.5rem] text-ice/30">
                           {new Date(req.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -126,32 +144,30 @@ function ChatRequestsPage() {
                     <div className="flex items-center gap-2">
                       {req.status === 'PENDING' && (
                         <>
-                          <Button
-                            variant="outline"
-                            size="sm"
+                          <button
                             onClick={() => handleAccept(req.id)}
+                            className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem] flex items-center gap-1"
                           >
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Accept
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
+                            <UserPlus size={12} />
+                            ACCEPT
+                          </button>
+                          <button
                             onClick={() => handleReject(req.id)}
+                            className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem] flex items-center gap-1"
                           >
-                            <UserX className="mr-2 h-4 w-4" />
-                            Reject
-                          </Button>
+                            <UserX size={12} />
+                            REJECT
+                          </button>
                         </>
                       )}
                       {req.status === 'ACCEPTED' && (
-                        <span className="rounded bg-green-500/10 px-2 py-1 text-xs font-medium text-green-500">
-                          Friends
+                        <span className="rounded bg-signal/20 px-2 py-1 text-[0.55rem] text-signal font-medium">
+                          FRIENDS
                         </span>
                       )}
                       {req.status === 'REJECTED' && (
-                        <span className="rounded bg-red-500/10 px-2 py-1 text-xs font-medium text-red-500">
-                          Rejected
+                        <span className="rounded bg-red-500/20 px-2 py-1 text-[0.55rem] text-red-500/70 font-medium">
+                          REJECTED
                         </span>
                       )}
                     </div>
@@ -159,9 +175,9 @@ function ChatRequestsPage() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-    </AppShell>
-  );
+          </motion.div>
+        </div>
+      </main>
+    </div>
+  )
 }

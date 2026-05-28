@@ -1,296 +1,287 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/lib/auth-store";
-import { toast } from "sonner";
-import { UserPlus, User, Search, X } from "lucide-react";
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore, selectToken, selectUser } from '../store/authStore'
+import Sidebar from '../components/Sidebar'
+import Starfield from '../components/Starfield'
+import api from '../services/api'
+import { UserPlus, User, Search, X } from 'lucide-react'
+import { motion } from 'framer-motion'
 
-export const Route = createFileRoute("/chat/find")({
-  beforeLoad: () => {
-    const { token } = useAuthStore.getState();
-    if (!token) throw redirect({ to: "/login" });
-  },
-  component: ChatFindPage,
-});
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
+interface UserData {
+  id: string
+  name: string
+  email: string
+  role: string
 }
 
 interface FriendRequest {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  id: string
+  senderId: string
+  receiverId: string
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
 }
 
-function ChatFindPage() {
-  const qc = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [isGroupMode, setIsGroupMode] = useState(false);
-  const [groupName, setGroupName] = useState("");
+export default function ChatFindPage() {
+  const token = useAuthStore(selectToken)
+  const user = useAuthStore(selectUser)
+  const nav = useNavigate()
+  
+  const [users, setUsers] = useState<UserData[]>([])
+  const [friends, setFriends] = useState<UserData[]>([])
+  const [requests, setRequests] = useState<FriendRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [isGroupMode, setIsGroupMode] = useState(false)
+  const [groupName, setGroupName] = useState('')
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+  const [error, setError] = useState('')
 
-  const users = useQuery({
-    queryKey: ["all-users"],
-    queryFn: async () => {
-      const { data } = await api.get("/admin/users");
-      return data;
-    },
-  });
+  useEffect(() => {
+    if (!token) {
+      nav('/login')
+      return
+    }
+    loadData()
+  }, [token, nav])
 
-  const friends = useQuery({
-    queryKey: ["friends"],
-    queryFn: async () => (await api.get("/chat/friends")).data,
-  });
-
-  const friendRequests = useQuery({
-    queryKey: ["friend-requests"],
-    queryFn: async () => (await api.get("/chat/friend-requests")).data,
-  });
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [usersRes, friendsRes, requestsRes] = await Promise.all([
+        api.get('/admin/users').catch(() => ({ data: [] })),
+        api.get('/chat/friends').catch(() => ({ data: [] })),
+        api.get('/chat/friend-requests').catch(() => ({ data: [] }))
+      ])
+      setUsers(usersRes.data || [])
+      setFriends(friendsRes.data || [])
+      setRequests(requestsRes.data || [])
+    } catch (err) {
+      setError('Failed to load users')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSendFriendRequest = async (userId: string) => {
     try {
-      await api.post("/chat/friend-requests", { receiverId: userId });
-      qc.invalidateQueries({ queryKey: ["friend-requests"] });
-      toast.success("Friend request sent");
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to send request");
+      await api.post('/chat/friend-requests', { receiverId: userId })
+      setRequests([...requests, { id: Date.now().toString(), senderId: user?.id || '', receiverId: userId, status: 'PENDING' }])
+    } catch (err) {
+      setError('Failed to send friend request')
+      console.error(err)
     }
-  };
+  }
 
   const handleCreateGroup = async () => {
     if (selectedUsers.length < 2) {
-      toast.error("Group chat must have at least 2 participants");
-      return;
+      setError('Group chat must have at least 2 participants')
+      return
     }
 
     try {
-      await api.post("/chat/group", {
-        name: groupName || "New Group",
-        participantIds: selectedUsers,
-      });
-      toast.success("Group chat created");
-      window.location.href = "/chat";
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Failed to create group");
+      await api.post('/chat/group', {
+        name: groupName || 'New Group',
+        participantIds: selectedUsers
+      })
+      nav('/chat')
+    } catch (err) {
+      setError('Failed to create group')
+      console.error(err)
     }
-  };
+  }
 
   const toggleUserSelection = (userId: string) => {
     setSelectedUsers(prev =>
       prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
-    );
-  };
+    )
+  }
 
-  const filteredUsers = users.data?.filter((user: User) => {
-    if (!searchTerm) return true;
+  const filteredUsers = users.filter(u => {
+    if (!searchTerm) return true
     return (
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }) || [];
+      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  })
 
   const isFriend = (userId: string) => {
-    return friends.data?.some((f: any) => f.id === userId);
-  };
+    return friends.some(f => f.id === userId)
+  }
 
   const hasPendingRequest = (userId: string) => {
-    return friendRequests.data?.some((r: FriendRequest) =>
-      (r.senderId === userId && r.receiverId === users.data?.find(u => u.id === userId)?.id) ||
-      (r.receiverId === userId && r.senderId === users.data?.find(u => u.id === userId)?.id)
-    );
-  };
+    return requests.some(r =>
+      (r.senderId === user?.id && r.receiverId === userId && r.status === 'PENDING') ||
+      (r.receiverId === user?.id && r.senderId === userId && r.status === 'PENDING')
+    )
+  }
 
   return (
-    <AppShell>
-      <PageHeader
-        eyebrow="COMMUNICATION"
-        title="Find People"
-        description="Search and connect with other users"
-      />
+    <div className="min-h-screen bg-navy-950 text-frost">
+      <Starfield />
+      <Sidebar />
+      <main className="md:ml-52 pt-14 min-h-screen relative z-10">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-8">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <p className="nav-label text-[0.55rem] text-gold/40 tracking-ultra mb-1">COMMUNICATION</p>
+            <h1 className="font-display font-black text-3xl text-ice-gradient">Find People</h1>
+            <div className="gold-rule w-14 mt-2" />
+            <p className="font-body text-sm text-ice/40 mt-3">
+              Search and connect with other users
+            </p>
+          </motion.div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Search and Filter */}
-        <div className="lg:col-span-1">
-          <Card className="border-border/60 bg-card/50 shadow-card backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Search Users</CardTitle>
-              <CardDescription>Find interns, leads, and admins</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            {/* Search and Filter */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="lg:col-span-1 glass-card rounded-sm p-6">
+              <p className="nav-label text-[0.6rem] text-gold/60 mb-3">SEARCH USERS</p>
+
+              <div className="space-y-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-ice/40" />
                   <input
                     type="text"
                     placeholder="Search by name or email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full rounded-md border border-border bg-background pl-10 pr-3 py-2 text-sm"
+                    className="uris-input pl-10 w-full"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs">Mode</Label>
-                <div className="flex gap-2">
-                  <Button
-                    variant={isGroupMode ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setIsGroupMode(false)}
-                  >
-                    Private
-                  </Button>
-                  <Button
-                    variant={isGroupMode ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setIsGroupMode(true)}
-                  >
-                    Group
-                  </Button>
-                </div>
-              </div>
-
-              {isGroupMode && (
                 <div className="space-y-2">
-                  <Label className="text-xs">Group Name</Label>
-                  <input
-                    type="text"
-                    placeholder="Enter group name..."
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-              )}
-
-              {isGroupMode && selectedUsers.length > 0 && (
-                <div className="rounded-lg border border-border/30 bg-muted/30 p-3">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
-                    Selected ({selectedUsers.length}):
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedUsers.map(userId => {
-                      const user = users.data?.find((u: User) => u.id === userId);
-                      return (
-                        <span
-                          key={userId}
-                          className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-1 text-xs text-primary"
-                        >
-                          {user?.name}
-                          <X
-                            className="h-3 w-3 cursor-pointer"
-                            onClick={() => toggleUserSelection(userId)}
-                          />
-                        </span>
-                      );
-                    })}
+                  <p className="nav-label text-[0.55rem] text-gold/40">MODE</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsGroupMode(false)}
+                      className={`flex-1 py-2 rounded-sm text-[0.6rem] transition-all ${
+                        !isGroupMode
+                          ? 'bg-gold/20 border border-gold/40 text-gold'
+                          : 'bg-navy-900/50 border border-gold/10 text-ice/50'
+                      }`}
+                    >
+                      PRIVATE
+                    </button>
+                    <button
+                      onClick={() => setIsGroupMode(true)}
+                      className={`flex-1 py-2 rounded-sm text-[0.6rem] transition-all ${
+                        isGroupMode
+                          ? 'bg-gold/20 border border-gold/40 text-gold'
+                          : 'bg-navy-900/50 border border-gold/10 text-ice/50'
+                      }`}
+                    >
+                      GROUP
+                    </button>
                   </div>
                 </div>
-              )}
 
-              {isGroupMode && (
-                <Button
-                  className="w-full"
-                  onClick={handleCreateGroup}
-                  disabled={selectedUsers.length < 2}
-                >
-                  Create Group Chat
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                {isGroupMode && (
+                  <div className="space-y-2">
+                    <p className="nav-label text-[0.55rem] text-gold/40">GROUP NAME</p>
+                    <input
+                      type="text"
+                      placeholder="Enter group name..."
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
+                      className="uris-input w-full"
+                    />
+                  </div>
+                )}
 
-        {/* Users List */}
-        <div className="lg:col-span-2">
-          <Card className="border-border/60 bg-card/50 shadow-card backdrop-blur-sm">
-            <CardHeader className="border-b border-border/30">
-              <CardTitle className="text-lg">Users</CardTitle>
-              <CardDescription>
-                {filteredUsers.length} user(s) found
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {users.isLoading ? (
-                <p className="text-sm text-muted-foreground">Loading users...</p>
+                {isGroupMode && selectedUsers.length > 0 && (
+                  <div className="rounded-sm border border-gold/20 bg-gold/5 p-3">
+                    <p className="text-[0.55rem] text-gold/60 mb-2">SELECTED ({selectedUsers.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedUsers.map(userId => {
+                        const selectedUser = users.find(u => u.id === userId)
+                        return (
+                          <span key={userId} className="inline-flex items-center gap-1 rounded bg-gold/10 px-2 py-1 text-[0.5rem] text-gold">
+                            {selectedUser?.name}
+                            <X className="h-3 w-3 cursor-pointer" onClick={() => toggleUserSelection(userId)} />
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {isGroupMode && (
+                  <button
+                    onClick={handleCreateGroup}
+                    disabled={selectedUsers.length < 2}
+                    className="btn-gold w-full py-2 rounded-sm text-[0.6rem] disabled:opacity-50"
+                  >
+                    CREATE GROUP CHAT
+                  </button>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Users List */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="lg:col-span-2 glass-card rounded-sm p-6">
+              <p className="nav-label text-[0.6rem] text-gold/60 mb-4">USERS ({filteredUsers.length})</p>
+
+              {loading ? (
+                <p className="text-sm text-ice/40">Loading users...</p>
+              ) : error ? (
+                <p className="text-sm text-red-400/70">{error}</p>
               ) : filteredUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No users found</p>
+                <p className="text-sm text-ice/40">No users found</p>
               ) : (
-                <div className="space-y-2">
-                  {filteredUsers.map((user: User) => {
-                    const isSelf = user.id === useAuthStore.getState().user?.id;
-                    const isAlreadyFriend = isFriend(user.id);
-                    const hasRequest = hasPendingRequest(user.id);
+                <div className="space-y-3">
+                  {filteredUsers.map(u => {
+                    const isSelf = u.id === user?.id
+                    const alreadyFriend = isFriend(u.id)
+                    const hasPending = hasPendingRequest(u.id)
 
-                    if (isSelf) return null;
+                    if (isSelf) return null
 
                     return (
-                      <div
-                        key={user.id}
-                        className="flex items-center justify-between rounded-lg border border-border/30 bg-background/50 p-4"
-                      >
+                      <div key={u.id} className="flex items-center justify-between rounded-sm border border-gold/10 bg-navy-900/40 p-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/10 text-gold">
                             <User className="h-5 w-5" />
                           </div>
                           <div>
-                            <h4 className="font-medium text-foreground">{user.name}</h4>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase">
-                              {user.role.replace('_', ' ')}
-                            </p>
+                            <p className="font-body font-semibold text-ice">{u.name}</p>
+                            <p className="text-[0.55rem] text-ice/40">{u.email}</p>
+                            <p className="text-[0.5rem] text-gold/50 uppercase">{u.role.replace('_', ' ')}</p>
                           </div>
                         </div>
                         <div>
-                          {isAlreadyFriend ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                // Navigate to chat with this user
-                                window.location.href = "/chat";
-                              }}
+                          {alreadyFriend ? (
+                            <button
+                              onClick={() => nav('/chat')}
+                              className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem]"
                             >
-                              Chat
-                            </Button>
-                          ) : hasRequest ? (
-                            <span className="rounded bg-yellow-500/10 px-2 py-1 text-xs font-medium text-yellow-500">
-                              Request Sent
+                              CHAT
+                            </button>
+                          ) : hasPending ? (
+                            <span className="rounded bg-yellow-500/20 px-2 py-1 text-[0.55rem] text-yellow-500/70 font-medium">
+                              REQUEST SENT
                             </span>
                           ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSendFriendRequest(user.id)}
+                            <button
+                              onClick={() => handleSendFriendRequest(u.id)}
+                              className="btn-outline px-3 py-1.5 rounded-sm text-[0.55rem] flex items-center gap-1"
                             >
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              Add
-                            </Button>
+                              <UserPlus size={12} />
+                              ADD
+                            </button>
                           )}
                         </div>
                       </div>
-                    );
+                    )
                   })}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </motion.div>
+          </div>
         </div>
-      </div>
-    </AppShell>
-  );
+      </main>
+    </div>
+  )
 }
