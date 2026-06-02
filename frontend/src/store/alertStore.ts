@@ -42,6 +42,17 @@ interface AlertState {
 
 let _pollInterval: ReturnType<typeof setInterval> | null = null
 let _isAdmin = false
+let _refreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+// Debounced refresh — collapses multiple rapid calls (socket + poll + mount)
+// into a single API call with a 1s settling window.
+function _scheduleRefresh(get: () => AlertState) {
+  if (_refreshDebounceTimer) clearTimeout(_refreshDebounceTimer)
+  _refreshDebounceTimer = setTimeout(() => {
+    _refreshDebounceTimer = null
+    void get().refresh()
+  }, 1_000)
+}
 
 export const useAlertStore = create<AlertState>((set, get) => ({
   alerts:         [],
@@ -121,10 +132,10 @@ export const useAlertStore = create<AlertState>((set, get) => ({
   startPolling: (isAdmin: boolean) => {
     _isAdmin = isAdmin
     if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null }
-    setTimeout(() => {
-      void get().refresh()
-      _pollInterval = setInterval(() => void get().refresh(), 30_000)
-    }, 100)
+    // Initial load via debouncer — collapses with any concurrent refresh calls
+    _scheduleRefresh(get)
+    // Poll every 5 minutes — socket handles real-time updates between polls
+    _pollInterval = setInterval(() => _scheduleRefresh(get), 5 * 60_000)
   },
 
   stopPolling: () => {
