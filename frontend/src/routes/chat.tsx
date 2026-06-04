@@ -48,11 +48,11 @@ export default function ChatPage() {
     try {
       setLoading(true)
       const [chatsRes, friendsRes] = await Promise.all([
-        api.get('/chat/chats').catch(() => ({ data: [] })),
-        api.get('/chat/friends').catch(() => ({ data: [] }))
+        api.get('/chat/chats').catch(() => ({ data: { data: [] } })),
+        api.get('/chat/friends').catch(() => ({ data: { data: [] } }))
       ])
-      setChats(Array.isArray(chatsRes.data) ? chatsRes.data : [])
-      setFriends(Array.isArray(friendsRes.data) ? friendsRes.data : [])
+      setChats(Array.isArray(chatsRes.data?.data) ? chatsRes.data.data : [])
+      setFriends(Array.isArray(friendsRes.data?.data) ? friendsRes.data.data : [])
     } catch (err) {
       setError('Failed to load chats')
       console.error(err)

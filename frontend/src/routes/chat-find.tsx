@@ -50,13 +50,13 @@ export default function ChatFindPage() {
     try {
       setLoading(true)
       const [usersRes, friendsRes, requestsRes] = await Promise.all([
-        api.get('/chat/users').catch(() => ({ data: [] })),
-        api.get('/chat/friends').catch(() => ({ data: [] })),
-        api.get('/chat/friend-requests').catch(() => ({ data: [] }))
+        api.get('/chat/users').catch(() => ({ data: { data: [] } })),
+        api.get('/chat/friends').catch(() => ({ data: { data: [] } })),
+        api.get('/chat/friend-requests').catch(() => ({ data: { data: [] } }))
       ])
-      setUsers(Array.isArray(usersRes.data) ? usersRes.data : [])
-      setFriends(Array.isArray(friendsRes.data) ? friendsRes.data : [])
-      setRequests(Array.isArray(requestsRes.data) ? requestsRes.data : [])
+      setUsers(Array.isArray(usersRes.data?.data) ? usersRes.data.data : [])
+      setFriends(Array.isArray(friendsRes.data?.data) ? friendsRes.data.data : [])
+      setRequests(Array.isArray(requestsRes.data?.data) ? requestsRes.data.data : [])
     } catch (err) {
       setError('Failed to load users')
       console.error(err)
@@ -71,7 +71,7 @@ export default function ChatFindPage() {
     try {
       setSearching(true)
       const res = await api.get(`/chat/users${q ? `?q=${encodeURIComponent(q)}` : ''}`)
-      setUsers(Array.isArray(res.data) ? res.data : [])
+      setUsers(Array.isArray(res.data?.data) ? res.data.data : [])
     } catch (err) {
       console.error(err)
       // don't crash — just keep existing list
@@ -160,16 +160,17 @@ export default function ChatFindPage() {
 
               <div className="space-y-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-ice/40" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ice/40 pointer-events-none z-10" />
                   <input
                     type="text"
                     placeholder="Search by name or email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="uris-input pl-10 w-full"
+                    className="uris-input w-full"
+                    style={{ paddingLeft: '2.25rem' }}
                   />
                   {searching && (
-                    <span className="absolute right-3 top-3 text-[0.5rem] text-gold/50 animate-pulse">SEARCHING...</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.5rem] text-gold/50 animate-pulse">...</span>
                   )}
                 </div>
 
