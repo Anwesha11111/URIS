@@ -2,6 +2,24 @@ const { resolveAlert } = require('../services/alertService');
 const { ok, notFound, forbidden } = require('../utils/respond');
 const prisma = require('../utils/prisma');
 
+// Alert types that are operational signals relevant to admins/leads.
+// These describe intern performance/workload issues that require admin action.
+// Intern-personal types (task_assigned, deadline_approaching, form_reminder,
+// task_reminder, review_submitted) are intentionally excluded — those belong
+// to the intern's own notification feed, not the admin operations feed.
+const ADMIN_ALERT_TYPES = [
+  'stale_task',
+  'blocker_reported',
+  'overload',
+  'low_performance',
+  'low_capacity',
+  'spike',
+  'availability_reminder',
+  'task_paused',
+  'credibility_risk',
+  'reassignment_recommendation',
+];
+
 async function getAlerts(req, res, next) {
   try {
     const { type, severity, includeResolved } = req.query;
@@ -11,8 +29,17 @@ async function getAlerts(req, res, next) {
     const where = {};
     // By default only return unresolved; pass includeResolved=true to get all
     if (includeResolved !== 'true') where.resolved = false;
-    if (type)     where.type     = type;
     if (severity) where.severity = severity;
+
+    // Scope to admin-relevant types only — never surface intern-personal notifications
+    // (task_assigned, deadline_approaching, form_reminder, etc.) in the admin feed.
+    if (type) {
+      // If caller explicitly requests a specific type, honour it (allows
+      // fine-grained filtering from the intelligence dashboard).
+      where.type = type;
+    } else {
+      where.type = { in: ADMIN_ALERT_TYPES };
+    }
 
     const alerts = await prisma.alert.findMany({
       where,
@@ -77,6 +104,7 @@ async function getMyAnomalyAlerts(req, res, next) {
       'low_performance', 'spike', 'task_assigned', 'task_paused',
       'blocker_reported', 'review_submitted', 'deadline_approaching',
       'availability_reminder', 'stale_task', 'overload', 'low_capacity',
+      'form_reminder', 'task_reminder',
     ];
 
     const where = {

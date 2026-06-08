@@ -43,15 +43,41 @@ async function getMyReviews(req, res, next) {
 
 /**
  * GET /review/task/:taskId
- * Intern fetches the review for a specific completed task they own.
+ * Fetch the review for a specific task.
+ * - Interns: can only view reviews for their own tasks.
+ * - Leads/admins (CAN_REVIEW): can view the review for any task by taskId.
  */
 async function getReviewForTask(req, res, next) {
   try {
     const { taskId } = req.params;
+    const { ROLES } = require('../constants/roles');
+
+    const CAN_REVIEW_ROLES = new Set([
+      ROLES.CORE_ADMIN, ROLES.TECHNICAL_LEAD, ROLES.RESEARCH_LEAD,
+      ROLES.COLLABORATOR_LEAD, ROLES.OPERATIONS_PROGRAM_MANAGER,
+      ROLES.OPERATIONS_LEAD,
+    ]);
+
+    // For admins/leads — just look up the review by taskId, no ownership check
+    if (CAN_REVIEW_ROLES.has(req.user.role)) {
+      const review = await prisma.review.findFirst({ where: { taskId } });
+      if (!review) return ok(res, null, 'No review submitted for this task yet');
+      return ok(res, {
+        id:         review.id,
+        taskId:     review.taskId,
+        quality:    review.quality,
+        timeliness: review.timeliness,
+        initiative: review.initiative,
+        complexity: review.complexity,
+        pps:        parseFloat((review.quality * 0.40 + review.timeliness * 0.35 + review.initiative * 0.25).toFixed(2)),
+        createdAt:  review.createdAt,
+      });
+    }
+
+    // For interns — must own the task
     const intern = await prisma.intern.findUnique({ where: { userId: req.user.id } });
     if (!intern) return notFound(res, 'Intern record not found');
 
-    // Verify the task belongs to this intern
     const task = await prisma.task.findUnique({ where: { id: taskId } });
     if (!task) return notFound(res, 'Task not found');
     if (task.internId !== intern.id) {
@@ -124,7 +150,6 @@ async function submitReview(req, res, next) {
         timeliness: timelinessScore,
         initiative: independenceScore,   // DB column kept as 'initiative' for backward compat
         complexity: taskComplexity,      // use actual task complexity for weighted performance index
-        ...(reviewNotes ? { reviewNotes } : {}),
       },
     });
 

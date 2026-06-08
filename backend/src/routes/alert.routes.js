@@ -6,7 +6,15 @@ const { validate }                 = require('../middleware/validate.middleware'
 const { schemas }                  = require('../validation/schemas');
 const { ROLES } = require('../constants/roles');
 
-const ADMIN_ROLES = [ROLES.CORE_ADMIN, ROLES.TECHNICAL_LEAD, ROLES.OPERATIONS_LEAD, ROLES.RESEARCH_LEAD];
+const ADMIN_ROLES = [
+  ROLES.CORE_ADMIN,
+  ROLES.TECHNICAL_LEAD,
+  ROLES.OPERATIONS_LEAD,
+  ROLES.RESEARCH_LEAD,
+  ROLES.OPERATIONS_PROGRAM_MANAGER,
+  ROLES.OBSERVER_TEAM_LEAD,
+  ROLES.COLLABORATOR_LEAD,
+];
 
 // Admin — all active alerts
 router.get('/',              verifyToken, requireRole(...ADMIN_ROLES), validate(schemas.getAlerts),    getAlerts);

@@ -97,8 +97,15 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => ({
 
     const socket = connectSocket(token)
 
-    socket.on('connect', () => set({ status: 'connected' }))
-    socket.on('disconnect', () => set({ status: 'disconnected' }))
+    // Remove any previously registered lifecycle listeners before re-adding
+    // so that calling connect() more than once (e.g. token refresh) doesn't
+    // stack duplicate handlers on the same socket instance.
+    socket.off('connect')
+    socket.off('disconnect')
+    socket.off('connect_error')
+
+    socket.on('connect',       () => set({ status: 'connected' }))
+    socket.on('disconnect',    () => set({ status: 'disconnected' }))
     socket.on('connect_error', () => set({ status: 'error' }))
 
     // Clean up any previous subscriptions

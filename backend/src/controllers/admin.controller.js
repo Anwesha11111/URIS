@@ -432,6 +432,9 @@ async function finishInternship(req, res, next) {
 
     if (!intern) return notFound(res, 'Intern not found');
 
+    // Guard: intern must have a linked user account
+    if (!intern.userId) return notFound(res, 'Intern has no linked user account');
+
     // Update user status and role
     await prisma.user.update({
       where: { id: intern.userId },
@@ -639,6 +642,9 @@ async function deleteIntern(req, res, next) {
     });
     if (!intern) return notFound(res, 'Intern not found');
 
+    // Guard: intern must have a linked user account to cascade-delete
+    if (!intern.userId) return notFound(res, 'Intern has no linked user account');
+
     // Delete user (cascades to intern, tasks, alerts, etc. via DB relations)
     await prisma.user.delete({ where: { id: intern.userId } });
 
@@ -668,13 +674,14 @@ async function updateIntern(req, res, next) {
 
     const { name, gdocUrl, joiningDate, dateOfBirth } = req.body;
 
-    // Update User fields
+    // Update User fields — only possible when intern has a linked user account
     const userUpdate = {};
     if (typeof name === 'string' && name.trim()) userUpdate.name = name.trim();
     if (joiningDate) userUpdate.joiningDate = new Date(joiningDate);
     if (dateOfBirth)  userUpdate.dateOfBirth  = new Date(dateOfBirth);
 
     if (Object.keys(userUpdate).length > 0) {
+      if (!intern.userId) return notFound(res, 'Intern has no linked user account');
       await prisma.user.update({ where: { id: intern.userId }, data: userUpdate });
     }
 

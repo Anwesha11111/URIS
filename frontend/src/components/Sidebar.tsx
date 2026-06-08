@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, CalendarDays, ClipboardList, Star, Users, Bell, LogOut, ChevronRight, ShieldCheck, ScrollText, TrendingUp, Shield, Menu, X, UserCircle, Settings, Wifi, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, ClipboardList, Star, Users, Bell, LogOut, ChevronRight, ShieldCheck, ScrollText, TrendingUp, Shield, Menu, X, UserCircle, Settings, Wifi, MessageSquare, AlertTriangle } from 'lucide-react'
 import { useAuthStore, selectUser, selectIsAdmin } from '../store/authStore'
 import { useAlertStore } from '../store/alertStore'
 import { useRealtimeStore } from '../store/realtimeStore'
@@ -17,7 +17,7 @@ const allItems = [
   { icon: MessageSquare,   label: 'Chat',          to: '/chat' },
   { icon: Star,            label: 'Reviews',       to: '/review' },
   { icon: Users,           label: 'Team',          to: '/team' },
-  { icon: Bell,            label: 'Alerts',        to: '/alerts' },
+  { icon: AlertTriangle,   label: 'Alerts',        to: '/alerts' },
   { icon: ShieldCheck,     label: 'Admin',         to: '/admin' },
   { icon: TrendingUp,      label: 'Intelligence',  to: '/intelligence' },
   { icon: Shield,          label: 'Governance',    to: '/governance' },
@@ -65,7 +65,7 @@ export default function Sidebar() {
               {showBadge && (
                 <motion.span key={unread} initial={{ scale: 0.5 }} animate={{ scale: 1 }}
                   className="ml-auto flex items-center justify-center min-w-[16px] h-4 px-0.5 rounded-full font-bold text-[0.46rem]"
-                  style={{ background: showCritical ? '#f87171' : '#f87171', color: '#fff', boxShadow: '0 0 6px #f8717166' }}>
+                  style={{ background: showCritical ? '#f87171' : '#f59e0b', color: '#fff', boxShadow: `0 0 6px ${showCritical ? '#f8717166' : '#f59e0b66'}` }}>
                   {unread > 9 ? '9+' : unread}
                 </motion.span>
               )}

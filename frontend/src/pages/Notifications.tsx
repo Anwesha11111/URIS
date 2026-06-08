@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bell, Check, Loader2, AlertTriangle,
@@ -78,8 +78,13 @@ export default function Notifications() {
   const [filter, setFilter]             = useState<'all' | 'critical' | 'warning'>('all')
   const [resolvingIds, setResolvingIds] = useState<Set<string>>(new Set())
   const [clearing, setClearing]         = useState(false)
+  const didMount = useRef(false)
 
-  useEffect(() => { void refresh() }, [refresh])
+  useEffect(() => {
+    if (didMount.current) return
+    didMount.current = true
+    void refresh()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleResolve = async (id: string) => {
     setResolvingIds(prev => new Set(prev).add(id))

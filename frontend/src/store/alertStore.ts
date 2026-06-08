@@ -140,6 +140,7 @@ export const useAlertStore = create<AlertState>((set, get) => ({
 
   stopPolling: () => {
     if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null }
+    _isAdmin = false  // reset so next login picks up the correct role
     set({ alerts: [], resolvedAlerts: [], unread: 0, hasCrit: false })
   },
 }))

@@ -6,7 +6,13 @@ const { validate }    = require('../middleware/validate.middleware');
 const { schemas }     = require('../validation/schemas');
 const { ROLES } = require('../constants/roles');
 
-const ADMIN_ROLES = [ROLES.CORE_ADMIN, ROLES.TECHNICAL_LEAD, ROLES.OPERATIONS_LEAD, ROLES.RESEARCH_LEAD];
+const ADMIN_ROLES = [
+  ROLES.CORE_ADMIN,
+  ROLES.TECHNICAL_LEAD,
+  ROLES.OPERATIONS_LEAD,
+  ROLES.RESEARCH_LEAD,
+  ROLES.OPERATIONS_PROGRAM_MANAGER,
+];
 const INTERN_ROLES = [ROLES.TECHNICAL_INTERN, ROLES.OPERATIONS_INTERN, ROLES.RESEARCH_INTERN];
 
 // Admin — can fetch any intern's performance by ID
