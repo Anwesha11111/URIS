@@ -44,14 +44,15 @@ async function getUsers(req, res, next) {
 
 /**
  * GET /chat/friend-requests
- * Get incoming friend requests for the authenticated user
+ * Get all friend requests (incoming) for the authenticated user — all statuses
+ * so the frontend can filter by pending / accepted / rejected.
  */
 async function getFriendRequests(req, res, next) {
   try {
     const requests = await prisma.friendRequest.findMany({
       where: {
         receiverId: req.user.id,
-        status: 'PENDING',
+        // No status filter — return all so the UI can filter client-side
       },
       include: {
         sender: {
@@ -296,6 +297,11 @@ async function getChats(req, res, next) {
         messages: {
           orderBy: { createdAt: 'desc' },
           take: 1,
+          include: {
+            sender: {
+              select: { id: true, name: true },
+            },
+          },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -550,10 +556,10 @@ async function sendMessage(req, res, next) {
       },
     });
 
-    // Emit real-time event via Socket.IO
+    // Emit real-time event via Socket.IO to all sockets in the chat room
     const io = require('../services/realtimeEngine').io;
     if (io) {
-      io.to(chatId).emit('newMessage', {
+      io.to(`chat:${chatId}`).emit('newMessage', {
         message,
         chatId,
       });

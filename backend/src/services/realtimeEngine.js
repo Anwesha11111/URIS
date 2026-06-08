@@ -132,7 +132,7 @@ function init(httpServer, allowedOrigins) {
     const { userId, role, internId } = socket.data;
     const rooms = getRoomsForRole(role, internId);
 
-    // Join all applicable rooms
+    // Join all applicable role rooms
     for (const room of rooms) socket.join(room);
 
     logger.debug({ userId, role, rooms }, 'Socket connected');
@@ -147,6 +147,33 @@ function init(httpServer, allowedOrigins) {
     // Client can request a fresh pulse manually (e.g. after tab focus)
     socket.on('request:pulse', () => {
       _emitOperationalPulse(socket).catch(() => {});
+    });
+
+    // ── Chat room join/leave ──────────────────────────────────────────────
+    // Client emits 'chat:join' with { chatId } when opening a conversation.
+    // We verify the user is actually a participant before joining the room
+    // so that io.to(chatId).emit(...) delivers to the right people only.
+    socket.on('chat:join', async ({ chatId } = {}) => {
+      if (!chatId || typeof chatId !== 'string') return;
+      try {
+        const participant = await prisma.chatParticipant.findUnique({
+          where: { chatId_userId: { chatId, userId } },
+          select: { id: true },
+        });
+        if (participant) {
+          socket.join(`chat:${chatId}`);
+          logger.debug({ userId, chatId }, 'Socket joined chat room');
+        }
+      } catch (err) {
+        logger.warn({ err: err.message, chatId }, 'chat:join failed');
+      }
+    });
+
+    socket.on('chat:leave', ({ chatId } = {}) => {
+      if (chatId) {
+        socket.leave(`chat:${chatId}`);
+        logger.debug({ userId, chatId }, 'Socket left chat room');
+      }
     });
   });
 

@@ -29,6 +29,7 @@ import Integrations       from './pages/Integrations'
 import ChatPage           from './routes/chat'
 import ChatFindPage       from './routes/chat-find'
 import ChatRequestsPage   from './routes/chat-requests'
+import ChatViewPage       from './routes/chat-view'
 import { useAuthStore, selectIsAuthenticated, selectIsAdmin } from './store/authStore'
 import { useAlertStore } from './store/alertStore'
 import { ROLES } from './constants/roles'
@@ -109,6 +110,8 @@ export default function App() {
             element={<ProtectedRoute><ChatFindPage /></ProtectedRoute>} />
           <Route path="/chat/requests"
             element={<ProtectedRoute><ChatRequestsPage /></ProtectedRoute>} />
+          <Route path="/chat/:chatId"
+            element={<ProtectedRoute><ChatViewPage /></ProtectedRoute>} />
 
           {/* Protected — leads + CORE_ADMIN (operational pages) */}
           <Route path="/review"
