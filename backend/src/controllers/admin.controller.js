@@ -129,7 +129,15 @@ async function getAdminOverview(req, res, next) {
     const filter = await getTaskFilter(req.user);
     
     let internFilter = {};
-    let alertFilter = { resolved: false };
+    // Operational alert types only — intern-personal types (task_assigned,
+    // deadline_approaching, form_reminder, review_submitted, task_reminder)
+    // are excluded from the admin/lead feed.
+    const ADMIN_ALERT_TYPES = [
+      'stale_task', 'blocker_reported', 'overload', 'low_performance',
+      'low_capacity', 'spike', 'availability_reminder', 'task_paused',
+      'credibility_risk', 'reassignment_recommendation',
+    ];
+    let alertFilter = { resolved: false, type: { in: ADMIN_ALERT_TYPES } };
     
     // Role-based filtering for leads
     if (req.user.role === ROLES.TECHNICAL_LEAD) {
@@ -148,10 +156,15 @@ async function getAdminOverview(req, res, next) {
       const allowedInternIds = [...new Set(allowedTasks.map(t => t.internId))];
       
       internFilter = { id: { in: allowedInternIds } };
-      alertFilter.OR = [
-        { taskId: { in: allowedTaskIds } },
-        { internId: { in: allowedInternIds } }
-      ];
+      // Combine the type filter with the scope filter using AND
+      alertFilter = {
+        resolved: false,
+        type: { in: ADMIN_ALERT_TYPES },
+        OR: [
+          { taskId: { in: allowedTaskIds } },
+          { internId: { in: allowedInternIds } },
+        ],
+      };
     }
 
     const [totalInterns, activeTasks, openAlerts, completedLast30, allInterns, alerts] = await Promise.all([
