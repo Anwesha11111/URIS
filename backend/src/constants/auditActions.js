@@ -86,6 +86,11 @@ const AUDIT_ACTIONS = Object.freeze({
   REMOVE_TASK_COLLABORATOR: 'REMOVE_TASK_COLLABORATOR',
   ADD_TASK_OBSERVER:        'ADD_TASK_OBSERVER',
   REMOVE_TASK_OBSERVER:     'REMOVE_TASK_OBSERVER',
+
+  // ── Virtual Presence ───────────────────────────────────────────────────────
+  CHECK_IN:       'CHECK_IN',
+  CHECK_OUT:      'CHECK_OUT',
+  DECLARE_WINDOW: 'DECLARE_WINDOW',
 });
 
 /**
@@ -102,6 +107,7 @@ const AUDIT_ENTITIES = Object.freeze({
   CONFIG:   'CONFIG',
   INTERN:   'INTERN',
   APPROVAL: 'APPROVAL',
+  PRESENCE: 'PRESENCE',
 });
 
 module.exports = { AUDIT_ACTIONS, AUDIT_ENTITIES };

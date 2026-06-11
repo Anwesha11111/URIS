@@ -10,6 +10,8 @@ const {
 } = require('../services/presenceService');
 const { ok, validationError, notFound } = require('../utils/respond');
 const logger = require('../utils/logger');
+const { logAction } = require('../utils/auditLogger');
+const { AUDIT_ACTIONS, AUDIT_ENTITIES } = require('../constants/auditActions');
 
 // Lazy-load realtimeEngine to avoid circular dependency at startup
 function emit(data) {
@@ -27,6 +29,15 @@ async function handleCheckIn(req, res, next) {
     const { session, alreadyCheckedIn } = await checkIn(intern.id);
 
     emit({ internId: intern.id, userId: req.user.id, status: 'ONLINE', checkInAt: session.checkInAt });
+
+    // Audit log — admin can see who checked in and when
+    if (!alreadyCheckedIn) {
+      void logAction(req.user.id, AUDIT_ACTIONS.CHECK_IN, AUDIT_ENTITIES.PRESENCE, intern.id, {
+        internId:  intern.id,
+        sessionId: session.id,
+        checkInAt: session.checkInAt,
+      });
+    }
 
     return ok(
       res,
@@ -50,6 +61,14 @@ async function handleCheckOut(req, res, next) {
       internId:        intern.id,
       userId:          req.user.id,
       status:          'OFFLINE',
+      checkOutAt:      session.checkOutAt,
+      durationMinutes: session.durationMinutes,
+    });
+
+    // Audit log — admin can see who checked out, when, and how long the session was
+    void logAction(req.user.id, AUDIT_ACTIONS.CHECK_OUT, AUDIT_ENTITIES.PRESENCE, intern.id, {
+      internId:        intern.id,
+      sessionId:       session.id,
       checkOutAt:      session.checkOutAt,
       durationMinutes: session.durationMinutes,
     });
@@ -78,6 +97,14 @@ async function handleDeclareWindow(req, res, next) {
       status:        'AVAILABLE_SOON',
       availableFrom: win.availableFrom,
       availableTo:   win.availableTo,
+    });
+
+    // Audit log — admin can see declared availability windows
+    void logAction(req.user.id, AUDIT_ACTIONS.DECLARE_WINDOW, AUDIT_ENTITIES.PRESENCE, intern.id, {
+      internId:      intern.id,
+      availableFrom: win.availableFrom,
+      availableTo:   win.availableTo,
+      date:          win.date,
     });
 
     return ok(res, { window: win }, 'Availability window declared.');
