@@ -29,7 +29,11 @@ function timeFromDate(d) {
 
 function buildTodayTime(d) {
   const today = todayStart();
-  const { h, m } = timeFromDate(d);
+  // TIME values are stored as 1970-01-01THH:MM:00Z — read UTC hours/minutes
+  // to get the exact time the intern declared without local offset conversion.
+  const dt = new Date(d);
+  const h = dt.getUTCHours();
+  const m = dt.getUTCMinutes();
   today.setHours(h, m, 0, 0);
   return today;
 }
@@ -126,23 +130,36 @@ async function checkOut(internId) {
 
 /**
  * Declare (or update) today's availability window for an intern.
- * availableFrom / availableTo: ISO datetime strings or Date objects.
+ * availableFrom / availableTo: "HH:MM" time strings OR full ISO datetime strings.
+ * Stores the time as-is — no UTC conversion.
  */
 async function declareAvailabilityWindow(internId, { date, availableFrom, availableTo }) {
   const dateObj = date ? new Date(date) : new Date();
   dateObj.setHours(0, 0, 0, 0);
 
+  // Build a DateTime using the date component and the supplied time,
+  // treating the time as local (offset 0) to avoid timezone shifts.
+  // If the caller sends "18:00" we parse it as "1970-01-01T18:00:00Z" so
+  // Prisma stores 18:00 in the TIME column with no offset applied.
+  function parseTime(t) {
+    if (!t) return new Date('1970-01-01T00:00:00Z');
+    // Already a full ISO string — extract just HH:MM
+    const match = String(t).match(/(\d{2}:\d{2})/);
+    const hhmm = match ? match[1] : '00:00';
+    return new Date(`1970-01-01T${hhmm}:00Z`);
+  }
+
   const win = await prisma.availabilityWindow.upsert({
     where: { internId_date: { internId, date: dateObj } },
     update: {
-      availableFrom: new Date(availableFrom),
-      availableTo:   new Date(availableTo),
+      availableFrom: parseTime(availableFrom),
+      availableTo:   parseTime(availableTo),
     },
     create: {
       internId,
       date:          dateObj,
-      availableFrom: new Date(availableFrom),
-      availableTo:   new Date(availableTo),
+      availableFrom: parseTime(availableFrom),
+      availableTo:   parseTime(availableTo),
     },
   });
 

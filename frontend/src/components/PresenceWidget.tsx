@@ -19,8 +19,17 @@ const STATUS_CFG = {
 } as const
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function toTimeString(d: string | Date) {
-  return new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+// Extract HH:MM directly from a stored time/datetime string without any
+// timezone conversion. The backend stores TIME values like "18:00:00" or
+// returns ISO strings like "1970-01-01T18:00:00.000Z". We always want the
+// time component exactly as the intern typed it — no UTC conversion.
+function extractTimeHHMM(d: string | Date): string {
+  const s = typeof d === 'string' ? d : d.toISOString()
+  // "1970-01-01T18:00:00.000Z" → "18:00"
+  // "18:00:00"                 → "18:00"
+  // "2026-06-11T18:00:00"      → "18:00"
+  const match = s.match(/(\d{2}:\d{2})/)
+  return match ? match[1] : s.slice(0, 5)
 }
 
 // ── Window declaration form ────────────────────────────────────────────────
@@ -33,12 +42,11 @@ function WindowForm({ onDone }: { onDone: () => void }) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const base = today.toISOString().slice(0, 10)
+      // Send plain time strings (HH:MM) — backend stores them as TIME without
+      // timezone conversion, so the intern sees exactly what they typed.
       await declareWindow({
-        availableFrom: `${base}T${from}:00`,
-        availableTo:   `${base}T${to}:00`,
+        availableFrom: from,  // e.g. "18:00"
+        availableTo:   to,    // e.g. "22:00"
       })
       await load()
       onDone()
@@ -144,9 +152,9 @@ export default function PresenceWidget() {
           <div className="min-w-0">
             <p className="nav-label text-[0.48rem] text-ice/30">DECLARED WINDOW</p>
             <p className="font-body text-xs text-frost/70">
-              {toTimeString(todayData.window.availableFrom)}
+              {extractTimeHHMM(todayData.window.availableFrom)}
               {' → '}
-              {toTimeString(todayData.window.availableTo)}
+              {extractTimeHHMM(todayData.window.availableTo)}
             </p>
           </div>
         </div>

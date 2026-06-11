@@ -289,16 +289,6 @@ export default function InternDashboard() {
                 </div>
               </motion.div>
 
-              {/* Virtual Presence Widget */}
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="mb-6"
-              >
-                <PresenceWidget />
-              </motion.div>
-
               {/* Team contribution — only shown when a team is selected */}              {activeTeam && (
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }} className="glass-card rounded-sm p-6 mb-6"
