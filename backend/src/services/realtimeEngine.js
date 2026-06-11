@@ -482,6 +482,42 @@ function getIO() {
   return _io;
 }
 
+// ── Presence update (added for Virtual Presence feature) ──────────────────────
+/**
+ * Broadcast a presence update event.
+ * Called when an intern checks in, checks out, or declares an availability window.
+ *
+ * @param {{ internId, userId, status, checkInAt?, checkOutAt?, durationMinutes?, availableFrom?, availableTo? }} data
+ */
+function emitPresenceUpdate(data) {
+  if (!_io) return;
+
+  const payload = {
+    type:      'presence_update',
+    timestamp: new Date().toISOString(),
+    severity:  'info',
+    affectedEntities: [{ internId: data.internId }],
+    payload:   data,
+    operationalImpact: data.status === 'ONLINE'
+      ? 'Intern checked in'
+      : data.status === 'OFFLINE'
+        ? `Intern checked out (${data.durationMinutes ?? 0} min session)`
+        : 'Intern declared availability window',
+    explainability: {
+      source:  'PresenceService',
+      trigger: data.status,
+    },
+  };
+
+  // Broadcast to admin and lead rooms
+  _io.to('admin').to('lead').emit('intelligence:presence_update', payload);
+
+  // Also notify the specific intern
+  if (data.internId) {
+    _io.to(`intern:${data.internId}`).emit('intelligence:presence_update', payload);
+  }
+}
+
 module.exports = {
   init,
   getIO,
@@ -494,4 +530,5 @@ module.exports = {
   emitIntegrationChange,
   emitEnterpriseHealthUpdate,
   broadcastOperationalPulse,
+  emitPresenceUpdate,
 };

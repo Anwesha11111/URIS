@@ -10,9 +10,11 @@ import ActivitySummaryCard from '../components/ActivitySummaryCard'
 import AnomalyAlertPanel  from '../components/AnomalyAlertPanel'
 import GoogleWorklogPanel from '../components/GoogleWorklogPanel'
 import GoogleCalendarPanel from '../components/GoogleCalendarPanel'
+import PresenceWidget     from '../components/PresenceWidget'
 import { useTeamStore, selectActiveTeam } from '../store/teamStore'
 import { getTeamContribution, type TeamContribution } from '../services/team.service'
 import api from '../services/api'
+import PresenceWidget from '../components/PresenceWidget'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -288,8 +290,17 @@ export default function InternDashboard() {
                 </div>
               </motion.div>
 
-              {/* Team contribution — only shown when a team is selected */}
-              {activeTeam && (
+              {/* Virtual Presence Widget */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="mb-6"
+              >
+                <PresenceWidget />
+              </motion.div>
+
+              {/* Team contribution — only shown when a team is selected */}              {activeTeam && (
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }} className="glass-card rounded-sm p-6 mb-6"
                   style={{ border: '1px solid rgba(201,168,76,0.15)' }}>
@@ -343,6 +354,12 @@ export default function InternDashboard() {
 
               {/* Anomaly alerts — only renders when alerts exist */}
               <AnomalyAlertPanel />
+
+              {/* Virtual Presence — check-in/out and availability window */}
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }} className="mb-6">
+                <PresenceWidget />
+              </motion.div>
 
               {/* Activity summary — 7-day window */}
               <ActivitySummaryCard />

@@ -192,6 +192,8 @@ function AdminCommandDashboard() {
                     <thead>
                       <tr>
                         <th className="text-left">Intern</th>
+                        <th className="text-center">Presence</th>
+                        <th className="text-center">Last Check-In</th>
                         <th className="text-center">Availability</th>
                         <th className="text-center">Capacity</th>
                         <th className="text-center">TLI</th>
@@ -208,6 +210,34 @@ function AdminCommandDashboard() {
                               <BandDot score={intern.capacityScore} />
                               <span className="font-body text-sm text-frost/80">{intern.name}</span>
                             </div>
+                          </td>
+                          <td className="text-center">
+                            {(() => {
+                              const s = (intern as any).presenceStatus || 'OFFLINE'
+                              const presenceMap: Record<string, { label: string; color: string; bg: string }> = {
+                                ONLINE:         { label: '🟢 Online',        color: '#4ade80',                  bg: 'rgba(74,222,128,0.10)'  },
+                                IN_SESSION:     { label: '🔵 In Session',     color: '#60a5fa',                  bg: 'rgba(96,165,250,0.10)'  },
+                                AVAILABLE_SOON: { label: '🟡 Available Soon', color: '#f59e0b',                  bg: 'rgba(245,158,11,0.10)'  },
+                                OFFLINE:        { label: '⚪ Offline',        color: 'rgba(184,212,240,0.35)',    bg: 'rgba(184,212,240,0.04)' },
+                              }
+                              const c = presenceMap[s] ?? presenceMap.OFFLINE
+                              return (
+                                <span
+                                  className="nav-label text-[0.5rem] px-2 py-0.5 rounded-full"
+                                  style={{ background: c.bg, color: c.color }}
+                                >
+                                  {c.label}
+                                </span>
+                              )
+                            })()}
+                          </td>
+                          <td className="text-center nav-label text-[0.5rem] text-ice/40">
+                            {(intern as any).lastCheckIn
+                              ? new Date((intern as any).lastCheckIn).toLocaleTimeString('en-GB', {
+                                  hour:   '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : '—'}
                           </td>
                           <td className="text-center">
                             <span className="nav-label text-[0.55rem] px-2 py-0.5 rounded-full"

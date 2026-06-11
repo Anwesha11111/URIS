@@ -202,6 +202,14 @@ async function getAdminOverview(req, res, next) {
       }),
     ]);
 
+    // Fetch today's presence data for all interns (non-fatal if unavailable)
+    const { getAllInternPresence } = require('../services/presenceService');
+    const { activeSet, windowMap, checkInMap } = await getAllInternPresence().catch(() => ({
+      activeSet:  new Set(),
+      windowMap:  new Map(),
+      checkInMap: new Map(),
+    }));
+
     const interns = allInterns.map(i => {
       const activeTasksList = i.tasks.filter(t => t.status === 'active');
       const completedTasks  = i.tasks.filter(t => t.status === 'completed');
@@ -260,6 +268,9 @@ async function getAdminOverview(req, res, next) {
         activeTasks:   activeTasksList.length,
         completedTasks: completedTasks.length,
         completionPct,
+        presenceStatus: activeSet.has(i.id) ? 'ONLINE' : windowMap.has(i.id) ? 'IN_SESSION' : 'OFFLINE',
+        lastCheckIn:   checkInMap.get(i.id) || null,
+        todayWindow:   windowMap.get(i.id)  || null,
       };
     });
 

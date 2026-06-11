@@ -150,6 +150,10 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => ({
         SOCKET_EVENTS.RESERVATION_UPDATE,
         (data) => get()._pushFeedEvent(data)
       ),
+      onSocketEvent<SocketEventPayload>(
+        'intelligence:presence_update' as SocketEventName,
+        (data) => get()._pushFeedEvent(data)
+      ),
     )
   },
 

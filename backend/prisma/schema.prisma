@@ -51,25 +51,27 @@ model GoogleToken {
 }
 
 model Intern {
-  id                     String             @id @default(uuid())
-  userId                 String?            @unique
-  createdAt              DateTime           @default(now())
+  id                     String               @id @default(uuid())
+  userId                 String?              @unique
+  createdAt              DateTime             @default(now())
   overrideScore          Float?
   reservedUntil          DateTime?
   gdocUrl                String?
   lastGdocReminderSentAt DateTime?
-  gdocIsStale            Boolean            @default(false)
+  gdocIsStale            Boolean              @default(false)
   gdocLastModified       DateTime?
   gdocMetaRefreshedAt    DateTime?
   availabilitySlots      AvailabilitySlot[]
   capacityScore          CapacityScore?
   credibility            CredibilityScore?
-  user                   User?              @relation(fields: [userId], references: [id])
+  user                   User?                @relation(fields: [userId], references: [id])
   digests                InternDigest[]
   reviews                Review[]
   scoreHistory           ScoreHistory[]
   syncLogs               SyncLog[]
   tasks                  Task[]
+  virtualPresence        VirtualPresence[]
+  availabilityWindows    AvailabilityWindow[]
 }
 
 model PasswordResetToken {
@@ -432,6 +434,36 @@ model Message {
   @@index([chatId])
   @@index([senderId])
   @@index([createdAt])
+}
+
+// ── Virtual Presence & Availability Tracking ──────────────────────────────────
+
+model VirtualPresence {
+  id              String    @id @default(uuid())
+  internId        String
+  checkInAt       DateTime  @default(now())
+  checkOutAt      DateTime?
+  durationMinutes Int?
+  createdAt       DateTime  @default(now())
+  intern          Intern    @relation(fields: [internId], references: [id], onDelete: Cascade)
+
+  @@index([internId])
+  @@index([checkInAt])
+  @@index([internId, checkInAt])
+}
+
+model AvailabilityWindow {
+  id            String   @id @default(uuid())
+  internId      String
+  date          DateTime @db.Date
+  availableFrom DateTime @db.Time
+  availableTo   DateTime @db.Time
+  createdAt     DateTime @default(now())
+  intern        Intern   @relation(fields: [internId], references: [id], onDelete: Cascade)
+
+  @@unique([internId, date])
+  @@index([internId])
+  @@index([date])
 }
 
 enum FriendRequestStatus {
