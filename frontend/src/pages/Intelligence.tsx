@@ -1235,7 +1235,6 @@ export default function Intelligence() {
   const [integrationLoading, setIntegrationLoading] = useState(false)
   const [unifiedData, setUnifiedData]           = useState<UnifiedIntelligenceData | null>(null)
   const [unifiedLoading, setUnifiedLoading]     = useState(false)
-  const [presenceData, setPresenceData]         = useState<any>(null)
 
   // Realtime store
   const { status: socketStatus, counters, scores: liveScores, feed } = useRealtimeStore()

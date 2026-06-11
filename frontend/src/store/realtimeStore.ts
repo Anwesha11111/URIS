@@ -18,6 +18,7 @@ import {
   onSocketEvent,
   SOCKET_EVENTS,
   type SocketEventPayload,
+  type SocketEventName,
   type OperationalPulsePayload,
   type EnterpriseHealthPayload,
 } from '../services/socket.service'
