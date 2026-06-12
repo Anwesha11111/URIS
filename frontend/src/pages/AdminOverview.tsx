@@ -24,7 +24,7 @@ const DAY_OPTIONS = [
 
 export default function AdminOverview() {
   const currentUser = useAuthStore(selectUser)
-  const isCoreAdmin = currentUser?.role === 'CORE_ADMIN'
+  const isCoreAdmin = currentUser?.role === 'core_admin'
 
   const [interns, setInterns]     = useState<InternRow[]>([])
   const [tasks, setTasks]         = useState<Task[]>([])
