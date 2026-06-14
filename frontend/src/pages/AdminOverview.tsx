@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, TrendingUp, X, Check, UserCheck, AlertTriangle, Loader2, Clock, ShieldCheck, Trash2, Edit2, Users, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Shield, TrendingUp, X, Check, UserCheck, AlertTriangle, Loader2, Clock, ShieldCheck, Trash2, Edit2, Users } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getAdminOverview, type InternRow } from '../services/dashboard.service'
@@ -116,22 +116,21 @@ export default function AdminOverview() {
     if (!isCoreAdmin) return
     getAllUsers()
       .then(users => {
-        // Show only non-CORE_ADMIN admin/lead roles — not interns, not past employees
-        const adminRoles = ['TECHNICAL_LEAD', 'OPERATIONS_LEAD', 'RESEARCH_LEAD',
-          'OPERATIONS_PROGRAM_MANAGER', 'OBSERVER_TEAM_LEAD', 'COLLABORATOR_LEAD', 'CORE_ADMIN']
+        // Show all non-intern, non-past-employee active users EXCEPT the current core admin themselves
+        const excludedRoles = ['TECHNICAL_INTERN', 'OPERATIONS_INTERN', 'RESEARCH_INTERN', 'ORENDA_MEMBER', 'PAST_EMPLOYEE']
         setAdminUsers(users.filter(u =>
-          adminRoles.includes(u.role.toUpperCase()) &&
-          u.status === 'active'
+          !excludedRoles.includes(u.role.toUpperCase()) &&
+          u.status === 'active' &&
+          u.id !== currentUser?.id
         ))
       })
       .catch(() => {})
-  }, [isCoreAdmin])
+  }, [isCoreAdmin, currentUser?.id])
 
   const handleElevationToggle = async (user: AdminUser) => {
     const isCoreNow = user.role.toUpperCase() === 'CORE_ADMIN'
     const newRole   = isCoreNow ? 'TECHNICAL_LEAD' : 'CORE_ADMIN'
     const action    = isCoreNow ? 'demoted from Core Admin' : 'elevated to Core Admin'
-    if (!window.confirm(`${user.name || user.email} will be ${action}. Continue?`)) return
     setElevationLoading(user.id)
     setElevationMsg(null)
     try {
@@ -817,12 +816,12 @@ export default function AdminOverview() {
         </div>
 
         {/* ── Admin Elevation Panel — CORE_ADMIN only ── */}
-        {isCoreAdmin && adminUsers.length > 0 && (
+        {isCoreAdmin && (
           <div className="px-4 md:px-8 pb-10">
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
               className="glass-card rounded-sm"
-              style={{ border: '1px solid rgba(96,165,250,0.15)' }}>
+              style={{ border: '1px solid rgba(96,165,250,0.18)' }}>
 
               {/* Header */}
               <div className="flex items-center gap-3 px-6 py-4"
@@ -835,16 +834,16 @@ export default function AdminOverview() {
                   <h2 className="font-display text-base text-frost">Admin Elevation</h2>
                 </div>
                 <p className="font-body text-xs ml-auto" style={{ color: 'rgba(184,212,240,0.3)' }}>
-                  Toggle to grant/revoke Core Admin access
+                  Toggle ON to grant full Core Admin access
                 </p>
               </div>
 
-              {/* Feedback */}
+              {/* Feedback banner */}
               <AnimatePresence>
                 {elevationMsg && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                    className="mx-6 mt-4">
-                    <div className="flex items-center gap-2 p-3 rounded-sm"
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                    <div className="mx-6 mt-4 flex items-center gap-2 p-3 rounded-sm"
                       style={{
                         background: elevationMsg.ok ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)',
                         border: `1px solid ${elevationMsg.ok ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
@@ -863,55 +862,79 @@ export default function AdminOverview() {
                 )}
               </AnimatePresence>
 
-              {/* Admin user list */}
-              <div className="divide-y px-6 py-2" style={{ borderColor: 'rgba(96,165,250,0.06)' }}>
-                {adminUsers.map(u => {
-                  const isCoreNow = u.role.toUpperCase() === 'CORE_ADMIN'
-                  const isLoading = elevationLoading === u.id
-                  return (
-                    <motion.div key={u.id}
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className="flex items-center justify-between py-3 gap-4">
+              {/* Loading */}
+              {adminUsers.length === 0 && (
+                <div className="px-6 py-8 flex items-center justify-center gap-2">
+                  <Loader2 size={16} className="animate-spin text-gold" />
+                  <p className="font-body text-sm text-ice/30">Loading admin users...</p>
+                </div>
+              )}
 
-                      {/* User info */}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-body text-sm text-frost/85 truncate">{u.name || u.email.split('@')[0]}</p>
-                        <p className="font-mono text-[0.5rem] text-ice/35 truncate">{u.email}</p>
-                        <p className="nav-label text-[0.45rem] mt-0.5"
-                          style={{ color: isCoreNow ? '#60a5fa' : 'rgba(184,212,240,0.35)' }}>
-                          {u.role.replace(/_/g, ' ')}
-                        </p>
-                      </div>
+              {/* User rows */}
+              {adminUsers.length > 0 && (
+                <div className="px-6 py-2">
+                  {adminUsers.map((u, idx) => {
+                    const isCoreNow = u.role.toUpperCase() === 'CORE_ADMIN'
+                    const isToggling = elevationLoading === u.id
+                    return (
+                      <motion.div key={u.id}
+                        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="flex items-center justify-between py-3"
+                        style={{ borderBottom: idx < adminUsers.length - 1 ? '1px solid rgba(96,165,250,0.06)' : 'none' }}>
 
-                      {/* Toggle switch */}
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="nav-label text-[0.5rem]"
-                          style={{ color: isCoreNow ? '#60a5fa' : 'rgba(184,212,240,0.25)' }}>
-                          {isCoreNow ? 'CORE ADMIN' : 'STANDARD'}
-                        </span>
-                        {isLoading ? (
-                          <Loader2 size={18} className="animate-spin" style={{ color: '#60a5fa' }} />
-                        ) : (
-                          <motion.button
-                            whileTap={{ scale: 0.92 }}
-                            onClick={() => handleElevationToggle(u)}
-                            className="flex-shrink-0 transition-all"
-                            title={isCoreNow ? 'Revoke Core Admin' : 'Elevate to Core Admin'}
-                            aria-label={isCoreNow ? 'Revoke Core Admin' : 'Elevate to Core Admin'}>
-                            {isCoreNow
-                              ? <ToggleRight size={28} style={{ color: '#60a5fa' }} />
-                              : <ToggleLeft size={28} style={{ color: 'rgba(184,212,240,0.25)' }} />}
-                          </motion.button>
-                        )}
-                      </div>
-                    </motion.div>
-                  )
-                })}
-              </div>
+                        {/* Left — user info */}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-body text-sm text-frost/90">{u.name || u.email.split('@')[0]}</p>
+                          <p className="font-mono text-[0.5rem] text-ice/35 truncate">{u.email}</p>
+                          <span className="nav-label text-[0.45rem] mt-0.5 inline-block px-1.5 py-0.5 rounded-sm"
+                            style={{
+                              background: isCoreNow ? 'rgba(96,165,250,0.12)' : 'rgba(184,212,240,0.05)',
+                              color: isCoreNow ? '#60a5fa' : 'rgba(184,212,240,0.3)',
+                            }}>
+                            {isCoreNow ? 'CORE ADMIN' : u.role.replace(/_/g, ' ')}
+                          </span>
+                        </div>
 
-              <p className="px-6 pb-4 nav-label text-[0.45rem]" style={{ color: 'rgba(184,212,240,0.15)' }}>
-                Core Admin can assign tasks to any role. Standard admins cannot assign to Core Admin.
-                All role changes are logged in the Audit Trail.
+                        {/* Right — CSS toggle switch */}
+                        <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                          <span className="nav-label text-[0.48rem]"
+                            style={{ color: isCoreNow ? '#60a5fa' : 'rgba(184,212,240,0.2)' }}>
+                            {isCoreNow ? 'CORE ADMIN' : 'STANDARD'}
+                          </span>
+                          {isToggling ? (
+                            <div className="w-12 h-6 flex items-center justify-center">
+                              <Loader2 size={14} className="animate-spin" style={{ color: '#60a5fa' }} />
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => void handleElevationToggle(u)}
+                              className="relative inline-flex h-6 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 transition-all duration-200 ease-in-out focus:outline-none"
+                              style={{
+                                backgroundColor: isCoreNow ? '#60a5fa' : 'rgba(184,212,240,0.1)',
+                                borderColor: isCoreNow ? '#60a5fa' : 'rgba(184,212,240,0.15)',
+                              }}
+                              role="switch"
+                              aria-checked={isCoreNow}>
+                              <span
+                                className="pointer-events-none inline-block h-4 w-4 rounded-full shadow transition-transform duration-200 ease-in-out"
+                                style={{
+                                  background: isCoreNow ? '#fff' : 'rgba(184,212,240,0.45)',
+                                  transform: isCoreNow ? 'translateX(22px)' : 'translateX(2px)',
+                                  marginTop: '1px',
+                                }}
+                              />
+                            </button>
+                          )}
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
+
+              <p className="px-6 pb-4 pt-2 nav-label text-[0.45rem]" style={{ color: 'rgba(184,212,240,0.15)' }}>
+                Toggle ON gives the admin full Core Admin access immediately. All changes are logged in the Audit Trail.
               </p>
             </motion.div>
           </div>
