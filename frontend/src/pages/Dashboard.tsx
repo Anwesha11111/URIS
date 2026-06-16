@@ -80,8 +80,6 @@ function AdminCommandDashboard() {
     void load()
   }, [])
 
-  const days = ['MON', 'TUE', 'WED', 'THU', 'FRI']
-
   if (loading) {
     return (
       <div className="min-h-screen bg-navy-950 text-frost">
@@ -312,98 +310,81 @@ function AdminCommandDashboard() {
             </motion.div>
           </div>
 
-          {/* Heatmap — derived from real team capacity data */}
-          {((data.teams && data.teams.length > 0) || data.interns.length > 0) && (
+          {/*
+           * AVAILABILITY HEATMAP
+           * Data source: data.teams[].capacityScore from /admin/overview
+           *   → admin.controller.js aggregates real ScoreHistory records per team.
+           * No synthetic/fabricated values are used.
+           * If no teams exist, show an empty state instead of manufactured data.
+           */}
+          {data.teams && data.teams.length > 0 ? (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }} className="glass-card rounded-sm mt-6 p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <p className="nav-label text-[0.55rem] text-gold/40 mb-0.5">AVAILABILITY HEATMAP</p>
-                  <h2 className="font-display text-lg text-frost">Team Capacity by Day</h2>
+                  <h2 className="font-display text-lg text-frost">Team Capacity Overview</h2>
                 </div>
                 <Clock size={13} className="text-gold/40" />
               </div>
-              <div className="flex gap-4 overflow-x-auto pb-2">
-                {/* Row Labels */}
-                <div className="flex flex-col justify-end">
-                  <div className="h-4 mb-2" /> {/* alignment spacer */}
-                  <div className="space-y-1.5">
-                    {data.teams && data.teams.length > 0 ? (
-                      data.teams.map((team) => (
-                        <div key={team.id} className="h-6 flex items-center pr-3 min-w-[120px]">
-                          <span className={`nav-label text-[0.55rem] truncate ${team.isBestPerforming ? 'text-green-400 font-black' : 'text-ice/60'}`}>
+
+              {/* Real capacity data table — one row per team, current capacity score only.
+                  Per-day breakdown requires AvailabilityWindow records in the DB.
+                  Until that data exists this section shows the current aggregate score. */}
+              <div className="overflow-x-auto">
+                <table className="uris-table w-full">
+                  <thead>
+                    <tr>
+                      <th className="text-left">Team</th>
+                      <th className="text-center">Members</th>
+                      <th className="text-center">Avg Capacity</th>
+                      <th className="text-center">Avg RPI</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.teams.map((team) => (
+                      <tr key={team.id}>
+                        <td>
+                          <span className={`font-body text-sm ${team.isBestPerforming ? 'text-green-400 font-semibold' : 'text-frost/80'}`}>
                             {team.name} {team.isBestPerforming && '👑'}
                           </span>
-                        </div>
-                      ))
-                    ) : (
-                      data.interns.map((intern) => (
-                        <div key={intern.id} className="h-6 flex items-center pr-3 min-w-[100px]">
-                          <span className="nav-label text-[0.55rem] text-ice/60 truncate">
-                            {intern.name}
+                        </td>
+                        <td className="text-center font-mono text-sm text-ice/60">{team.internCount}</td>
+                        <td className="text-center">
+                          <span className="font-mono text-sm font-bold"
+                            style={{ color: team.capacityScore >= 70 ? '#4ade80' : team.capacityScore >= 40 ? '#f59e0b' : '#f87171' }}>
+                            {team.capacityScore}
                           </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Daily Blocks */}
-                <div className="grid grid-cols-5 gap-2 md:gap-3 flex-1 min-w-[300px]">
-                  {days.map((day, di) => (
-                    <div key={day}>
-                      <p className="nav-label text-[0.55rem] text-ice/40 text-center mb-2">{day}</p>
-                      <div className="space-y-1.5">
-                        {data.teams && data.teams.length > 0 ? (
-                          data.teams.map((team, ti) => {
-                            const seed = (di * 7 + ti * 3) % 5
-                            const v = Math.max(15, Math.min(95, team.capacityScore + (seed - 2) * 12))
-                            const isBest = team.isBestPerforming
-                            return (
-                              <motion.div key={team.id}
-                                initial={{ opacity: 0, scaleX: 0 }} animate={{ opacity: 1, scaleX: 1 }}
-                                transition={{ delay: 0.7 + di * 0.04 + ti * 0.02 }}
-                                title={`${team.name}${isBest ? ' (Best Performing Team)' : ''}: ${v}`}
-                                className="h-6 rounded-sm cursor-pointer hover:scale-y-110 transition-transform flex items-center justify-center relative overflow-hidden"
-                                style={{ 
-                                  background: isBest ? `rgba(74,222,128,${v / 100 * 0.6 + 0.15})` : `rgba(201,168,76,${v / 100 * 0.5 + 0.05})`, 
-                                  border: isBest ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(201,168,76,0.1)' 
-                                }}>
-                                <span className="nav-label text-[0.45rem] font-bold" style={{ color: isBest ? '#4ade80' : '#c9a84c' }}>{v}</span>
-                              </motion.div>
-                            )
-                          })
-                        ) : (
-                          data.interns.map((intern, ii) => {
-                            const seed = (di * 7 + ii * 3) % 5
-                            const v = Math.max(15, Math.min(95, intern.capacityScore + (seed - 2) * 12))
-                            return (
-                              <motion.div key={intern.id}
-                                initial={{ opacity: 0, scaleX: 0 }} animate={{ opacity: 1, scaleX: 1 }}
-                                transition={{ delay: 0.7 + di * 0.04 + ii * 0.02 }}
-                                title={`${intern.name}: ${v}`}
-                                className="h-6 rounded-sm cursor-pointer hover:scale-y-110 transition-transform flex items-center justify-center"
-                                style={{ background: `rgba(201,168,76,${v / 100 * 0.5 + 0.05})`, border: '1px solid rgba(201,168,76,0.1)' }}>
-                                <span className="nav-label text-[0.45rem] text-gold/70">{v}</span>
-                              </motion.div>
-                            )
-                          })
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                        </td>
+                        <td className="text-center font-mono text-sm text-ice/60">{team.rpi.toFixed(1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="flex items-center gap-4 mt-4 justify-end">
-                {[{ label: 'HIGH', c: 'rgba(201,168,76,0.6)' }, { label: 'MED', c: 'rgba(201,168,76,0.3)' }, { label: 'LOW', c: 'rgba(201,168,76,0.1)' }, { label: 'BEST PERFORMING TEAM', c: 'rgba(74,222,128,0.5)' }].map(l => (
-                  <div key={l.label} className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm" style={{ background: l.c }} />
-                    <span className="nav-label text-[0.55rem] text-ice/30">{l.label}</span>
-                  </div>
-                ))}
+              <p className="nav-label text-[0.5rem] text-ice/25 mt-3 text-right">
+                Capacity scores sourced from ScoreHistory · per-day breakdown available when AvailabilityWindow data is present
+              </p>
+            </motion.div>
+          ) : (data.interns.length > 0) ? (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }} className="glass-card rounded-sm mt-6 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="nav-label text-[0.55rem] text-gold/40 mb-0.5">AVAILABILITY HEATMAP</p>
+                  <h2 className="font-display text-lg text-frost">Team Capacity Overview</h2>
+                </div>
+                <Clock size={13} className="text-gold/40" />
+              </div>
+              <div className="py-6 text-center">
+                <Clock size={20} className="mx-auto mb-2 text-ice/20" />
+                <p className="font-body text-sm text-ice/30">No team data available.</p>
+                <p className="nav-label text-[0.5rem] text-ice/20 mt-1">
+                  Assign interns to teams to see capacity data here.
+                </p>
               </div>
             </motion.div>
-          )}
+          ) : null}
           {/* STEMONEF BRANDING */}
           <div className="mt-12 py-8 flex flex-col items-center gap-4 opacity-40">
             <div className="h-[1px] w-12 bg-gold/20" />
