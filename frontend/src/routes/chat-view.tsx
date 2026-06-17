@@ -99,9 +99,13 @@ export default function ChatViewPage() {
 
     socket.on('newMessage', (data: { message: Message; chatId: string }) => {
       if (data.chatId !== chatId) return
-      setMessages(prev => [...prev, data.message])
-      // Scroll to bottom on new incoming message
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      // Skip if this message was already appended optimistically by the sender
+      // (the REST response and the socket broadcast carry the same message id).
+      setMessages(prev => {
+        if (prev.some(m => m.id === data.message.id)) return prev
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+        return [...prev, data.message]
+      })
     })
 
     return () => {
