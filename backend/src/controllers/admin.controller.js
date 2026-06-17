@@ -10,6 +10,10 @@ const configStore = require('../services/configStore');
 const { getCapacityLabel } = require('../services/capacityEngine');
 const { getRpiWindowStart } = require('../services/performanceEngine');
 const notificationService = require('../services/notification.service');
+// LOW-1: imported lazily below to avoid a circular-require at startup.
+// realtimeEngine depends on prisma; importing it at the top of admin.controller
+// is safe but lazy import avoids any future circular issue if the dep graph grows.
+
 
 // Default deadline: Monday at 11:00 AM
 const DEFAULT_DEADLINE = { day: 1, hour: 11, minute: 0 }; // day: 0=Sun,1=Mon,...6=Sat
@@ -615,7 +619,12 @@ async function changeUserRole(req, res, next) {
     const normalizedRole = normalizeRole(newRole);
     if (!normalizedRole) return validationError(res, `Invalid role "${newRole}"`);
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    // Expand select to include the linked Intern record so we can pass internId
+    // to reroomSocket — the intern room is keyed by Intern.id, not User.id.
+    const user = await prisma.user.findUnique({
+      where:  { id: userId },
+      select: { role: true, intern: { select: { id: true } } },
+    });
     if (!user) return notFound(res, 'User not found');
 
     if (user.role === normalizedRole) {
@@ -639,6 +648,11 @@ async function changeUserRole(req, res, next) {
         },
       }),
     ]);
+
+    // LOW-1: update RBAC rooms on any active socket connections for this user
+    // so the change takes effect immediately without requiring a reconnect.
+    const { reroomSocket } = require('../services/realtimeEngine');
+    reroomSocket(userId, normalizedRole, user.intern?.id ?? null);
 
     void logAction(req.user?.id ?? null, AUDIT_ACTIONS.CHANGE_USER_ROLE, AUDIT_ENTITIES.USER, userId, {
       userId,

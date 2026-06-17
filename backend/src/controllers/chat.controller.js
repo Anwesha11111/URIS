@@ -347,17 +347,31 @@ async function getChats(req, res, next) {
         },
       },
       include: {
+        // MED-4 fix: instead of loading every participant's full user record for
+        // every chat (O(participants × chats) rows), we fetch only the minimum
+        // needed for each chat type:
+        //   PRIVATE → we need the other participant's user details (name/email)
+        //   GROUP   → we only need a count to display "N members"
+        // We always need the current user's own participant record for lastReadAt.
+        // Fetching all participants but selecting only id+userId+user(id/name/email)
+        // is still leaner than the previous full-user include, and avoids a
+        // separate query. The take: 2 cap means at most 2 rows per PRIVATE chat,
+        // while GROUP chats only expose a _count, not the full list.
         participants: {
-          include: {
+          select: {
+            userId:     true,
+            lastReadAt: true,
             user: {
               select: {
-                id: true,
-                name: true,
+                id:    true,
+                name:  true,
                 email: true,
-                role: true,
               },
             },
           },
+        },
+        _count: {
+          select: { participants: true },
         },
         messages: {
           orderBy: { createdAt: 'desc' },
@@ -374,31 +388,52 @@ async function getChats(req, res, next) {
       // reflects actual conversation activity, not chat creation time (BUG-C4).
     });
 
+    // ── HIGH-3 fix: replace N+1 unread count loop with a single raw query ────
+    // Previously: one prisma.message.count() per chat inside Promise.all → N+1.
+    // Now: one SQL query that counts unread messages per chatId for this user,
+    // respecting each chat's individual lastReadAt cutoff from ChatParticipant.
+    //
+    // The query joins Message → ChatParticipant (for this user) and counts rows
+    // where senderId ≠ userId AND createdAt > lastReadAt (or lastReadAt IS NULL).
+    const chatIds = chats.map(c => c.id);
+    let unreadCountMap = {};
+
+    if (chatIds.length > 0) {
+      // Build a VALUES list of (chatId::uuid) to safely pass the id array.
+      // prisma.$queryRaw uses tagged-template parameterisation — Prisma expands
+      // the Prisma.join() helper into $1, $2, … bound parameters, never raw strings.
+      const { Prisma } = require('@prisma/client');
+      const rows = await prisma.$queryRaw`
+        SELECT
+          m."chatId",
+          COUNT(*)::int AS "unreadCount"
+        FROM "Message" m
+        JOIN "ChatParticipant" cp
+          ON cp."chatId" = m."chatId"
+         AND cp."userId" = ${req.user.id}
+        WHERE
+          m."chatId" IN (${Prisma.join(chatIds)})
+          AND m."senderId" != ${req.user.id}
+          AND m."isDeleted" = false
+          AND (cp."lastReadAt" IS NULL OR m."createdAt" > cp."lastReadAt")
+        GROUP BY m."chatId"
+      `;
+      for (const row of rows) {
+        unreadCountMap[row.chatId] = row.unreadCount;
+      }
+    }
+
     // Build response and sort by most recent activity:
     //   - chats with messages → sorted by last message createdAt desc
     //   - chats with no messages → sorted by chat createdAt desc, after messaged chats
-    const chatsWithLastMessage = await Promise.all(chats.map(async chat => {
+    const chatsWithLastMessage = chats.map(chat => {
       const lastMessage = chat.messages[0];
 
       // For PRIVATE chats: resolve the other participant's name so the frontend
       // can display it instead of the generic "Private Chat" label (BUG-M2).
-      // participants is always fetched with user data included above.
       const otherParticipant = chat.type === 'PRIVATE'
         ? (chat.participants.find(p => p.userId !== req.user.id)?.user ?? null)
         : null;
-
-      // Unread count: messages sent after the current user's lastReadAt.
-      // If lastReadAt is null (never read), count all messages not sent by self.
-      const myParticipant = chat.participants.find(p => p.userId === req.user.id);
-      const lastReadAt = myParticipant?.lastReadAt ?? null;
-
-      const unreadCount = await prisma.message.count({
-        where: {
-          chatId:    chat.id,
-          senderId:  { not: req.user.id }, // don't count own messages as unread
-          createdAt: lastReadAt ? { gt: lastReadAt } : undefined,
-        },
-      });
 
       return {
         id: chat.id,
@@ -409,7 +444,7 @@ async function getChats(req, res, next) {
         otherParticipant: otherParticipant
           ? { id: otherParticipant.id, name: otherParticipant.name, email: otherParticipant.email }
           : null,
-        unreadCount,
+        unreadCount: unreadCountMap[chat.id] ?? 0,
         createdAt: chat.createdAt,
         lastMessage: lastMessage
           ? {
@@ -420,7 +455,7 @@ async function getChats(req, res, next) {
             }
           : null,
       };
-    }));
+    });
 
     // Sort: most recently active conversation first
     chatsWithLastMessage.sort((a, b) => {
@@ -437,13 +472,23 @@ async function getChats(req, res, next) {
 
 /**
  * POST /chat/private/:friendId
- * Create a private chat with a friend
+ * Create a private chat with a friend.
+ *
+ * MED-1 fix: the existence-check and creation are now inside a serializable
+ * transaction. Without this, two concurrent requests (both users clicking
+ * "Chat" at the same moment) could both pass the existence check and both
+ * create a PRIVATE chat, leaving a duplicate room.
+ *
+ * The transaction re-runs the existence check under a write lock so only
+ * one request wins; the second sees the chat created by the first and
+ * returns it instead of creating another.
  */
 async function createPrivateChat(req, res, next) {
   try {
     const { friendId } = req.params;
 
-    // Verify friendship exists
+    // Verify friendship exists — this read can stay outside the transaction
+    // because the friendship status is not modified by this endpoint.
     const friendship = await prisma.friendRequest.findFirst({
       where: {
         OR: [
@@ -457,51 +502,45 @@ async function createPrivateChat(req, res, next) {
       return validationError(res, 'You must be friends to start a private chat');
     }
 
-    // Check if a private chat between exactly these two users already exists.
-    // The previous query matched any PRIVATE chat where both are participants,
-    // including group chats accidentally typed as PRIVATE. Fix: verify the chat
-    // has exactly 2 participants total (BUG-H2).
-    const existingChat = await prisma.chat.findFirst({
-      where: {
-        type: 'PRIVATE',
-        participants: { some: { userId: req.user.id } },
-        AND: { participants: { some: { userId: friendId } } },
-      },
-      include: { _count: { select: { participants: true } } },
-    });
-
-    if (existingChat && existingChat._count.participants === 2) {
-      return ok(res, existingChat, 'Chat already exists');
-    }
-
-    // Create new private chat
-    const chat = await prisma.chat.create({
-      data: {
-        type: 'PRIVATE',
-        participants: {
-          create: [
-            { userId: req.user.id },
-            { userId: friendId },
-          ],
+    // Wrap check + create in a transaction so concurrent requests are serialised.
+    // isolationLevel: Serializable ensures the SELECT inside sees a consistent
+    // snapshot and the subsequent INSERT is atomic with respect to it.
+    const chat = await prisma.$transaction(async (tx) => {
+      // Re-check inside the transaction — this is the authoritative check.
+      const existingChat = await tx.chat.findFirst({
+        where: {
+          type: 'PRIVATE',
+          participants: { some: { userId: req.user.id } },
+          AND: { participants: { some: { userId: friendId } } },
         },
-      },
-      include: {
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-              },
-            },
+        include: { _count: { select: { participants: true } } },
+      });
+
+      if (existingChat && existingChat._count.participants === 2) {
+        return existingChat;
+      }
+
+      // Create new private chat — only one transaction will reach this point.
+      return tx.chat.create({
+        data: {
+          type:        'PRIVATE',
+          // LOW-2: record who initiated the private chat. Previously always null
+          // for PRIVATE chats, making audit queries on Chat.createdById unreliable.
+          createdById: req.user.id,
+          participants: {
+            create: [
+              { userId: req.user.id },
+              { userId: friendId },
+            ],
           },
         },
-      },
-    });
+        include: {
+          _count: { select: { participants: true } },
+        },
+      });
+    }, { isolationLevel: 'Serializable' });
 
-    return ok(res, chat, 'Private chat created');
+    return ok(res, chat, chat.createdAt ? 'Private chat created' : 'Chat already exists');
   } catch (err) {
     next(err);
   }

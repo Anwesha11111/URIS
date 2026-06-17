@@ -9,6 +9,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getSocket } from '../services/socket.service'
 import { useRealtimeStore } from '../store/realtimeStore'
 
+// ── Draft persistence helpers (MED-3) ─────────────────────────────────────────
+// Drafts are keyed by chatId so switching conversations never mixes content.
+const DRAFT_PREFIX = 'uris_chat_draft_'
+const getDraft  = (chatId: string) => localStorage.getItem(`${DRAFT_PREFIX}${chatId}`) ?? ''
+const saveDraft = (chatId: string, text: string) => {
+  if (text) localStorage.setItem(`${DRAFT_PREFIX}${chatId}`, text)
+  else      localStorage.removeItem(`${DRAFT_PREFIX}${chatId}`)
+}
+
 interface Message {
   id: string
   chatId: string
@@ -43,7 +52,7 @@ export default function ChatViewPage() {
   const [loading, setLoading]         = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [sending, setSending]         = useState(false)
-  const [content, setContent]         = useState('')
+  const [content, setContent]         = useState(() => (chatId ? getDraft(chatId) : ''))
   const [error, setError]             = useState('')
   const [chatName, setChatName]       = useState('')
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({})
@@ -62,6 +71,25 @@ export default function ChatViewPage() {
   const bottomRef        = useRef<HTMLDivElement>(null)
   const inputRef         = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // LOW-3: track mount state so the debounced stop_typing callback never fires
+  // after the component has unmounted and the chat room has been left.
+  // Using a ref (not state) avoids triggering a re-render on unmount.
+  const mountedRef       = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  // MED-2: track the page the user has explicitly loaded, independent of the
+  // server's pagination snapshot. Real-time messages appended via socket do not
+  // change this counter, so "Load older messages" always requests the correct
+  // next historical page rather than skipping rows that arrived after load.
+  const loadedPageRef    = useRef(1)
+  // MED-2: whether there are more historical pages to fetch. Stored as both a
+  // ref (for use inside callbacks without stale closure) and state (to drive
+  // the "Load older messages" button visibility reactively).
+  const hasMorePagesRef  = useRef(false)
+  const [hasMorePages, setHasMorePages] = useState(false)
 
   // Session expiry detection — if the socket was rejected due to an expired token,
   // show a visible banner prompting re-login (SEC-7).
@@ -71,18 +99,26 @@ export default function ChatViewPage() {
   // ── Load messages ──────────────────────────────────────────────────────────
   const loadMessages = useCallback(async (page = 1, append = false) => {
     if (!chatId) return
+    const LIMIT = 50
     try {
       if (page === 1) setLoading(true); else setLoadingMore(true)
       const res = await api.get<{
         success: boolean
         data: { messages: Message[]; pagination: Pagination }
-      }>(`/chat/chats/${chatId}/messages?page=${page}&limit=50`)
+      }>(`/chat/chats/${chatId}/messages?page=${page}&limit=${LIMIT}`)
 
       const { messages: msgs, pagination: pg } = res.data.data
       // Messages come back newest-first — reverse for display
       const ordered = [...msgs].reverse()
       setMessages(prev => append ? [...ordered, ...prev] : ordered)
       setPagination(pg)
+
+      // MED-2: update the independent page tracker and the "has more" flag.
+      // We consider there to be more pages only when the server returned a full
+      // page — this stays correct even as real-time messages inflate pg.total.
+      loadedPageRef.current   = page
+      hasMorePagesRef.current = msgs.length === LIMIT
+      setHasMorePages(msgs.length === LIMIT)
     } catch {
       setError('Failed to load messages')
     } finally {
@@ -123,9 +159,17 @@ export default function ChatViewPage() {
     const socket = getSocket()
     if (!socket) return
 
-    // Join the chat room on the shared socket
-    // The server validates ChatParticipant membership before allowing the join
+    // Join the chat room on the shared socket.
+    // The server validates ChatParticipant membership before allowing the join.
     socket.emit('chat:join', { chatId })
+
+    // HIGH-1 fix: on reconnect, re-join the room (Socket.IO rooms are server-side
+    // state — a reconnected socket starts with no rooms) and re-fetch page 1 to
+    // recover any messages that arrived during the disconnection window.
+    const handleReconnect = () => {
+      socket.emit('chat:join', { chatId })
+      void loadMessages(1, false)
+    }
 
     const handleNewMessage = (data: { message: Message; chatId: string }) => {
       if (data.chatId !== chatId) return
@@ -171,6 +215,13 @@ export default function ChatViewPage() {
       })
     }
 
+    // 'connect' fires on the initial connection AND on every successful reconnect.
+    // We only want the reconnect behaviour (re-join + re-fetch), not on first mount
+    // (the initial load useEffect already handles that). Socket.IO sets
+    // socket.recovered=true when the connection was restored transparently, but
+    // we can't rely on that across all transports, so we always re-fetch.
+    // The newMessage deduplication by id prevents double-rendering.
+    socket.on('connect', handleReconnect)
     socket.on('newMessage', handleNewMessage)
     socket.on('messageEdited', handleMessageEdited)
     socket.on('messageDeleted', handleMessageDeleted)
@@ -178,6 +229,7 @@ export default function ChatViewPage() {
     socket.on('chat:user_stop_typing', handleUserStopTyping)
 
     return () => {
+      socket.off('connect', handleReconnect)
       socket.off('newMessage', handleNewMessage)
       socket.off('messageEdited', handleMessageEdited)
       socket.off('messageDeleted', handleMessageDeleted)
@@ -187,7 +239,7 @@ export default function ChatViewPage() {
       // Clear any pending typing timeout
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     }
-  }, [chatId, user?.id])
+  }, [chatId, user?.id, loadMessages])
 
   // ── Initial load + scroll to bottom ───────────────────────────────────────
   useEffect(() => {
@@ -212,18 +264,36 @@ export default function ChatViewPage() {
 
     setSending(true)
     setContent('')
+    // MED-3: clear the draft immediately on send attempt
+    if (chatId) saveDraft(chatId, '')
     emitStopTyping()
-    try {
+
+    // MED-3: attempt the POST, retry once on failure before giving up
+    const attemptSend = async (): Promise<Message> => {
       const res = await api.post<{ success: boolean; data: Message }>(
         `/chat/chats/${chatId}/messages`,
         { content: text }
       )
+      return res.data.data
+    }
+
+    try {
+      let message: Message
+      try {
+        message = await attemptSend()
+      } catch {
+        // First attempt failed — wait 800 ms then retry once
+        await new Promise(resolve => setTimeout(resolve, 800))
+        message = await attemptSend()
+      }
       // Optimistically append (socket will also fire for other participants)
-      setMessages(prev => [...prev, res.data.data])
+      setMessages(prev => [...prev, message])
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     } catch {
-      setError('Failed to send message')
-      setContent(text) // restore on failure
+      // Both attempts failed — restore draft so the user doesn't lose their text
+      setError('Failed to send message. Your text has been restored.')
+      setContent(text)
+      if (chatId) saveDraft(chatId, text)
     } finally {
       setSending(false)
       inputRef.current?.focus()
@@ -240,13 +310,19 @@ export default function ChatViewPage() {
   // ── Typing indicator emit ─────────────────────────────────────────────────
   // Emit 'chat:typing' on each keystroke, then debounce 'chat:stop_typing'
   // after 2 seconds of inactivity. Also emit stop on send/blur.
+  //
+  // LOW-3: the debounce callback checks mountedRef before emitting so it
+  // never sends stop_typing to a room the user has already left (the race
+  // where the 2s timer fires after the useEffect cleanup has run).
   const emitTyping = () => {
     const socket = getSocket()
     if (!socket || !chatId) return
     socket.emit('chat:typing', { chatId })
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     typingTimeoutRef.current = setTimeout(() => {
-      socket.emit('chat:stop_typing', { chatId })
+      if (!mountedRef.current) return   // LOW-3: component already unmounted
+      const s = getSocket()
+      if (s) s.emit('chat:stop_typing', { chatId })
     }, 2000)
   }
 
@@ -258,9 +334,12 @@ export default function ChatViewPage() {
   }
 
   // ── Load older messages ───────────────────────────────────────────────────
+  // MED-2: use loadedPageRef (client-controlled) instead of pagination.page
+  // (server snapshot). hasMorePagesRef is set true only when the last fetch
+  // returned a full page, so it stays correct even as real-time messages arrive.
   const handleLoadMore = () => {
-    if (!pagination || pagination.page >= pagination.pages) return
-    void loadMessages(pagination.page + 1, true)
+    if (!hasMorePagesRef.current || loadingMore) return
+    void loadMessages(loadedPageRef.current + 1, true)
   }
 
   const formatTime = (iso: string) => {
@@ -327,8 +406,8 @@ export default function ChatViewPage() {
           <div className="flex-1 overflow-y-auto space-y-3 pb-2 pr-1"
             style={{ minHeight: 0 }}>
 
-            {/* Load more */}
-            {pagination && pagination.page < pagination.pages && (
+            {/* Load more — MED-2: driven by hasMorePages state, not stale pagination.pages */}
+            {hasMorePages && (
               <div className="text-center pt-2">
                 <button onClick={handleLoadMore} disabled={loadingMore}
                   className="nav-label text-[0.55rem] px-4 py-1.5 rounded-sm transition-all disabled:opacity-50"
@@ -429,7 +508,13 @@ export default function ChatViewPage() {
               <textarea
                 ref={inputRef}
                 value={content}
-                onChange={e => { setContent(e.target.value); emitTyping() }}
+                onChange={e => {
+                  setContent(e.target.value)
+                  emitTyping()
+                  // MED-3: persist draft on every keystroke so content survives
+                  // accidental navigation, refresh, or a failed send.
+                  if (chatId) saveDraft(chatId, e.target.value)
+                }}
                 onKeyDown={handleKeyDown}
                 onBlur={emitStopTyping}
                 placeholder="Type a message... (Enter to send, Shift+Enter for new line)"

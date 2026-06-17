@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore, selectToken } from '../store/authStore'
+import { useAuthStore, selectToken, selectUser } from '../store/authStore'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import api from '../services/api'
 import { MessageSquare, Users, Plus, Search, ChevronRight } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { getSocket } from '../services/socket.service'
 
 interface Chat {
   id: string
@@ -31,6 +32,7 @@ interface Friend {
 
 export default function ChatPage() {
   const token = useAuthStore(selectToken)
+  const user  = useAuthStore(selectUser)
   const nav = useNavigate()
 
   const [chats, setChats] = useState<Chat[]>([])
@@ -39,6 +41,9 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState('')
+
+  // Track which chat rooms the list page has joined so we can leave them on unmount.
+  const joinedRoomsRef = useRef<string[]>([])
 
   useEffect(() => {
     if (!token) { nav('/login'); return }
@@ -53,13 +58,24 @@ export default function ChatPage() {
         api.get('/chat/friends').catch(() => ({ data: { data: [] } })),
         api.get('/chat/friend-requests').catch(() => ({ data: { data: [] } })),
       ])
-      setChats(Array.isArray(chatsRes.data?.data) ? chatsRes.data.data : [])
+      const loadedChats = Array.isArray(chatsRes.data?.data) ? chatsRes.data.data : []
+      setChats(loadedChats)
       setFriends(Array.isArray(friendsRes.data?.data) ? friendsRes.data.data : [])
       // Count only PENDING incoming requests for the badge
       const allRequests: { status: string }[] = Array.isArray(requestsRes.data?.data)
         ? requestsRes.data.data
         : []
       setPendingCount(allRequests.filter(r => r.status === 'PENDING').length)
+
+      // HIGH-2 fix: join all the user's chat rooms on the shared socket so
+      // newMessage events are delivered to this page without a full reload.
+      const socket = getSocket()
+      if (socket && loadedChats.length > 0) {
+        // Leave any previously joined rooms first (handles loadData being called again)
+        for (const id of joinedRoomsRef.current) socket.emit('chat:leave', { chatId: id })
+        joinedRoomsRef.current = loadedChats.map((c: Chat) => c.id)
+        for (const id of joinedRoomsRef.current) socket.emit('chat:join', { chatId: id })
+      }
     } catch (err) {
       setError('Failed to load chats')
       console.error(err)
@@ -67,6 +83,56 @@ export default function ChatPage() {
       setLoading(false)
     }
   }
+
+  // HIGH-2 fix: subscribe to newMessage on the shared socket.
+  // Updates lastMessage preview, increments unreadCount, and re-sorts the list
+  // in real-time whenever a message arrives in any of the user's conversations.
+  useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
+
+    const handleNewMessage = (data: {
+      message: { id: string; chatId: string; senderId: string; content: string; createdAt: string; sender?: { name: string } }
+      chatId: string
+    }) => {
+      setChats(prev => {
+        const updated = prev.map(chat => {
+          if (chat.id !== data.chatId) return chat
+          const isCurrentUser = data.message.senderId === user?.id
+          return {
+            ...chat,
+            lastMessage: {
+              content:    data.message.content,
+              senderId:   data.message.senderId,
+              senderName: data.message.sender?.name,
+              createdAt:  data.message.createdAt,
+            },
+            // Only increment unread for messages from others — own messages
+            // are not unread. The badge clears when the user opens the chat.
+            unreadCount: isCurrentUser ? chat.unreadCount : chat.unreadCount + 1,
+          }
+        })
+        // Re-sort: most recently active conversation floats to the top
+        return [...updated].sort((a, b) => {
+          const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : new Date(a.createdAt).getTime()
+          const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : new Date(b.createdAt).getTime()
+          return bTime - aTime
+        })
+      })
+    }
+
+    socket.on('newMessage', handleNewMessage)
+
+    return () => {
+      socket.off('newMessage', handleNewMessage)
+      // Leave all chat rooms the list page joined when unmounting
+      const s = getSocket()
+      if (s) {
+        for (const id of joinedRoomsRef.current) s.emit('chat:leave', { chatId: id })
+      }
+      joinedRoomsRef.current = []
+    }
+  }, [user?.id])
 
   // Create private chat and navigate straight into it
   const handleCreatePrivateChat = async (friendId: string) => {

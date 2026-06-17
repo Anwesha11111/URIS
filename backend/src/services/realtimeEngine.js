@@ -68,6 +68,43 @@ function isThrottled(key, windowMs = 5000) {
   return false;
 }
 
+// ── Per-user connection registry (LOW-4) ──────────────────────────────────────
+// Tracks all active socket IDs for each userId so we can enforce a cap on
+// concurrent connections. Without this a user with 10 open tabs creates 10
+// socket connections with no server-side bound.
+//
+// Cap is tunable via SOCKET_MAX_CONNECTIONS_PER_USER (default 5).
+// When the cap is exceeded the oldest connection is forcibly disconnected so
+// the new one is always accepted — this matches browser tab behaviour where
+// the newest tab should always work.
+
+const _userSockets = new Map(); // userId → Set<socketId> (insertion-ordered)
+
+function _registerSocket(userId, socketId) {
+  if (!_userSockets.has(userId)) _userSockets.set(userId, new Set());
+  const set = _userSockets.get(userId);
+  set.add(socketId);
+
+  const cap = parseInt(process.env.SOCKET_MAX_CONNECTIONS_PER_USER) || 5;
+  if (set.size > cap && _io) {
+    // Evict the oldest socket (first inserted value in the Set)
+    const oldest = set.values().next().value;
+    const oldSocket = _io.sockets.sockets.get(oldest);
+    if (oldSocket) {
+      logger.debug({ userId, evicted: oldest }, 'Socket cap exceeded — evicting oldest connection');
+      oldSocket.disconnect(true);
+    }
+    set.delete(oldest);
+  }
+}
+
+function _unregisterSocket(userId, socketId) {
+  const set = _userSockets.get(userId);
+  if (!set) return;
+  set.delete(socketId);
+  if (set.size === 0) _userSockets.delete(userId);
+}
+
 // ── Singleton IO instance ─────────────────────────────────────────────────────
 
 let _io = null;
@@ -136,6 +173,9 @@ function init(httpServer, allowedOrigins) {
     // Join all applicable role rooms
     for (const room of rooms) socket.join(room);
 
+    // LOW-4: register this socket; evicts the oldest if the per-user cap is exceeded
+    _registerSocket(userId, socket.id);
+
     logger.debug({ userId, role, rooms }, 'Socket connected');
 
     // Send initial operational pulse on connect so UI is immediately populated
@@ -143,6 +183,8 @@ function init(httpServer, allowedOrigins) {
 
     socket.on('disconnect', (reason) => {
       logger.debug({ userId, reason }, 'Socket disconnected');
+      // LOW-4: clean up connection registry on disconnect
+      _unregisterSocket(userId, socket.id);
     });
 
     // Client can request a fresh pulse manually (e.g. after tab focus)
@@ -181,8 +223,14 @@ function init(httpServer, allowedOrigins) {
     // Client emits 'chat:typing' when the user starts typing.
     // Client emits 'chat:stop_typing' when they stop (on blur or send).
     // We broadcast to everyone else in the room — NOT back to the sender.
+    //
+    // LOW-5: throttle chat:typing per socket per chat to 1 broadcast per 500ms.
+    // A user typing fast fires this event at keyboard speed (10-20/s). Without
+    // a throttle every keystroke becomes a broadcast to the entire chat room.
+    // 500ms is imperceptible to the recipient but cuts the event rate by ~20×.
     socket.on('chat:typing', ({ chatId } = {}) => {
       if (!chatId || typeof chatId !== 'string') return;
+      if (isThrottled(`typing:${socket.id}:${chatId}`, 500)) return;
       socket.to(`chat:${chatId}`).emit('chat:user_typing', {
         chatId,
         userId,
@@ -540,9 +588,62 @@ function emitPresenceUpdate(data) {
   }
 }
 
+// ── LOW-1: Role re-room ───────────────────────────────────────────────────────
+/**
+ * Re-assign all active sockets for a user to the rooms that match their new
+ * role. Called by the admin controller immediately after persisting a role
+ * change so the effect takes place on live connections without requiring a
+ * reconnect.
+ *
+ * The function:
+ *   1. Looks up every active socket for the given userId.
+ *   2. Leaves ALL current role rooms (admin, lead, and any intern:* room).
+ *   3. Joins the rooms appropriate for newRole.
+ *   4. Updates socket.data.role so future room-based logic is consistent.
+ *
+ * Chat rooms (chat:*) are intentionally left untouched — those are authorised
+ * per ChatParticipant and are unaffected by role changes.
+ *
+ * @param {string} userId    — the user whose role changed
+ * @param {string} newRole   — the new role value (from ROLES constants)
+ * @param {string|null} internId — intern record id if applicable, else null
+ */
+function reroomSocket(userId, newRole, internId = null) {
+  if (!_io) return;
+
+  const socketIds = _userSockets.get(userId);
+  if (!socketIds || socketIds.size === 0) return;
+
+  // All possible role rooms — we leave all of them before rejoining the correct set
+  const ALL_ROLE_ROOMS = ['admin', 'lead'];
+
+  const newRooms = getRoomsForRole(newRole, internId);
+
+  for (const socketId of socketIds) {
+    const sock = _io.sockets.sockets.get(socketId);
+    if (!sock) continue;
+
+    // Leave every role room the socket might currently be in
+    for (const room of ALL_ROLE_ROOMS) sock.leave(room);
+    // Also leave any intern:* room (pattern match against current rooms)
+    for (const room of sock.rooms) {
+      if (room.startsWith('intern:')) sock.leave(room);
+    }
+
+    // Join the rooms for the new role
+    for (const room of newRooms) sock.join(room);
+
+    // Update the cached role on the socket so subsequent logic is consistent
+    sock.data.role = newRole;
+
+    logger.info({ userId, socketId, newRole, newRooms }, 'Socket re-roomed after role change');
+  }
+}
+
 module.exports = {
   init,
   getIO,
+  reroomSocket,
   emitAlertUpdate,
   emitWorkloadUpdate,
   emitBlockerEscalation,

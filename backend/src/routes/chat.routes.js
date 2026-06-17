@@ -20,14 +20,14 @@ const {
 const { verifyToken } = require('../middleware/auth.middleware');
 const { validate }    = require('../middleware/validate.middleware');
 const { schemas }     = require('../validation/schemas');
-const { chatMessageLimiter } = require('../middleware/rateLimit.middleware');
+const { chatMessageLimiter, friendRequestLimiter } = require('../middleware/rateLimit.middleware');
 
 // User discovery
 router.get('/users', verifyToken, getUsers);
 
-// Friend requests
+// Friend requests — POST is rate limited per user to prevent spam enumeration (LOW-6)
 router.get('/friend-requests', verifyToken, getFriendRequests);
-router.post('/friend-requests', verifyToken, validate(schemas.sendFriendRequest), sendFriendRequest);
+router.post('/friend-requests', verifyToken, friendRequestLimiter, validate(schemas.sendFriendRequest), sendFriendRequest);
 router.patch('/friend-requests/:id/accept', verifyToken, validate(schemas.acceptFriendRequest), acceptFriendRequest);
 router.patch('/friend-requests/:id/reject', verifyToken, validate(schemas.rejectFriendRequest), rejectFriendRequest);
 router.get('/friends', verifyToken, getFriends);
