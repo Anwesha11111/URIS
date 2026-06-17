@@ -4,11 +4,10 @@ import { useAuthStore, selectToken, selectUser } from '../store/authStore'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import api from '../services/api'
-import { ArrowLeft, Send, Loader2, MessageSquare } from 'lucide-react'
+import { ArrowLeft, Send, Loader2, MessageSquare, AlertTriangle, Search, X, Edit2, Trash2, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-// Use the existing singleton socket from socket.service — no second connection.
-// The realtimeStore already connects this socket on login.
 import { getSocket } from '../services/socket.service'
+import { useRealtimeStore } from '../store/realtimeStore'
 
 interface Message {
   id: string
@@ -16,6 +15,8 @@ interface Message {
   senderId: string
   content: string
   createdAt: string
+  editedAt?: string | null
+  isDeleted?: boolean
   sender: {
     id: string
     name: string
@@ -37,20 +38,35 @@ export default function ChatViewPage() {
   const user  = useAuthStore(selectUser)
   const nav   = useNavigate()
 
-  const [messages, setMessages]   = useState<Message[]>([])
-  const [pagination, setPagination] = useState<Pagination | null>(null)
-  const [loading, setLoading]     = useState(true)
+  const [messages, setMessages]       = useState<Message[]>([])
+  const [pagination, setPagination]   = useState<Pagination | null>(null)
+  const [loading, setLoading]         = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [sending, setSending]     = useState(false)
-  const [content, setContent]     = useState('')
-  const [error, setError]         = useState('')
-  const [chatName, setChatName]   = useState('')
-  // typingUsers: map of userId → display name for users currently typing
+  const [sending, setSending]         = useState(false)
+  const [content, setContent]         = useState('')
+  const [error, setError]             = useState('')
+  const [chatName, setChatName]       = useState('')
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({})
+
+  // ── Search state ──────────────────────────────────────────────────────────
+  const [showSearch, setShowSearch]         = useState(false)
+  const [searchQuery, setSearchQuery]       = useState('')
+  const [searchResults, setSearchResults]   = useState<Message[] | null>(null)
+  const [searchLoading, setSearchLoading]   = useState(false)
+
+  // ── Edit state ────────────────────────────────────────────────────────────
+  const [editingId, setEditingId]     = useState<string | null>(null)
+  const [editContent, setEditContent] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
 
   const bottomRef        = useRef<HTMLDivElement>(null)
   const inputRef         = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Session expiry detection — if the socket was rejected due to an expired token,
+  // show a visible banner prompting re-login (SEC-7).
+  const socketStatus = useRealtimeStore(s => s.status)
+  const isSessionExpired = socketStatus === 'auth_expired'
 
   // ── Load messages ──────────────────────────────────────────────────────────
   const loadMessages = useCallback(async (page = 1, append = false) => {
@@ -266,6 +282,24 @@ export default function ChatViewPage() {
               </div>
             </div>
           </motion.div>
+
+          {/* Session expired banner — shown when socket token was rejected (SEC-7) */}
+          {isSessionExpired && (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 mb-3 px-4 py-2.5 rounded-sm flex-shrink-0"
+              style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}>
+              <AlertTriangle size={13} className="text-red-400 flex-shrink-0" />
+              <p className="font-body text-xs text-red-400/90 flex-1">
+                Your session has expired. Real-time messaging is paused.
+              </p>
+              <button
+                onClick={() => { useAuthStore.getState().logout(); nav('/login') }}
+                className="nav-label text-[0.55rem] px-3 py-1 rounded-sm transition-all flex-shrink-0"
+                style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', color: '#f87171' }}>
+                RE-LOGIN
+              </button>
+            </motion.div>
+          )}
 
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto space-y-3 pb-2 pr-1"

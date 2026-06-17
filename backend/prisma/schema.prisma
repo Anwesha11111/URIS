@@ -425,14 +425,18 @@ model ChatParticipant {
 }
 
 model Message {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   chatId    String
   senderId  String
   content   String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   readAt    DateTime?
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  // Edit/delete support
+  editedAt  DateTime?           // set when sender edits; null = never edited
+  isDeleted Boolean   @default(false) // soft delete — content replaced with tombstone
+  deletedAt DateTime?           // when the message was soft-deleted
+  chat      Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([chatId])
   @@index([senderId])

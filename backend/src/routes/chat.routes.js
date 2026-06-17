@@ -13,6 +13,9 @@ const {
   getMessages,
   sendMessage,
   markChatRead,
+  searchMessages,
+  editMessage,
+  deleteMessage,
 } = require('../controllers/chat.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 const { validate }    = require('../middleware/validate.middleware');
@@ -37,6 +40,11 @@ router.post('/group', verifyToken, validate(schemas.createGroupChat), createGrou
 // Messages — rate limited per user (10 messages per 10s) to prevent flooding
 router.get('/chats/:chatId/messages', verifyToken, validate(schemas.getMessages), getMessages);
 router.post('/chats/:chatId/messages', verifyToken, chatMessageLimiter, validate(schemas.sendMessage), sendMessage);
+router.get('/chats/:chatId/search', verifyToken, searchMessages);
+
+// Message edit & delete — sender only
+router.patch('/messages/:messageId', verifyToken, editMessage);
+router.delete('/messages/:messageId', verifyToken, deleteMessage);
 
 // Mark chat as read — updates lastReadAt on ChatParticipant for unread count tracking
 router.patch('/chats/:chatId/read', verifyToken, markChatRead);

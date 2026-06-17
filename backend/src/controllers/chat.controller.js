@@ -4,25 +4,90 @@ const logger = require('../utils/logger');
 
 /**
  * GET /chat/users
- * Search all users for chat discovery — available to any authenticated user
+ * Search users for chat discovery.
+ *
+ * SEC-5 fix: interns previously saw the full active user directory (name, email,
+ * role of every admin and lead). This is now scoped to:
+ *   - Existing friends (ACCEPTED friend requests in either direction)
+ *   - Members of any team the current user belongs to
+ *   - Search results are filtered to only those two groups
+ *
+ * Admins/leads retain the broader view since they need to initiate chats
+ * across the organisation.
  */
 async function getUsers(req, res, next) {
   try {
     const { q } = req.query;
+    const { ROLES } = require('../constants/roles');
+
+    const ADMIN_ROLES = new Set([
+      ROLES.CORE_ADMIN,
+      ROLES.TECHNICAL_LEAD,
+      ROLES.OPERATIONS_LEAD,
+      ROLES.RESEARCH_LEAD,
+      ROLES.OPERATIONS_PROGRAM_MANAGER,
+      ROLES.OBSERVER_TEAM_LEAD,
+      ROLES.COLLABORATOR_LEAD,
+    ]);
+
+    const isAdmin = ADMIN_ROLES.has(req.user.role);
+
+    let allowedUserIds = null; // null = no restriction (admin path)
+
+    if (!isAdmin) {
+      // Build the set of user IDs this user is allowed to discover:
+      // 1. Accepted friends
+      const friendships = await prisma.friendRequest.findMany({
+        where: {
+          status: 'ACCEPTED',
+          OR: [
+            { senderId: req.user.id },
+            { receiverId: req.user.id },
+          ],
+        },
+        select: { senderId: true, receiverId: true },
+      });
+      const friendIds = friendships.map(f =>
+        f.senderId === req.user.id ? f.receiverId : f.senderId
+      );
+
+      // 2. Teammates — users in any team the current user belongs to
+      const userTeams = await prisma.userTeam.findMany({
+        where: { userId: req.user.id, leftAt: null },
+        select: { teamId: true },
+      });
+      const teamIds = userTeams.map(t => t.teamId);
+
+      let teammateIds = [];
+      if (teamIds.length > 0) {
+        const teammates = await prisma.userTeam.findMany({
+          where: { teamId: { in: teamIds }, leftAt: null, userId: { not: req.user.id } },
+          select: { userId: true },
+        });
+        teammateIds = teammates.map(t => t.userId);
+      }
+
+      allowedUserIds = [...new Set([...friendIds, ...teammateIds])];
+    }
+
+    const idFilter = allowedUserIds !== null
+      ? { in: allowedUserIds.filter(id => id !== req.user.id) }
+      : { not: req.user.id };
+
+    const baseWhere = {
+      id: idFilter,
+      status: 'active',
+    };
 
     const where = q
       ? {
-          id: { not: req.user.id },
-          status: 'active',
+          ...baseWhere,
           OR: [
             { name:  { contains: q, mode: 'insensitive' } },
             { email: { contains: q, mode: 'insensitive' } },
           ],
         }
-      : {
-          id: { not: req.user.id },
-          status: 'active',
-        };
+      : baseWhere;
 
     const users = await prisma.user.findMany({
       where,
@@ -392,22 +457,20 @@ async function createPrivateChat(req, res, next) {
       return validationError(res, 'You must be friends to start a private chat');
     }
 
-    // Check if chat already exists
+    // Check if a private chat between exactly these two users already exists.
+    // The previous query matched any PRIVATE chat where both are participants,
+    // including group chats accidentally typed as PRIVATE. Fix: verify the chat
+    // has exactly 2 participants total (BUG-H2).
     const existingChat = await prisma.chat.findFirst({
       where: {
         type: 'PRIVATE',
-        participants: {
-          some: { userId: req.user.id },
-        },
-        AND: {
-          participants: {
-            some: { userId: friendId },
-          },
-        },
+        participants: { some: { userId: req.user.id } },
+        AND: { participants: { some: { userId: friendId } } },
       },
+      include: { _count: { select: { participants: true } } },
     });
 
-    if (existingChat) {
+    if (existingChat && existingChat._count.participants === 2) {
       return ok(res, existingChat, 'Chat already exists');
     }
 
@@ -558,7 +621,9 @@ async function getMessages(req, res, next) {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        // Dual sort: createdAt desc as primary, id desc as stable tiebreaker.
+        // This prevents page drift when new messages arrive mid-pagination (BUG-H5).
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take: parseInt(limit),
       }),
@@ -636,6 +701,133 @@ async function sendMessage(req, res, next) {
 }
 
 /**
+ * GET /chat/chats/:chatId/search
+ * Search messages within a chat by keyword.
+ * Returns up to 50 matching messages ordered by newest first.
+ * Only accessible to participants of the chat.
+ */
+async function searchMessages(req, res, next) {
+  try {
+    const { chatId } = req.params;
+    const { q } = req.query;
+
+    if (!q || !q.trim()) {
+      return validationError(res, 'Search query is required');
+    }
+
+    // Verify participant access
+    const participant = await prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId, userId: req.user.id } },
+      select: { id: true },
+    });
+    if (!participant) {
+      return notFound(res, 'Chat not found or access denied');
+    }
+
+    const messages = await prisma.message.findMany({
+      where: {
+        chatId,
+        isDeleted: false,
+        content: { contains: q.trim(), mode: 'insensitive' },
+      },
+      include: {
+        sender: {
+          select: { id: true, name: true, email: true, role: true },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 50,
+    });
+
+    return ok(res, { messages, query: q.trim(), count: messages.length }, 'Search results');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PATCH /chat/messages/:messageId
+ * Edit a message. Only the sender can edit their own messages.
+ * Sets editedAt to now and updates content.
+ * Broadcasts messageEdited socket event to the chat room.
+ */
+async function editMessage(req, res, next) {
+  try {
+    const { messageId } = req.params;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return validationError(res, 'Content is required');
+    }
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: { id: true, chatId: true, senderId: true, isDeleted: true },
+    });
+
+    if (!message) return notFound(res, 'Message not found');
+    if (message.senderId !== req.user.id) return forbidden(res, 'You can only edit your own messages');
+    if (message.isDeleted) return validationError(res, 'Cannot edit a deleted message');
+
+    const updated = await prisma.message.update({
+      where: { id: messageId },
+      data:  { content: content.trim(), editedAt: new Date() },
+      include: {
+        sender: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+
+    // Broadcast edit to all chat participants in real-time
+    const io = require('../services/realtimeEngine').getIO();
+    if (io) {
+      io.to(`chat:${message.chatId}`).emit('messageEdited', { message: updated, chatId: message.chatId });
+    }
+
+    return ok(res, updated, 'Message updated');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * DELETE /chat/messages/:messageId
+ * Soft-delete a message. Only the sender can delete their own messages.
+ * Sets isDeleted=true, deletedAt=now. Content is preserved in DB but
+ * the frontend replaces it with a tombstone "Message deleted".
+ * Broadcasts messageDeleted socket event to the chat room.
+ */
+async function deleteMessage(req, res, next) {
+  try {
+    const { messageId } = req.params;
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: { id: true, chatId: true, senderId: true, isDeleted: true },
+    });
+
+    if (!message) return notFound(res, 'Message not found');
+    if (message.senderId !== req.user.id) return forbidden(res, 'You can only delete your own messages');
+    if (message.isDeleted) return validationError(res, 'Message already deleted');
+
+    const updated = await prisma.message.update({
+      where: { id: messageId },
+      data:  { isDeleted: true, deletedAt: new Date() },
+      select: { id: true, chatId: true, isDeleted: true, deletedAt: true },
+    });
+
+    // Broadcast deletion to all chat participants in real-time
+    const io = require('../services/realtimeEngine').getIO();
+    if (io) {
+      io.to(`chat:${message.chatId}`).emit('messageDeleted', { messageId, chatId: message.chatId });
+    }
+
+    return ok(res, updated, 'Message deleted');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * PATCH /chat/chats/:chatId/read
  * Mark a chat as read by updating the current user's lastReadAt timestamp.
  * Called when the user opens a conversation. Resets the unread badge.
@@ -678,4 +870,7 @@ module.exports = {
   getMessages,
   sendMessage,
   markChatRead,
+  searchMessages,
+  editMessage,
+  deleteMessage,
 };
