@@ -552,6 +552,39 @@ function getIO() {
   return _io;
 }
 
+/**
+ * Given a chatId, returns the set of userIds from the provided participant list
+ * who currently have NO socket in the chat room — i.e. they are offline for
+ * this conversation and will not receive the real-time newMessage event.
+ *
+ * Used by sendMessage to decide who needs an email notification.
+ *
+ * @param {string}   chatId         — the chat room key (without 'chat:' prefix)
+ * @param {string[]} participantIds — all participant userIds for this chat
+ * @param {string}   excludeUserId  — the sender; always excluded
+ * @returns {string[]} userIds who are offline in this chat
+ */
+function getOfflineParticipants(chatId, participantIds, excludeUserId) {
+  if (!_io) return participantIds.filter(id => id !== excludeUserId);
+
+  const roomKey = `chat:${chatId}`;
+  const roomSockets = _io.sockets.adapter.rooms.get(roomKey);
+
+  if (!roomSockets || roomSockets.size === 0) {
+    // Nobody is in the room — everyone except the sender is offline
+    return participantIds.filter(id => id !== excludeUserId);
+  }
+
+  // Build the set of userIds that have at least one socket in the room
+  const onlineUserIds = new Set();
+  for (const socketId of roomSockets) {
+    const sock = _io.sockets.sockets.get(socketId);
+    if (sock?.data?.userId) onlineUserIds.add(sock.data.userId);
+  }
+
+  return participantIds.filter(id => id !== excludeUserId && !onlineUserIds.has(id));
+}
+
 // ── Presence update (added for Virtual Presence feature) ──────────────────────
 /**
  * Broadcast a presence update event.
@@ -644,6 +677,7 @@ module.exports = {
   init,
   getIO,
   reroomSocket,
+  getOfflineParticipants,
   emitAlertUpdate,
   emitWorkloadUpdate,
   emitBlockerEscalation,

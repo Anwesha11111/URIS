@@ -4,7 +4,7 @@ import { useAuthStore, selectToken, selectUser } from '../store/authStore'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import api from '../services/api'
-import { ArrowLeft, Send, Loader2, MessageSquare, AlertTriangle, Search, X, Edit2, Trash2, Check } from 'lucide-react'
+import { ArrowLeft, Send, Loader2, MessageSquare, AlertTriangle, Search, X, Edit2, Trash2, Check, Settings } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getSocket } from '../services/socket.service'
 import { useRealtimeStore } from '../store/realtimeStore'
@@ -55,6 +55,7 @@ export default function ChatViewPage() {
   const [content, setContent]         = useState(() => (chatId ? getDraft(chatId) : ''))
   const [error, setError]             = useState('')
   const [chatName, setChatName]       = useState('')
+  const [chatType, setChatType]       = useState<'PRIVATE' | 'GROUP' | null>(null)
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({})
 
   // ── Search state ──────────────────────────────────────────────────────────
@@ -127,7 +128,7 @@ export default function ChatViewPage() {
     }
   }, [chatId])
 
-  // ── Load chat name from chats list ─────────────────────────────────────────
+  // ── Load chat name + type from chats list ─────────────────────────────────
   useEffect(() => {
     if (!chatId) return
     api.get<{ success: boolean; data: Array<{
@@ -139,6 +140,7 @@ export default function ChatViewPage() {
       .then(res => {
         const chat = (res.data.data ?? []).find(c => c.id === chatId)
         if (!chat) { setChatName('Chat'); return }
+        setChatType(chat.type as 'PRIVATE' | 'GROUP')
         if (chat.type === 'PRIVATE') {
           // Use the other participant's name for private chats (BUG-M2 fix)
           setChatName(chat.otherParticipant?.name ?? chat.otherParticipant?.email ?? 'Private Chat')
@@ -171,6 +173,17 @@ export default function ChatViewPage() {
       void loadMessages(1, false)
     }
 
+    // Update the header name live when a group is renamed from the manage page
+    const handleRenamed = (data: { chatId: string; name: string }) => {
+      if (data.chatId !== chatId) return
+      setChatName(data.name)
+    }
+
+    // If this user is removed from the group or the group is deleted, go back to chat list
+    const handleParticipantRemoved = (data: { chatId: string; userId: string }) => {
+      if (data.chatId !== chatId) return
+      if (data.userId === user?.id) nav('/chat')
+    }
     const handleNewMessage = (data: { message: Message; chatId: string }) => {
       if (data.chatId !== chatId) return
       // Skip if already appended optimistically by the sender (BUG-C1 fix)
@@ -227,6 +240,8 @@ export default function ChatViewPage() {
     socket.on('messageDeleted', handleMessageDeleted)
     socket.on('chat:user_typing', handleUserTyping)
     socket.on('chat:user_stop_typing', handleUserStopTyping)
+    socket.on('chat:renamed', handleRenamed)
+    socket.on('chat:participant_removed', handleParticipantRemoved)
 
     return () => {
       socket.off('connect', handleReconnect)
@@ -235,11 +250,13 @@ export default function ChatViewPage() {
       socket.off('messageDeleted', handleMessageDeleted)
       socket.off('chat:user_typing', handleUserTyping)
       socket.off('chat:user_stop_typing', handleUserStopTyping)
+      socket.off('chat:renamed', handleRenamed)
+      socket.off('chat:participant_removed', handleParticipantRemoved)
       socket.emit('chat:leave', { chatId })
       // Clear any pending typing timeout
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     }
-  }, [chatId, user?.id, loadMessages])
+  }, [chatId, user?.id, loadMessages, nav])
 
   // ── Initial load + scroll to bottom ───────────────────────────────────────
   useEffect(() => {
@@ -372,16 +389,26 @@ export default function ChatViewPage() {
               style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.12)' }}>
               <ArrowLeft size={14} />
             </button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-sm flex items-center justify-center"
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="w-8 h-8 rounded-sm flex items-center justify-center flex-shrink-0"
                 style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)' }}>
                 <MessageSquare size={13} className="text-gold" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="nav-label text-[0.55rem] text-gold/40 leading-none mb-0.5">CONVERSATION</p>
-                <p className="font-display font-bold text-sm text-frost/90">{chatName}</p>
+                <p className="font-display font-bold text-sm text-frost/90 truncate">{chatName}</p>
               </div>
             </div>
+            {/* Group manage button — only visible for GROUP chats */}
+            {chatType === 'GROUP' && (
+              <button
+                onClick={() => nav(`/chat/${chatId}/manage`)}
+                className="flex-shrink-0 p-2 rounded-sm text-ice/40 hover:text-gold transition-colors"
+                style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.12)' }}
+                title="Group settings">
+                <Settings size={14} />
+              </button>
+            )}
           </motion.div>
 
           {/* Session expired banner — shown when socket token was rejected (SEC-7) */}

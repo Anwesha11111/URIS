@@ -725,13 +725,69 @@ async function sendMessage(req, res, next) {
 
     // Emit real-time event via Socket.IO to all sockets in the chat room.
     // Use getIO() — the module exports this function, not a raw .io property.
-    const io = require('../services/realtimeEngine').getIO();
+    const { getIO, getOfflineParticipants } = require('../services/realtimeEngine');
+    const io = getIO();
     if (io) {
       io.to(`chat:${chatId}`).emit('newMessage', {
         message,
         chatId,
       });
     }
+
+    // FEAT-1: Email notification for offline participants.
+    // We fire-and-forget (void) so the HTTP response is not held up by email.
+    // Only participants who have NO active socket in the chat room are emailed —
+    // online users already received the message via the socket above.
+    void (async () => {
+      try {
+        const { notifyNewChatMessage } = require('../services/notification.service');
+
+        // Fetch all participants except the sender, with their user email + name
+        const participants = await prisma.chatParticipant.findMany({
+          where: {
+            chatId,
+            userId: { not: req.user.id },
+          },
+          select: {
+            userId: true,
+            user: { select: { id: true, name: true, email: true } },
+          },
+        });
+
+        const participantIds = participants.map(p => p.userId);
+        const offlineIds = getOfflineParticipants(chatId, participantIds, req.user.id);
+
+        if (offlineIds.length === 0) return;
+
+        // Determine the chat display name: for PRIVATE chats it's the sender's name;
+        // for GROUP chats it's the group name.
+        const chatRecord = await prisma.chat.findUnique({
+          where: { id: chatId },
+          select: { type: true, name: true },
+        });
+        const chatDisplayName = chatRecord?.type === 'GROUP'
+          ? (chatRecord.name ?? 'Group Chat')
+          : (message.sender?.name ?? 'Someone');
+
+        const senderName = message.sender?.name ?? 'Someone';
+        const preview    = message.content;
+
+        for (const offlineId of offlineIds) {
+          const participant = participants.find(p => p.userId === offlineId);
+          if (!participant?.user?.email) continue;
+          void notifyNewChatMessage(
+            participant.user.email,
+            participant.user.name || 'User',
+            senderName,
+            chatDisplayName,
+            preview,
+            chatId,
+          );
+        }
+      } catch (err) {
+        logger.warn({ err: err.message, chatId }, 'Failed to send offline message notifications');
+      }
+    })();
 
     return ok(res, message, 'Message sent');
   } catch (err) {
@@ -896,6 +952,274 @@ async function markChatRead(req, res, next) {
   }
 }
 
+// ── Group Chat Management ──────────────────────────────────────────────────────
+
+/**
+ * GET /chat/chats/:chatId
+ * Return full chat details including all participants with user info.
+ * Available to any participant of the chat (private or group).
+ */
+async function getChatDetails(req, res, next) {
+  try {
+    const { chatId } = req.params;
+
+    const chat = await prisma.chat.findFirst({
+      where: {
+        id: chatId,
+        participants: { some: { userId: req.user.id } },
+      },
+      include: {
+        participants: {
+          orderBy: { joinedAt: 'asc' },
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, role: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!chat) return notFound(res, 'Chat not found or access denied');
+
+    return ok(res, {
+      id:          chat.id,
+      type:        chat.type,
+      name:        chat.name,
+      createdById: chat.createdById,
+      createdAt:   chat.createdAt,
+      participants: chat.participants.map(p => ({
+        userId:   p.userId,
+        joinedAt: p.joinedAt,
+        user:     p.user,
+      })),
+    }, 'Chat details retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PATCH /chat/chats/:chatId/name
+ * Rename a group chat. Only the chat creator may rename it.
+ */
+async function renameGroupChat(req, res, next) {
+  try {
+    const { chatId } = req.params;
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return validationError(res, 'Name is required');
+    }
+
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, participants: { some: { userId: req.user.id } } },
+      select: { id: true, type: true, createdById: true },
+    });
+
+    if (!chat) return notFound(res, 'Chat not found or access denied');
+    if (chat.type !== 'GROUP') return validationError(res, 'Only group chats can be renamed');
+    if (chat.createdById !== req.user.id) return forbidden(res, 'Only the group creator can rename this chat');
+
+    const updated = await prisma.chat.update({
+      where: { id: chatId },
+      data:  { name: name.trim() },
+      select: { id: true, name: true },
+    });
+
+    // Broadcast the rename to everyone in the room so the header updates live
+    const { getIO } = require('../services/realtimeEngine');
+    const io = getIO();
+    if (io) {
+      io.to(`chat:${chatId}`).emit('chat:renamed', { chatId, name: updated.name });
+    }
+
+    logger.info({ chatId, newName: updated.name, userId: req.user.id }, 'Group chat renamed');
+    return ok(res, updated, 'Group chat renamed');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /chat/chats/:chatId/participants
+ * Add a participant to a group chat.
+ * Restricted to the group creator. The new member must be a friend of the creator.
+ */
+async function addGroupParticipant(req, res, next) {
+  try {
+    const { chatId } = req.params;
+    const { userId: newUserId } = req.body;
+
+    if (!newUserId) return validationError(res, 'userId is required');
+
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, participants: { some: { userId: req.user.id } } },
+      select: { id: true, type: true, createdById: true },
+    });
+
+    if (!chat) return notFound(res, 'Chat not found or access denied');
+    if (chat.type !== 'GROUP') return validationError(res, 'Can only add participants to group chats');
+    if (chat.createdById !== req.user.id) return forbidden(res, 'Only the group creator can add participants');
+
+    // New member must already be a friend of the creator
+    const friendship = await prisma.friendRequest.findFirst({
+      where: {
+        status: 'ACCEPTED',
+        OR: [
+          { senderId: req.user.id, receiverId: newUserId },
+          { senderId: newUserId,   receiverId: req.user.id },
+        ],
+      },
+    });
+    if (!friendship) return validationError(res, 'You can only add friends to a group chat');
+
+    // Check they are not already a participant
+    const existing = await prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId, userId: newUserId } },
+    });
+    if (existing) return validationError(res, 'User is already in this chat');
+
+    const participant = await prisma.chatParticipant.create({
+      data: { chatId, userId: newUserId },
+      include: { user: { select: { id: true, name: true, email: true, role: true } } },
+    });
+
+    // Notify room members in real-time
+    const { getIO } = require('../services/realtimeEngine');
+    const io = getIO();
+    if (io) {
+      io.to(`chat:${chatId}`).emit('chat:participant_added', {
+        chatId,
+        user: participant.user,
+      });
+    }
+
+    logger.info({ chatId, newUserId, addedBy: req.user.id }, 'Participant added to group chat');
+    return ok(res, participant, 'Participant added');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * DELETE /chat/chats/:chatId/participants/:userId
+ * Remove a participant from a group chat.
+ * - The group creator can remove anyone.
+ * - A participant can remove themselves (same as leaveGroupChat but explicit).
+ */
+async function removeGroupParticipant(req, res, next) {
+  try {
+    const { chatId, userId: targetUserId } = req.params;
+
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, participants: { some: { userId: req.user.id } } },
+      select: { id: true, type: true, createdById: true },
+    });
+
+    if (!chat) return notFound(res, 'Chat not found or access denied');
+    if (chat.type !== 'GROUP') return validationError(res, 'Can only remove participants from group chats');
+
+    const isSelf    = targetUserId === req.user.id;
+    const isCreator = chat.createdById === req.user.id;
+
+    if (!isSelf && !isCreator) {
+      return forbidden(res, 'Only the group creator can remove other participants');
+    }
+
+    // Prevent the creator from removing themselves via this endpoint — use leaveGroupChat
+    if (isSelf && isCreator) {
+      return validationError(res, 'Creators must use the leave endpoint, which transfers ownership first');
+    }
+
+    const target = await prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId, userId: targetUserId } },
+    });
+    if (!target) return notFound(res, 'Participant not found in this chat');
+
+    await prisma.chatParticipant.delete({
+      where: { chatId_userId: { chatId, userId: targetUserId } },
+    });
+
+    const { getIO } = require('../services/realtimeEngine');
+    const io = getIO();
+    if (io) {
+      io.to(`chat:${chatId}`).emit('chat:participant_removed', { chatId, userId: targetUserId });
+    }
+
+    logger.info({ chatId, targetUserId, removedBy: req.user.id }, 'Participant removed from group chat');
+    return ok(res, null, 'Participant removed');
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /chat/chats/:chatId/leave
+ * Leave a group chat.
+ * If the leaving user is the creator, ownership transfers to the next oldest
+ * participant (by joinedAt). If no other participants remain, the chat is deleted.
+ */
+async function leaveGroupChat(req, res, next) {
+  try {
+    const { chatId } = req.params;
+
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, participants: { some: { userId: req.user.id } } },
+      select: { id: true, type: true, createdById: true },
+    });
+
+    if (!chat) return notFound(res, 'Chat not found or access denied');
+    if (chat.type !== 'GROUP') return validationError(res, 'Can only leave group chats');
+
+    const isCreator = chat.createdById === req.user.id;
+
+    // Find all other participants ordered by joinedAt to determine successor
+    const others = await prisma.chatParticipant.findMany({
+      where:   { chatId, userId: { not: req.user.id } },
+      orderBy: { joinedAt: 'asc' },
+      select:  { userId: true },
+    });
+
+    if (others.length === 0) {
+      // Last person — delete the entire chat (cascades to messages + participants)
+      await prisma.chat.delete({ where: { id: chatId } });
+      logger.info({ chatId, userId: req.user.id }, 'Group chat deleted — last member left');
+      return ok(res, null, 'You were the last member. The group has been deleted.');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Remove the leaving user
+      await tx.chatParticipant.delete({
+        where: { chatId_userId: { chatId, userId: req.user.id } },
+      });
+
+      // Transfer ownership if the creator is leaving
+      if (isCreator) {
+        await tx.chat.update({
+          where: { id: chatId },
+          data:  { createdById: others[0].userId },
+        });
+      }
+    });
+
+    const { getIO } = require('../services/realtimeEngine');
+    const io = getIO();
+    if (io) {
+      io.to(`chat:${chatId}`).emit('chat:participant_removed', {
+        chatId,
+        userId:          req.user.id,
+        newCreatorId:    isCreator ? others[0].userId : undefined,
+      });
+    }
+
+    logger.info({ chatId, userId: req.user.id, ownershipTransferred: isCreator }, 'User left group chat');
+    return ok(res, null, 'You have left the group chat');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getUsers,
   getFriendRequests,
@@ -912,4 +1236,9 @@ module.exports = {
   searchMessages,
   editMessage,
   deleteMessage,
+  getChatDetails,
+  renameGroupChat,
+  addGroupParticipant,
+  removeGroupParticipant,
+  leaveGroupChat,
 };
