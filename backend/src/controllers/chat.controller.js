@@ -304,10 +304,14 @@ async function getChats(req, res, next) {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      // Prisma does not support orderBy on relation aggregates directly.
+      // We fetch all chats and sort in JS by last message time so the list
+      // reflects actual conversation activity, not chat creation time (BUG-C4).
     });
 
-    // Add last message info
+    // Build response and sort by most recent activity:
+    //   - chats with messages → sorted by last message createdAt desc
+    //   - chats with no messages → sorted by chat createdAt desc, after messaged chats
     const chatsWithLastMessage = chats.map(chat => {
       const lastMessage = chat.messages[0];
       return {
@@ -324,6 +328,13 @@ async function getChats(req, res, next) {
             }
           : null,
       };
+    });
+
+    // Sort: most recently active conversation first
+    chatsWithLastMessage.sort((a, b) => {
+      const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : new Date(a.createdAt).getTime();
+      const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : new Date(b.createdAt).getTime();
+      return bTime - aTime;
     });
 
     return ok(res, chatsWithLastMessage, 'Chats retrieved');
