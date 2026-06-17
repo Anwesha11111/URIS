@@ -556,8 +556,9 @@ async function sendMessage(req, res, next) {
       },
     });
 
-    // Emit real-time event via Socket.IO to all sockets in the chat room
-    const io = require('../services/realtimeEngine').io;
+    // Emit real-time event via Socket.IO to all sockets in the chat room.
+    // Use getIO() — the module exports this function, not a raw .io property.
+    const io = require('../services/realtimeEngine').getIO();
     if (io) {
       io.to(`chat:${chatId}`).emit('newMessage', {
         message,
