@@ -35,8 +35,8 @@ export const availabilityAPI = {
     maxFreeBlockHours: data.maxFreeBlockHours,
     weekStatusToggle:  data.weekStatus,
   }),
-
-  get: () => api.get('/availability/get'),
+  // get() removed — FIX 7: /availability/get route does not exist.
+  // Use /availability/:internId/:weekStart for scoped reads.
 }
 
 // ─── PERFORMANCE & REVIEW ────────────────────────────────────────────────────

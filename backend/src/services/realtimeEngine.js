@@ -175,6 +175,25 @@ function init(httpServer, allowedOrigins) {
         logger.debug({ userId, chatId }, 'Socket left chat room');
       }
     });
+
+    // ── FIX 15: Typing indicators ─────────────────────────────────────────
+    // Client emits 'chat:typing' when user starts typing and
+    // 'chat:typing_stop' when they stop (or send). We broadcast to
+    // everyone else in that chat room with the sender's name so the
+    // UI can show "Alice is typing...". No DB write — ephemeral only.
+    socket.on('chat:typing', async ({ chatId, userName } = {}) => {
+      if (!chatId || typeof chatId !== 'string') return;
+      socket.to(`chat:${chatId}`).emit('chat:typing', {
+        userId,
+        userName: userName || 'Someone',
+        chatId,
+      });
+    });
+
+    socket.on('chat:typing_stop', ({ chatId } = {}) => {
+      if (!chatId || typeof chatId !== 'string') return;
+      socket.to(`chat:${chatId}`).emit('chat:typing_stop', { userId, chatId });
+    });
   });
 
   logger.info('Socket.IO realtime engine initialised');

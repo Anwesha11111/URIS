@@ -43,10 +43,13 @@ export default function ChatViewPage() {
   const [content, setContent]     = useState('')
   const [error, setError]         = useState('')
   const [chatName, setChatName]   = useState('')
+  // FIX 15: typing indicators
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map())
 
   const bottomRef   = useRef<HTMLDivElement>(null)
   const socketRef   = useRef<Socket | null>(null)
   const inputRef    = useRef<HTMLTextAreaElement>(null)
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Load messages ──────────────────────────────────────────────────────────
   const loadMessages = useCallback(async (page = 1, append = false) => {
@@ -90,24 +93,51 @@ export default function ChatViewPage() {
     const socket = socketIO(backendUrl, {
       auth: { token },
       transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
     })
     socketRef.current = socket
 
-    socket.on('connect', () => {
+    const registerListeners = () => {
       socket.emit('chat:join', { chatId })
+
+      socket.on('newMessage', (data: { message: Message; chatId: string }) => {
+        if (data.chatId !== chatId) return
+        setMessages(prev => [...prev, data.message])
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      })
+
+      // FIX 15: typing indicator listeners
+      socket.on('chat:typing', (data: { userId: string; userName: string; chatId: string }) => {
+        if (data.chatId !== chatId) return
+        setTypingUsers(prev => new Map(prev).set(data.userId, data.userName))
+      })
+
+      socket.on('chat:typing_stop', (data: { userId: string; chatId: string }) => {
+        if (data.chatId !== chatId) return
+        setTypingUsers(prev => {
+          const next = new Map(prev)
+          next.delete(data.userId)
+          return next
+        })
+      })
+    }
+
+    socket.on('connect', () => {
+      // FIX 15: Re-register listeners and rejoin room after reconnect
+      registerListeners()
     })
 
-    socket.on('newMessage', (data: { message: Message; chatId: string }) => {
-      if (data.chatId !== chatId) return
-      setMessages(prev => [...prev, data.message])
-      // Scroll to bottom on new incoming message
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-    })
+    // Register immediately if already connected
+    if (socket.connected) registerListeners()
 
     return () => {
+      if (typingTimer.current) clearTimeout(typingTimer.current)
       socket.emit('chat:leave', { chatId })
       socket.disconnect()
       socketRef.current = null
+      setTypingUsers(new Map())
     }
   }, [token, chatId])
 
@@ -128,6 +158,10 @@ export default function ChatViewPage() {
     const text = content.trim()
     if (!text || !chatId || sending) return
 
+    // Stop typing indicator before sending
+    if (typingTimer.current) clearTimeout(typingTimer.current)
+    socketRef.current?.emit('chat:typing_stop', { chatId })
+
     setSending(true)
     setContent('')
     try {
@@ -135,16 +169,26 @@ export default function ChatViewPage() {
         `/chat/chats/${chatId}/messages`,
         { content: text }
       )
-      // Optimistically append (socket will also fire for other participants)
       setMessages(prev => [...prev, res.data.data])
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     } catch {
       setError('Failed to send message')
-      setContent(text) // restore on failure
+      setContent(text)
     } finally {
       setSending(false)
       inputRef.current?.focus()
     }
+  }
+
+  // FIX 15: emit typing events with debounce
+  const handleTyping = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value)
+    if (!chatId || !socketRef.current) return
+    socketRef.current.emit('chat:typing', { chatId, userName: user?.name || 'Someone' })
+    if (typingTimer.current) clearTimeout(typingTimer.current)
+    typingTimer.current = setTimeout(() => {
+      socketRef.current?.emit('chat:typing_stop', { chatId })
+    }, 2000) // stop after 2s of inactivity
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -278,11 +322,17 @@ export default function ChatViewPage() {
 
           {/* Input bar */}
           <div className="flex-shrink-0 pt-3 border-t border-gold/10">
+            {/* FIX 15: typing indicator */}
+            {typingUsers.size > 0 && (
+              <p className="nav-label text-[0.48rem] text-gold/50 mb-1.5 animate-pulse">
+                {[...typingUsers.values()].join(', ')} {typingUsers.size === 1 ? 'is' : 'are'} typing...
+              </p>
+            )}
             <div className="flex items-end gap-2">
               <textarea
                 ref={inputRef}
                 value={content}
-                onChange={e => setContent(e.target.value)}
+                onChange={handleTyping}
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
                 rows={1}
