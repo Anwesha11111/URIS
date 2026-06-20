@@ -423,6 +423,26 @@ export default function AdminOverview() {
                       <motion.form key="assign" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }} onSubmit={handleAssign} className="space-y-4">
                         <p className="nav-label text-[0.55rem] text-gold/40 mb-3">ASSIGN TASK TO INTERN</p>
+
+                        {/* Contextual warnings when data is missing */}
+                        {interns.length === 0 && (
+                          <div className="flex items-start gap-2 p-3 rounded-sm mb-1"
+                            style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                            <AlertTriangle size={12} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                            <p className="font-body text-xs text-amber-400/80">
+                              No interns are registered yet. Add interns before assigning tasks.
+                            </p>
+                          </div>
+                        )}
+                        {tasks.length === 0 && (
+                          <div className="flex items-start gap-2 p-3 rounded-sm mb-1"
+                            style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                            <AlertTriangle size={12} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                            <p className="font-body text-xs text-amber-400/80">
+                              No tasks exist yet. Create a task in the Tasks page before assigning.
+                            </p>
+                          </div>
+                        )}
                         <div>
                           <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">SELECT INTERN</label>
                           <select className="uris-input" value={assignInternId}
@@ -452,7 +472,21 @@ export default function AdminOverview() {
                     {activeTab === 'override' && (
                       <motion.form key="override" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }} onSubmit={handleOverride} className="space-y-4">
-                        <p className="nav-label text-[0.55rem] text-gold/40 mb-3">MANUAL SCORE OVERRIDE</p>
+                        <div className="mb-3">
+                          <p className="nav-label text-[0.55rem] text-gold/40">MANUAL SCORE OVERRIDE</p>
+                          <p className="font-body text-xs text-ice/30 mt-1">
+                            Use sparingly — overrides replace the computed capacity score until the next calculation cycle.
+                          </p>
+                        </div>
+                        {interns.length === 0 && (
+                          <div className="flex items-start gap-2 p-3 rounded-sm"
+                            style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                            <AlertTriangle size={12} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                            <p className="font-body text-xs text-amber-400/80">
+                              No interns found. Overrides can only be applied once interns are registered.
+                            </p>
+                          </div>
+                        )}
                         <div>
                           <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">SELECT INTERN</label>
                           <select className="uris-input" value={overrideInternId}
@@ -484,7 +518,21 @@ export default function AdminOverview() {
                     {activeTab === 'status' && (
                       <motion.form key="status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }} onSubmit={handleStatusUpdate} className="space-y-4">
-                        <p className="nav-label text-[0.55rem] text-gold/40 mb-3">UPDATE TASK STATUS</p>
+                        <div className="mb-3">
+                          <p className="nav-label text-[0.55rem] text-gold/40">UPDATE TASK STATUS</p>
+                          <p className="font-body text-xs text-ice/30 mt-1">
+                            Admin overrides an intern's self-reported progress. The intern will see the updated status immediately.
+                          </p>
+                        </div>
+                        {tasks.length === 0 && (
+                          <div className="flex items-start gap-2 p-3 rounded-sm"
+                            style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                            <AlertTriangle size={12} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                            <p className="font-body text-xs text-amber-400/80">
+                              No tasks exist yet. Create tasks in the Tasks page first.
+                            </p>
+                          </div>
+                        )}
                         <div>
                           <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">SELECT TASK</label>
                           <select className="uris-input" value={statusTaskId}
@@ -531,8 +579,14 @@ export default function AdminOverview() {
 
                         {pendingUsers.length === 0 ? (
                           <div className="py-8 text-center">
-                            <Check size={20} className="text-signal mx-auto mb-2 opacity-40" />
-                            <p className="font-body text-sm text-ice/30">No pending approvals.</p>
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-3"
+                              style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}>
+                              <Check size={16} className="text-signal" />
+                            </div>
+                            <p className="font-body text-sm text-ice/50 mb-1">No pending approvals.</p>
+                            <p className="font-body text-xs text-ice/25 max-w-[200px] mx-auto">
+                              New admin and lead registrations will appear here for review before access is granted.
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-3">
@@ -747,7 +801,11 @@ export default function AdminOverview() {
                         {/* Intern list */}
                         {interns.length === 0 ? (
                           <div className="py-8 text-center">
-                            <p className="font-body text-sm text-ice/30">No interns found.</p>
+                            <Users size={24} className="text-ice/20 mx-auto mb-3" />
+                            <p className="font-body text-sm text-ice/50 mb-1">No interns registered yet.</p>
+                            <p className="font-body text-xs text-ice/25 max-w-[200px] mx-auto">
+                              Interns join via the registration page. Approve their accounts in the Approvals tab to make them appear here.
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-2 max-h-96 overflow-y-auto">
