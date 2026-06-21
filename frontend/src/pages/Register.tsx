@@ -93,7 +93,7 @@ export default function Register() {
       }
 
       login(data.token!, data.user)
-      navigate(data.user.role.includes('intern') ? '/availability' : '/dashboard')
+      navigate('/dashboard')
     } catch (err: unknown) {
       setError(extractErrorMessage(err, 'Registration failed. Please try again.'))
     } finally {

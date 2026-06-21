@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, TrendingUp, X, Check, UserCheck, AlertTriangle, Loader2, Clock, ShieldCheck, Trash2, Edit2, Users } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
@@ -26,11 +27,22 @@ export default function AdminOverview() {
   const currentUser = useAuthStore(selectUser)
   const isCoreAdmin = currentUser?.role === 'core_admin'
 
+  // FIX 1: read ?tab= and ?internId= from URL so Dashboard quick-action shortcuts
+  // land on the correct tab with the intern pre-selected.
+  const [searchParams] = useSearchParams()
+
   const [interns, setInterns]     = useState<InternRow[]>([])
   const [tasks, setTasks]         = useState<Task[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [dataError, setDataError] = useState('')
-  const [activeTab, setActiveTab] = useState<'override' | 'assign' | 'status' | 'deadline' | 'approvals' | 'roles' | 'interns'>('assign')
+
+  // Initialise activeTab from URL param — defaults to 'assign'
+  const validTabs = ['override', 'assign', 'status', 'deadline', 'approvals', 'roles', 'interns'] as const
+  type TabKey = typeof validTabs[number]
+  const tabParam = searchParams.get('tab') as TabKey | null
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    tabParam && (validTabs as readonly string[]).includes(tabParam) ? tabParam : 'assign'
+  )
 
   // Admin elevation panel
   const [adminUsers, setAdminUsers]         = useState<AdminUser[]>([])
@@ -44,8 +56,8 @@ export default function AdminOverview() {
   const [overrideLoading, setOverrideLoading]   = useState(false)
   const [overrideMsg, setOverrideMsg]           = useState<{ ok: boolean; text: string } | null>(null)
 
-  // Assign task form
-  const [assignInternId, setAssignInternId] = useState('')
+  // Assign task form — pre-fill internId from URL param if present (FIX 1)
+  const [assignInternId, setAssignInternId] = useState(() => searchParams.get('internId') ?? '')
   const [assignTaskId, setAssignTaskId]     = useState('')
   const [assignLoading, setAssignLoading]   = useState(false)
   const [assignMsg, setAssignMsg]           = useState<{ ok: boolean; text: string } | null>(null)

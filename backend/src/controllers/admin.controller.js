@@ -143,16 +143,50 @@ async function getAdminOverview(req, res, next) {
     ];
     let alertFilter = { resolved: false, type: { in: ADMIN_ALERT_TYPES } };
     
-    // Role-based filtering for leads
-    if (req.user.role === ROLES.TECHNICAL_LEAD) {
-      // Tech leads see only TECHNICAL_INTERNs
-      internFilter = { user: { role: 'TECHNICAL_INTERN' } };
-    } else if (req.user.role === ROLES.OPERATIONS_LEAD) {
-      // Ops leads see only OPERATIONS_INTERNs
-      internFilter = { user: { role: 'OPERATIONS_INTERN' } };
-    } else if (req.user.role === ROLES.RESEARCH_LEAD) {
-      // Research leads see only RESEARCH_INTERNs
-      internFilter = { user: { role: 'RESEARCH_INTERN' } };
+    // Role-based filtering for leads — scoped to their own team members only.
+    // Previously filtered by intern role type (e.g. all TECHNICAL_INTERNs) which
+    // returned interns across all teams. Now we look up which teams the lead belongs
+    // to and only return interns who are members of those same teams.
+    if (
+      req.user.role === ROLES.TECHNICAL_LEAD ||
+      req.user.role === ROLES.RESEARCH_LEAD  ||
+      req.user.role === ROLES.OPERATIONS_LEAD
+    ) {
+      // 1. Find the teams this lead is a member of (as 'lead' role in UserTeam)
+      const leadTeams = await prisma.userTeam.findMany({
+        where: { userId: req.user.id, leftAt: null },
+        select: { teamId: true },
+      });
+      const teamIds = leadTeams.map(t => t.teamId);
+
+      if (teamIds.length === 0) {
+        // Lead has no team assignments — show nothing rather than everything
+        internFilter = { id: { in: [] } };
+      } else {
+        // 2. Find all user IDs in those teams
+        const teamMembers = await prisma.userTeam.findMany({
+          where: { teamId: { in: teamIds }, leftAt: null, userId: { not: req.user.id } },
+          select: { userId: true },
+        });
+        const memberUserIds = [...new Set(teamMembers.map(m => m.userId))];
+
+        // 3. Map to intern records (only users who have an Intern record)
+        const teamInterns = await prisma.intern.findMany({
+          where: { userId: { in: memberUserIds } },
+          select: { id: true },
+        });
+        const teamInternIds = teamInterns.map(i => i.id);
+
+        internFilter = { id: { in: teamInternIds } };
+      }
+
+      // Scope alerts to interns in this lead's teams only
+      const teamInternIdsForAlerts = internFilter.id?.in ?? [];
+      alertFilter = {
+        resolved: false,
+        type: { in: ADMIN_ALERT_TYPES },
+        internId: { in: teamInternIdsForAlerts },
+      };
     } else if (req.user.role !== ROLES.CORE_ADMIN && req.user.role !== ROLES.OPERATIONS_PROGRAM_MANAGER) {
       // Other leads/admins: filter by their assigned tasks
       const allowedTasks = await prisma.task.findMany({ where: filter, select: { id: true, internId: true } });

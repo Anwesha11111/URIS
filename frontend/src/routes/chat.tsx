@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore, selectToken, selectUser } from '../store/authStore'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
@@ -33,6 +33,7 @@ export default function ChatPage() {
   const token = useAuthStore(selectToken)
   const user  = useAuthStore(selectUser)
   const nav   = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [chats, setChats]           = useState<Chat[]>([])
   const [friends, setFriends]       = useState<Friend[]>([])
@@ -54,6 +55,41 @@ export default function ChatPage() {
     if (!token) { nav('/login'); return }
     void loadData()
   }, [token, nav])
+
+  // FIX 1 — Chat shortcut: when navigated from Dashboard with ?userId=X,
+  // immediately open the existing conversation with that user OR create one.
+  // We wait until loadData has finished (loading === false) so friends and
+  // existing chats are available before acting.
+  const handledChatShortcutRef = useRef(false)
+  useEffect(() => {
+    if (loading) return                          // data not ready yet
+    if (handledChatShortcutRef.current) return  // already acted
+    const targetUserId = searchParams.get('userId')
+    if (!targetUserId) return
+
+    handledChatShortcutRef.current = true
+
+    // Check if we already have an open private chat with this user
+    const existingChat = chats.find(
+      c => c.type === 'PRIVATE' && c.otherParticipant?.id === targetUserId
+    )
+    if (existingChat) {
+      // Navigate straight into the existing conversation
+      nav(`/chat/${existingChat.id}`, { replace: true })
+      return
+    }
+
+    // Check if the target is already a friend — if so, create/open the chat
+    const isFriend = friends.some(f => f.id === targetUserId)
+    if (isFriend) {
+      void handleCreatePrivateChat(targetUserId)
+      return
+    }
+
+    // Not yet friends — go to Find People with the userId pre-filled so the
+    // lead can see the person and send a friend request without re-searching.
+    nav(`/chat/find?userId=${targetUserId}`, { replace: true })
+  }, [loading, searchParams, chats, friends, nav])
 
   const loadData = async () => {
     try {

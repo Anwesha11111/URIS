@@ -175,6 +175,51 @@ async function validateReviewSubmission({ taskId, internId, qualityScore, timeli
     };
   }
 
+  // 6. Team scope check — leads may only review interns on their own teams.
+  //    CORE_ADMIN and OPERATIONS_LEAD/OPERATIONS_PROGRAM_MANAGER have global scope.
+  //    All other reviewer roles must have the task's intern in one of their teams.
+  if (user) {
+    const GLOBAL_REVIEW_ROLES = new Set([
+      ROLES.CORE_ADMIN,
+      ROLES.OPERATIONS_LEAD,
+      ROLES.OPERATIONS_PROGRAM_MANAGER,
+    ]);
+
+    if (!GLOBAL_REVIEW_ROLES.has(user.role)) {
+      // Resolve the reviewer's teams
+      const reviewerTeams = await prisma.userTeam.findMany({
+        where: { userId: user.id, leftAt: null },
+        select: { teamId: true },
+      });
+      const reviewerTeamIds = reviewerTeams.map(t => t.teamId);
+
+      let isInScope = false;
+      if (reviewerTeamIds.length > 0) {
+        // Get all interns in those teams
+        const teamMembers = await prisma.userTeam.findMany({
+          where: { teamId: { in: reviewerTeamIds }, leftAt: null },
+          select: { userId: true },
+        });
+        const memberUserIds = teamMembers.map(m => m.userId);
+
+        const teamInterns = await prisma.intern.findMany({
+          where: { userId: { in: memberUserIds } },
+          select: { id: true },
+        });
+        const teamInternIds = new Set(teamInterns.map(i => i.id));
+        isInScope = teamInternIds.has(task.internId);
+      }
+
+      if (!isInScope) {
+        return {
+          ok:      false,
+          status:  403,
+          message: 'You can only review tasks assigned to interns on your team',
+        };
+      }
+    }
+  }
+
   return { ok: true };
 }
 

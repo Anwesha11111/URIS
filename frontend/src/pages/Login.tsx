@@ -24,7 +24,7 @@ export default function Login() {
       const res = await authAPI.login(email, password)
       const { token, user } = res.data.data as { token: string; user: { id: string; name: string; email: string; role: string } }
       login(token, user as Parameters<typeof login>[1])
-      navigate(user.role.includes('intern') ? '/availability' : '/dashboard')
+      navigate('/dashboard')
     } catch (err: unknown) {
       setError(extractErrorMessage(err, 'Invalid credentials. Please try again.'))
     } finally {
