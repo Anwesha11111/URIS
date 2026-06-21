@@ -1,0 +1,1569 @@
+Date,Fasting_Sugar,Post_Meal_Sugar,Diet_Type,Exercise,Notes
+16-08-2019,145,300,Non-Veg,Walking,Drank soft drinks
+17-08-2019,155,275,Non-Veg,Yoga,Had fruits
+19-08-2019,178,243,Non-Veg,None,Ate fried food
+20-08-2019,106,198,Veg,Walking,Skipped exercise
+21-08-2019,133,218,Non-Veg,Walking,Drank soft drinks
+22-08-2019,169,239,Veg,None,Good diet control
+24-08-2019,158,191,Non-Veg,None,Skipped exercise
+26-08-2019,98,266,Veg,Yoga,Ate sweets
+27-08-2019,108,154,Non-Veg,Walking,Normal diet
+28-08-2019,169,182,Non-Veg,Walking,Ate outside food
+29-08-2019,149,180,Veg,Yoga,Ate rice
+30-08-2019,144,207,Veg,None,Normal diet
+01-09-2019,167,209,Non-Veg,None,Skipped exercise
+02-09-2019,162,268,Veg,Walking,Ate fried food
+04-09-2019,118,254,Non-Veg,None,Good diet control
+05-09-2019,102,291,Veg,Walking,Good diet control
+06-09-2019,114,241,Non-Veg,None,Had fruits
+08-09-2019,108,150,Non-Veg,Yoga,Heavy dinner
+10-09-2019,98,242,Non-Veg,Walking,Normal diet
+11-09-2019,154,187,Veg,Yoga,Skipped exercise
+12-09-2019,126,139,Veg,None,Ate outside food
+13-09-2019,154,282,Non-Veg,Yoga,Skipped exercise
+14-09-2019,135,285,Non-Veg,None,Drank soft drinks
+16-09-2019,118,150,Non-Veg,None,Ate outside food
+18-09-2019,93,159,Veg,Walking,Ate outside food
+19-09-2019,144,249,Non-Veg,Yoga,Ate sweets
+20-09-2019,114,297,Non-Veg,None,Ate outside food
+21-09-2019,175,190,Non-Veg,None,Normal diet
+22-09-2019,166,215,Non-Veg,Walking,Drank soft drinks
+23-09-2019,174,234,Non-Veg,None,Good diet control
+24-09-2019,91,141,Non-Veg,Walking,Ate sweets
+26-09-2019,114,210,Veg,None,Ate rice
+27-09-2019,110,181,Non-Veg,Yoga,Good diet control
+29-09-2019,119,250,Veg,None,Normal diet
+01-10-2019,178,182,Non-Veg,Yoga,Normal diet
+02-10-2019,140,278,Veg,None,Skipped exercise
+04-10-2019,132,231,Veg,Yoga,Ate outside food
+05-10-2019,113,139,Veg,Yoga,Ate outside food
+07-10-2019,161,190,Non-Veg,Yoga,Ate sweets
+09-10-2019,131,265,Veg,Walking,Normal diet
+10-10-2019,110,219,Veg,Yoga,Had fruits
+11-10-2019,91,213,Veg,None,Had fruits
+13-10-2019,154,177,Non-Veg,Yoga,Drank soft drinks
+14-10-2019,152,268,Non-Veg,None,Ate outside food
+15-10-2019,124,177,Veg,None,Ate rice
+16-10-2019,167,281,Veg,Yoga,Ate sweets
+17-10-2019,147,254,Veg,Walking,Skipped exercise
+19-10-2019,102,218,Veg,None,Had fruits
+21-10-2019,179,289,Non-Veg,None,Normal diet
+22-10-2019,166,216,Non-Veg,Yoga,Good diet control
+23-10-2019,164,232,Veg,None,Good diet control
+25-10-2019,92,169,Non-Veg,None,Skipped exercise
+26-10-2019,115,187,Non-Veg,Walking,Skipped exercise
+27-10-2019,180,264,Veg,Walking,Ate rice
+28-10-2019,124,191,Non-Veg,Yoga,Skipped exercise
+29-10-2019,140,230,Non-Veg,Walking,Ate outside food
+30-10-2019,145,145,Non-Veg,Walking,Ate sweets
+31-10-2019,157,258,Veg,None,Skipped exercise
+01-11-2019,116,223,Veg,Yoga,Ate rice
+03-11-2019,117,184,Non-Veg,Walking,Ate fried food
+04-11-2019,170,156,Non-Veg,Yoga,Drank soft drinks
+06-11-2019,119,276,Non-Veg,None,Normal diet
+07-11-2019,103,192,Veg,None,Ate rice
+08-11-2019,92,164,Veg,None,Skipped exercise
+09-11-2019,148,189,Non-Veg,Walking,Ate rice
+11-11-2019,85,252,Non-Veg,Walking,Skipped exercise
+13-11-2019,142,295,Non-Veg,Yoga,Good diet control
+15-11-2019,146,182,Veg,Yoga,Ate fried food
+17-11-2019,124,251,Veg,Walking,Skipped exercise
+18-11-2019,146,198,Veg,Yoga,Good diet control
+19-11-2019,159,228,Non-Veg,Walking,Good diet control
+21-11-2019,130,156,Non-Veg,Yoga,Ate fried food
+22-11-2019,167,221,Veg,Yoga,Drank soft drinks
+23-11-2019,141,259,Non-Veg,None,Ate outside food
+24-11-2019,101,264,Non-Veg,None,Ate outside food
+25-11-2019,164,143,Non-Veg,None,Ate outside food
+26-11-2019,119,202,Non-Veg,Walking,Ate outside food
+28-11-2019,102,299,Non-Veg,Yoga,Had fruits
+29-11-2019,141,220,Non-Veg,Walking,Skipped exercise
+30-11-2019,111,282,Non-Veg,Walking,Ate rice
+01-12-2019,119,162,Veg,Yoga,Ate sweets
+03-12-2019,112,299,Veg,Yoga,Ate sweets
+04-12-2019,130,136,Non-Veg,Walking,Ate sweets
+06-12-2019,117,201,Non-Veg,Yoga,Normal diet
+08-12-2019,161,256,Veg,Yoga,Good diet control
+10-12-2019,106,179,Veg,None,Ate rice
+12-12-2019,176,189,Non-Veg,Yoga,Normal diet
+14-12-2019,174,271,Veg,Yoga,Heavy dinner
+15-12-2019,124,134,Non-Veg,Yoga,Heavy dinner
+17-12-2019,95,255,Veg,Yoga,Ate fried food
+18-12-2019,146,281,Non-Veg,None,Skipped exercise
+20-12-2019,158,141,Non-Veg,None,Good diet control
+21-12-2019,115,190,Veg,Yoga,Ate outside food
+22-12-2019,163,207,Veg,Walking,Heavy dinner
+24-12-2019,119,170,Non-Veg,Walking,Skipped exercise
+25-12-2019,113,171,Veg,Walking,Ate outside food
+27-12-2019,134,217,Non-Veg,Yoga,Ate rice
+29-12-2019,116,167,Non-Veg,None,Ate fried food
+30-12-2019,179,132,Non-Veg,None,Normal diet
+01-01-2020,157,164,Veg,Walking,Drank soft drinks
+02-01-2020,128,150,Non-Veg,None,Normal diet
+03-01-2020,128,138,Non-Veg,Yoga,Ate fried food
+04-01-2020,98,214,Veg,Walking,Ate sweets
+06-01-2020,135,143,Veg,None,Heavy dinner
+08-01-2020,142,258,Veg,None,Ate outside food
+10-01-2020,160,259,Veg,None,Heavy dinner
+12-01-2020,104,256,Non-Veg,None,Heavy dinner
+14-01-2020,140,197,Non-Veg,None,Normal diet
+15-01-2020,140,242,Non-Veg,None,Ate sweets
+17-01-2020,171,161,Non-Veg,None,Good diet control
+18-01-2020,125,224,Non-Veg,None,Ate outside food
+20-01-2020,148,288,Veg,None,Ate rice
+22-01-2020,122,194,Non-Veg,Yoga,Ate outside food
+23-01-2020,169,166,Non-Veg,None,Heavy dinner
+24-01-2020,112,211,Veg,Walking,Ate rice
+25-01-2020,152,196,Non-Veg,None,Skipped exercise
+26-01-2020,164,184,Non-Veg,None,Ate sweets
+27-01-2020,155,257,Veg,Walking,Drank soft drinks
+28-01-2020,164,272,Non-Veg,Walking,Ate fried food
+29-01-2020,102,219,Non-Veg,Yoga,Good diet control
+31-01-2020,97,136,Veg,Walking,Good diet control
+02-02-2020,111,214,Veg,Yoga,Ate rice
+03-02-2020,119,300,Veg,Yoga,Skipped exercise
+04-02-2020,126,134,Non-Veg,None,Had fruits
+06-02-2020,114,263,Veg,Yoga,Ate sweets
+07-02-2020,130,147,Non-Veg,Yoga,Ate outside food
+08-02-2020,152,238,Veg,None,Drank soft drinks
+09-02-2020,146,177,Non-Veg,Yoga,Ate sweets
+11-02-2020,102,199,Veg,Walking,Ate outside food
+12-02-2020,132,169,Non-Veg,Walking,Heavy dinner
+13-02-2020,110,231,Non-Veg,None,Ate sweets
+15-02-2020,107,234,Veg,Yoga,Drank soft drinks
+17-02-2020,168,205,Non-Veg,Walking,Good diet control
+18-02-2020,133,164,Non-Veg,Walking,Ate outside food
+20-02-2020,156,211,Non-Veg,None,Ate sweets
+21-02-2020,91,223,Veg,Yoga,Heavy dinner
+22-02-2020,90,148,Non-Veg,None,Good diet control
+23-02-2020,87,212,Non-Veg,None,Drank soft drinks
+25-02-2020,138,161,Veg,None,Ate outside food
+26-02-2020,88,238,Non-Veg,None,Normal diet
+28-02-2020,85,181,Veg,Walking,Had fruits
+01-03-2020,110,194,Non-Veg,None,Heavy dinner
+03-03-2020,106,147,Non-Veg,Yoga,Skipped exercise
+05-03-2020,99,152,Non-Veg,None,Drank soft drinks
+06-03-2020,119,241,Veg,None,Ate fried food
+07-03-2020,94,267,Non-Veg,Walking,Good diet control
+09-03-2020,114,259,Veg,Yoga,Drank soft drinks
+10-03-2020,144,254,Veg,Walking,Ate outside food
+12-03-2020,116,294,Non-Veg,Yoga,Heavy dinner
+13-03-2020,162,192,Veg,Walking,Heavy dinner
+14-03-2020,91,212,Non-Veg,Walking,Heavy dinner
+16-03-2020,97,239,Non-Veg,Walking,Had fruits
+17-03-2020,146,263,Non-Veg,None,Good diet control
+18-03-2020,117,140,Veg,None,Skipped exercise
+19-03-2020,104,284,Non-Veg,Walking,Ate outside food
+20-03-2020,174,279,Veg,None,Heavy dinner
+22-03-2020,109,268,Veg,Walking,Drank soft drinks
+23-03-2020,125,254,Non-Veg,Walking,Normal diet
+24-03-2020,93,217,Veg,Walking,Normal diet
+25-03-2020,157,197,Non-Veg,Walking,Good diet control
+27-03-2020,173,245,Non-Veg,Walking,Skipped exercise
+29-03-2020,165,265,Non-Veg,Yoga,Ate fried food
+30-03-2020,131,227,Veg,Walking,Ate rice
+31-03-2020,114,230,Non-Veg,None,Ate rice
+02-04-2020,119,205,Veg,Walking,Ate sweets
+04-04-2020,164,156,Non-Veg,None,Normal diet
+05-04-2020,115,237,Veg,None,Heavy dinner
+07-04-2020,86,166,Non-Veg,Walking,Ate fried food
+09-04-2020,127,256,Non-Veg,None,Heavy dinner
+10-04-2020,164,284,Veg,Walking,Good diet control
+11-04-2020,138,141,Veg,None,Skipped exercise
+12-04-2020,148,295,Veg,Yoga,Ate outside food
+13-04-2020,170,254,Veg,None,Normal diet
+14-04-2020,144,210,Veg,Yoga,Ate rice
+16-04-2020,117,287,Non-Veg,Yoga,Ate outside food
+18-04-2020,124,262,Veg,Yoga,Good diet control
+20-04-2020,102,219,Veg,Yoga,Ate rice
+22-04-2020,118,180,Non-Veg,Yoga,Ate fried food
+24-04-2020,115,205,Veg,Walking,Skipped exercise
+26-04-2020,145,219,Non-Veg,Yoga,Heavy dinner
+27-04-2020,120,210,Veg,None,Ate sweets
+29-04-2020,93,220,Non-Veg,None,Ate sweets
+30-04-2020,141,251,Veg,Walking,Drank soft drinks
+01-05-2020,104,216,Non-Veg,Walking,Drank soft drinks
+02-05-2020,97,151,Veg,Yoga,Heavy dinner
+04-05-2020,86,207,Veg,None,Ate sweets
+05-05-2020,137,140,Non-Veg,Yoga,Ate sweets
+07-05-2020,122,179,Veg,Walking,Good diet control
+08-05-2020,92,274,Non-Veg,Walking,Heavy dinner
+09-05-2020,117,220,Veg,Yoga,Heavy dinner
+11-05-2020,165,133,Veg,None,Ate rice
+13-05-2020,155,231,Veg,None,Normal diet
+14-05-2020,124,226,Non-Veg,Walking,Normal diet
+16-05-2020,145,295,Veg,Walking,Good diet control
+17-05-2020,129,288,Veg,None,Had fruits
+19-05-2020,92,262,Non-Veg,None,Ate outside food
+20-05-2020,169,158,Veg,Walking,Ate fried food
+22-05-2020,141,145,Non-Veg,Yoga,Drank soft drinks
+23-05-2020,164,235,Non-Veg,None,Normal diet
+25-05-2020,102,300,Non-Veg,None,Heavy dinner
+26-05-2020,85,179,Non-Veg,None,Heavy dinner
+28-05-2020,122,213,Veg,None,Good diet control
+29-05-2020,115,272,Veg,Walking,Skipped exercise
+30-05-2020,180,261,Veg,Yoga,Normal diet
+01-06-2020,113,224,Non-Veg,Walking,Drank soft drinks
+02-06-2020,89,172,Non-Veg,Yoga,Ate fried food
+03-06-2020,87,160,Non-Veg,Yoga,Ate rice
+05-06-2020,86,252,Non-Veg,Yoga,Ate sweets
+06-06-2020,147,187,Veg,Walking,Ate fried food
+07-06-2020,176,189,Non-Veg,None,Ate fried food
+08-06-2020,109,168,Non-Veg,Yoga,Heavy dinner
+09-06-2020,97,148,Non-Veg,None,Ate outside food
+11-06-2020,118,256,Veg,Yoga,Normal diet
+13-06-2020,112,180,Veg,Yoga,Ate sweets
+14-06-2020,168,140,Veg,None,Normal diet
+16-06-2020,142,181,Veg,None,Ate outside food
+18-06-2020,167,277,Non-Veg,Yoga,Ate outside food
+20-06-2020,106,252,Non-Veg,Walking,Good diet control
+22-06-2020,124,148,Veg,Yoga,Good diet control
+24-06-2020,86,192,Non-Veg,None,Normal diet
+25-06-2020,92,274,Non-Veg,Walking,Skipped exercise
+27-06-2020,92,166,Non-Veg,Walking,Heavy dinner
+28-06-2020,128,197,Veg,None,Good diet control
+29-06-2020,163,244,Non-Veg,Walking,Heavy dinner
+01-07-2020,88,259,Veg,Yoga,Had fruits
+02-07-2020,127,136,Veg,None,Heavy dinner
+04-07-2020,152,237,Non-Veg,Walking,Good diet control
+05-07-2020,127,130,Non-Veg,Yoga,Had fruits
+07-07-2020,108,139,Veg,Walking,Skipped exercise
+09-07-2020,146,258,Non-Veg,Yoga,Ate outside food
+11-07-2020,130,179,Veg,Yoga,Heavy dinner
+13-07-2020,134,268,Veg,None,Ate outside food
+14-07-2020,108,300,Non-Veg,Yoga,Ate sweets
+15-07-2020,138,162,Veg,None,Had fruits
+16-07-2020,91,225,Veg,Yoga,Ate fried food
+17-07-2020,159,262,Veg,Walking,Heavy dinner
+19-07-2020,169,214,Veg,Yoga,Ate sweets
+21-07-2020,159,225,Non-Veg,Yoga,Drank soft drinks
+22-07-2020,102,231,Non-Veg,Yoga,Skipped exercise
+24-07-2020,104,261,Veg,None,Heavy dinner
+25-07-2020,121,178,Non-Veg,None,Ate sweets
+27-07-2020,107,283,Veg,Walking,Ate sweets
+29-07-2020,90,260,Non-Veg,None,Ate fried food
+30-07-2020,96,146,Veg,None,Ate outside food
+31-07-2020,91,140,Veg,Yoga,Heavy dinner
+02-08-2020,149,265,Veg,Yoga,Drank soft drinks
+04-08-2020,109,189,Veg,Yoga,Normal diet
+05-08-2020,169,199,Non-Veg,Walking,Ate outside food
+06-08-2020,111,166,Non-Veg,Yoga,Ate rice
+07-08-2020,135,161,Veg,Walking,Had fruits
+09-08-2020,96,196,Non-Veg,Walking,Heavy dinner
+10-08-2020,170,268,Veg,None,Skipped exercise
+11-08-2020,110,152,Veg,None,Drank soft drinks
+12-08-2020,109,287,Non-Veg,None,Ate outside food
+14-08-2020,143,286,Veg,None,Ate fried food
+16-08-2020,90,209,Veg,Yoga,Ate outside food
+18-08-2020,111,161,Non-Veg,Yoga,Drank soft drinks
+20-08-2020,98,269,Non-Veg,None,Good diet control
+21-08-2020,102,250,Non-Veg,Yoga,Good diet control
+22-08-2020,90,130,Veg,None,Drank soft drinks
+23-08-2020,88,201,Non-Veg,None,Good diet control
+25-08-2020,142,140,Non-Veg,Yoga,Normal diet
+27-08-2020,123,295,Veg,Yoga,Ate rice
+29-08-2020,106,281,Veg,None,Good diet control
+30-08-2020,150,132,Non-Veg,Yoga,Ate outside food
+01-09-2020,158,203,Veg,None,Good diet control
+03-09-2020,89,185,Veg,Yoga,Ate fried food
+04-09-2020,173,159,Non-Veg,None,Drank soft drinks
+05-09-2020,94,284,Veg,Walking,Ate sweets
+07-09-2020,165,149,Veg,None,Normal diet
+09-09-2020,120,227,Non-Veg,None,Heavy dinner
+10-09-2020,112,138,Non-Veg,None,Heavy dinner
+11-09-2020,91,219,Non-Veg,Yoga,Normal diet
+12-09-2020,120,213,Non-Veg,Yoga,Ate rice
+13-09-2020,99,138,Non-Veg,Walking,Ate fried food
+14-09-2020,121,291,Veg,Yoga,Drank soft drinks
+16-09-2020,135,144,Veg,Yoga,Ate rice
+17-09-2020,131,139,Veg,Yoga,Ate sweets
+18-09-2020,146,171,Veg,Yoga,Good diet control
+19-09-2020,112,150,Non-Veg,None,Ate fried food
+21-09-2020,123,166,Veg,Yoga,Skipped exercise
+23-09-2020,126,234,Veg,None,Skipped exercise
+25-09-2020,147,170,Veg,Yoga,Skipped exercise
+26-09-2020,138,237,Veg,Yoga,Ate sweets
+28-09-2020,159,268,Non-Veg,Walking,Drank soft drinks
+30-09-2020,119,226,Veg,Yoga,Ate fried food
+02-10-2020,97,136,Veg,Yoga,Normal diet
+03-10-2020,171,219,Veg,Yoga,Had fruits
+04-10-2020,112,135,Veg,Yoga,Ate outside food
+05-10-2020,99,165,Non-Veg,None,Ate rice
+06-10-2020,174,288,Non-Veg,Yoga,Heavy dinner
+07-10-2020,128,168,Non-Veg,None,Ate fried food
+08-10-2020,107,274,Non-Veg,Walking,Skipped exercise
+10-10-2020,89,199,Non-Veg,Yoga,Ate fried food
+12-10-2020,110,202,Veg,None,Had fruits
+14-10-2020,99,176,Non-Veg,Yoga,Drank soft drinks
+16-10-2020,127,248,Non-Veg,Walking,Drank soft drinks
+18-10-2020,173,280,Non-Veg,Yoga,Had fruits
+20-10-2020,129,142,Non-Veg,None,Had fruits
+21-10-2020,141,207,Veg,Yoga,Skipped exercise
+23-10-2020,160,275,Non-Veg,Yoga,Ate rice
+25-10-2020,101,185,Non-Veg,Walking,Ate sweets
+26-10-2020,101,182,Veg,Walking,Ate sweets
+28-10-2020,164,232,Non-Veg,Yoga,Good diet control
+30-10-2020,138,161,Non-Veg,Walking,Heavy dinner
+31-10-2020,122,247,Veg,None,Ate fried food
+01-11-2020,165,203,Veg,None,Ate rice
+03-11-2020,105,288,Veg,None,Ate outside food
+05-11-2020,102,210,Non-Veg,Walking,Skipped exercise
+06-11-2020,164,287,Non-Veg,None,Good diet control
+07-11-2020,172,225,Non-Veg,Walking,Heavy dinner
+08-11-2020,136,266,Non-Veg,Yoga,Had fruits
+09-11-2020,139,287,Non-Veg,Walking,Good diet control
+10-11-2020,131,206,Veg,Walking,Ate sweets
+11-11-2020,170,243,Non-Veg,None,Skipped exercise
+12-11-2020,180,169,Veg,None,Ate sweets
+14-11-2020,175,219,Veg,None,Had fruits
+15-11-2020,144,151,Veg,None,Ate rice
+17-11-2020,157,259,Non-Veg,None,Ate fried food
+19-11-2020,153,204,Veg,Yoga,Ate sweets
+20-11-2020,143,261,Non-Veg,Yoga,Ate fried food
+22-11-2020,123,288,Non-Veg,None,Skipped exercise
+24-11-2020,129,184,Veg,None,Ate fried food
+26-11-2020,164,234,Non-Veg,Walking,Ate fried food
+27-11-2020,111,170,Veg,None,Normal diet
+28-11-2020,170,210,Non-Veg,None,Skipped exercise
+29-11-2020,86,153,Veg,Walking,Drank soft drinks
+01-12-2020,120,149,Non-Veg,Yoga,Heavy dinner
+03-12-2020,140,242,Veg,Walking,Skipped exercise
+04-12-2020,138,239,Veg,None,Ate sweets
+05-12-2020,113,184,Non-Veg,Walking,Ate rice
+07-12-2020,114,269,Non-Veg,Walking,Had fruits
+09-12-2020,102,222,Non-Veg,None,Heavy dinner
+11-12-2020,129,166,Veg,Yoga,Ate rice
+12-12-2020,160,227,Non-Veg,Walking,Skipped exercise
+14-12-2020,157,153,Non-Veg,Yoga,Normal diet
+16-12-2020,106,253,Non-Veg,Walking,Ate sweets
+18-12-2020,105,283,Non-Veg,Walking,Good diet control
+19-12-2020,87,284,Non-Veg,None,Ate rice
+21-12-2020,104,282,Non-Veg,Yoga,Ate sweets
+22-12-2020,102,180,Veg,Walking,Ate rice
+24-12-2020,128,148,Non-Veg,Walking,Ate outside food
+26-12-2020,166,164,Non-Veg,Walking,Ate outside food
+27-12-2020,158,248,Veg,None,Ate sweets
+28-12-2020,97,253,Non-Veg,Yoga,Had fruits
+29-12-2020,90,240,Veg,Walking,Ate sweets
+30-12-2020,90,175,Veg,None,Ate fried food
+31-12-2020,180,199,Veg,Walking,Normal diet
+02-01-2021,87,260,Non-Veg,Yoga,Ate outside food
+04-01-2021,90,185,Veg,None,Ate outside food
+06-01-2021,98,245,Non-Veg,Walking,Good diet control
+07-01-2021,170,161,Veg,Yoga,Drank soft drinks
+09-01-2021,105,201,Veg,Yoga,Good diet control
+10-01-2021,127,239,Veg,Walking,Skipped exercise
+11-01-2021,147,154,Non-Veg,Yoga,Ate fried food
+13-01-2021,136,281,Non-Veg,Walking,Ate outside food
+15-01-2021,124,276,Non-Veg,Yoga,Had fruits
+17-01-2021,109,241,Non-Veg,None,Normal diet
+18-01-2021,106,257,Non-Veg,Walking,Drank soft drinks
+20-01-2021,138,196,Non-Veg,None,Ate fried food
+21-01-2021,143,230,Non-Veg,Walking,Ate outside food
+23-01-2021,163,206,Veg,Walking,Ate outside food
+24-01-2021,136,162,Non-Veg,Yoga,Ate rice
+26-01-2021,129,161,Veg,Yoga,Ate fried food
+27-01-2021,134,196,Non-Veg,Yoga,Skipped exercise
+29-01-2021,108,226,Veg,None,Ate rice
+31-01-2021,139,166,Non-Veg,Yoga,Good diet control
+02-02-2021,152,246,Non-Veg,None,Ate sweets
+04-02-2021,131,227,Non-Veg,None,Good diet control
+06-02-2021,138,211,Non-Veg,None,Skipped exercise
+08-02-2021,93,167,Veg,Walking,Had fruits
+09-02-2021,159,229,Veg,None,Normal diet
+10-02-2021,115,249,Veg,Walking,Good diet control
+12-02-2021,170,247,Non-Veg,Walking,Heavy dinner
+14-02-2021,124,203,Non-Veg,Yoga,Ate sweets
+15-02-2021,167,297,Veg,Walking,Heavy dinner
+16-02-2021,147,254,Veg,Yoga,Good diet control
+17-02-2021,176,130,Non-Veg,None,Drank soft drinks
+18-02-2021,123,203,Veg,Yoga,Good diet control
+20-02-2021,106,142,Veg,Yoga,Ate rice
+22-02-2021,110,186,Non-Veg,Yoga,Skipped exercise
+24-02-2021,164,228,Non-Veg,None,Heavy dinner
+26-02-2021,150,158,Non-Veg,Walking,Heavy dinner
+27-02-2021,144,241,Non-Veg,Yoga,Ate fried food
+01-03-2021,132,254,Non-Veg,Walking,Ate sweets
+02-03-2021,148,177,Non-Veg,None,Normal diet
+04-03-2021,159,154,Non-Veg,Walking,Skipped exercise
+06-03-2021,156,209,Veg,Yoga,Good diet control
+08-03-2021,90,270,Non-Veg,Yoga,Had fruits
+10-03-2021,109,238,Non-Veg,Walking,Normal diet
+12-03-2021,87,184,Veg,Yoga,Good diet control
+14-03-2021,162,217,Non-Veg,Yoga,Ate sweets
+15-03-2021,156,162,Non-Veg,Walking,Had fruits
+17-03-2021,121,178,Non-Veg,Yoga,Ate outside food
+18-03-2021,129,240,Non-Veg,None,Ate rice
+20-03-2021,150,204,Veg,None,Ate outside food
+22-03-2021,159,212,Non-Veg,Walking,Heavy dinner
+23-03-2021,179,150,Veg,Walking,Normal diet
+25-03-2021,167,296,Veg,None,Ate sweets
+27-03-2021,128,130,Non-Veg,None,Ate outside food
+29-03-2021,119,208,Non-Veg,Yoga,Good diet control
+31-03-2021,162,227,Veg,Walking,Ate fried food
+01-04-2021,122,137,Non-Veg,Walking,Skipped exercise
+02-04-2021,114,151,Veg,Yoga,Ate sweets
+03-04-2021,161,244,Non-Veg,None,Had fruits
+05-04-2021,149,210,Non-Veg,None,Ate outside food
+07-04-2021,100,296,Non-Veg,Walking,Had fruits
+09-04-2021,178,149,Veg,None,Had fruits
+11-04-2021,113,188,Veg,Yoga,Drank soft drinks
+13-04-2021,130,285,Veg,Walking,Heavy dinner
+15-04-2021,105,161,Veg,None,Ate sweets
+16-04-2021,134,245,Veg,None,Ate rice
+18-04-2021,134,162,Non-Veg,None,Ate fried food
+20-04-2021,108,268,Veg,Walking,Heavy dinner
+22-04-2021,160,191,Non-Veg,Yoga,Heavy dinner
+24-04-2021,91,180,Veg,None,Heavy dinner
+26-04-2021,138,287,Non-Veg,Walking,Skipped exercise
+28-04-2021,156,163,Non-Veg,Walking,Ate outside food
+29-04-2021,139,196,Veg,Yoga,Skipped exercise
+30-04-2021,92,268,Veg,Walking,Good diet control
+01-05-2021,152,203,Non-Veg,None,Normal diet
+03-05-2021,91,224,Non-Veg,Yoga,Normal diet
+05-05-2021,110,237,Non-Veg,None,Ate sweets
+06-05-2021,93,295,Non-Veg,Walking,Ate fried food
+07-05-2021,122,256,Non-Veg,Yoga,Had fruits
+09-05-2021,156,147,Non-Veg,Walking,Ate outside food
+11-05-2021,87,261,Non-Veg,Yoga,Ate rice
+13-05-2021,153,258,Veg,None,Ate sweets
+14-05-2021,118,204,Non-Veg,Walking,Skipped exercise
+16-05-2021,178,269,Non-Veg,None,Ate sweets
+18-05-2021,168,176,Non-Veg,Walking,Ate fried food
+20-05-2021,128,146,Veg,Walking,Skipped exercise
+22-05-2021,102,292,Veg,Yoga,Good diet control
+23-05-2021,130,166,Veg,Walking,Ate fried food
+24-05-2021,102,276,Veg,Yoga,Ate fried food
+25-05-2021,98,225,Veg,None,Ate fried food
+27-05-2021,120,268,Non-Veg,Yoga,Good diet control
+29-05-2021,160,284,Veg,Yoga,Ate fried food
+30-05-2021,101,175,Veg,None,Skipped exercise
+01-06-2021,146,184,Non-Veg,Yoga,Good diet control
+03-06-2021,124,294,Non-Veg,Yoga,Drank soft drinks
+05-06-2021,161,295,Non-Veg,None,Had fruits
+06-06-2021,94,234,Non-Veg,Walking,Heavy dinner
+08-06-2021,161,225,Non-Veg,Yoga,Skipped exercise
+10-06-2021,149,184,Non-Veg,Walking,Ate fried food
+11-06-2021,89,209,Veg,Yoga,Had fruits
+13-06-2021,174,188,Veg,Yoga,Ate rice
+15-06-2021,153,182,Non-Veg,Walking,Good diet control
+16-06-2021,178,208,Veg,Walking,Good diet control
+17-06-2021,177,133,Veg,Walking,Heavy dinner
+18-06-2021,102,152,Veg,Walking,Normal diet
+20-06-2021,131,230,Non-Veg,Yoga,Had fruits
+22-06-2021,179,228,Non-Veg,None,Ate rice
+24-06-2021,155,194,Veg,Walking,Ate outside food
+26-06-2021,141,208,Non-Veg,None,Good diet control
+28-06-2021,123,290,Non-Veg,Yoga,Skipped exercise
+30-06-2021,157,254,Veg,None,Ate rice
+02-07-2021,85,259,Veg,Walking,Normal diet
+04-07-2021,120,135,Non-Veg,Walking,Normal diet
+05-07-2021,135,237,Veg,Walking,Ate sweets
+06-07-2021,154,154,Non-Veg,Walking,Had fruits
+08-07-2021,143,282,Non-Veg,Yoga,Heavy dinner
+09-07-2021,145,161,Veg,None,Ate outside food
+11-07-2021,132,185,Veg,Walking,Ate sweets
+13-07-2021,124,177,Veg,Yoga,Ate rice
+15-07-2021,93,273,Non-Veg,Yoga,Ate rice
+17-07-2021,160,272,Non-Veg,Yoga,Ate fried food
+19-07-2021,145,148,Veg,Yoga,Heavy dinner
+21-07-2021,88,297,Non-Veg,None,Ate outside food
+23-07-2021,128,287,Veg,Walking,Good diet control
+24-07-2021,153,254,Veg,Yoga,Drank soft drinks
+26-07-2021,149,272,Veg,Yoga,Ate sweets
+28-07-2021,162,230,Veg,None,Heavy dinner
+29-07-2021,106,288,Veg,None,Ate rice
+30-07-2021,93,198,Non-Veg,None,Ate fried food
+31-07-2021,147,253,Non-Veg,Walking,Heavy dinner
+02-08-2021,120,171,Veg,Yoga,Normal diet
+04-08-2021,157,149,Non-Veg,None,Ate fried food
+06-08-2021,137,165,Veg,Walking,Ate sweets
+08-08-2021,124,143,Non-Veg,Yoga,Normal diet
+10-08-2021,116,214,Veg,Yoga,Ate fried food
+11-08-2021,112,171,Non-Veg,Walking,Normal diet
+13-08-2021,152,215,Non-Veg,None,Good diet control
+14-08-2021,137,177,Veg,Yoga,Heavy dinner
+15-08-2021,136,169,Veg,Walking,Drank soft drinks
+16-08-2021,133,194,Non-Veg,None,Ate fried food
+17-08-2021,135,161,Non-Veg,Walking,Heavy dinner
+19-08-2021,117,244,Veg,Walking,Had fruits
+21-08-2021,94,244,Non-Veg,Yoga,Skipped exercise
+23-08-2021,180,252,Veg,Yoga,Ate sweets
+25-08-2021,180,200,Veg,Yoga,Normal diet
+27-08-2021,159,258,Veg,None,Ate rice
+28-08-2021,128,140,Veg,Walking,Had fruits
+30-08-2021,117,204,Non-Veg,Walking,Good diet control
+31-08-2021,120,260,Non-Veg,Yoga,Ate sweets
+01-09-2021,104,179,Non-Veg,None,Skipped exercise
+02-09-2021,126,135,Veg,Yoga,Ate outside food
+04-09-2021,122,130,Non-Veg,Yoga,Ate rice
+06-09-2021,135,259,Non-Veg,Yoga,Ate outside food
+08-09-2021,150,209,Veg,None,Ate sweets
+10-09-2021,154,228,Non-Veg,None,Ate fried food
+11-09-2021,161,185,Veg,None,Ate sweets
+13-09-2021,92,204,Veg,Walking,Normal diet
+14-09-2021,85,220,Non-Veg,Walking,Ate outside food
+15-09-2021,119,244,Non-Veg,None,Heavy dinner
+17-09-2021,115,189,Non-Veg,Yoga,Ate fried food
+18-09-2021,91,249,Veg,None,Ate fried food
+20-09-2021,162,245,Non-Veg,None,Ate rice
+21-09-2021,122,173,Veg,Yoga,Skipped exercise
+22-09-2021,137,161,Non-Veg,Walking,Skipped exercise
+24-09-2021,114,279,Non-Veg,None,Ate outside food
+26-09-2021,173,205,Veg,Yoga,Ate rice
+27-09-2021,104,248,Veg,Yoga,Ate outside food
+29-09-2021,151,223,Veg,Walking,Skipped exercise
+01-10-2021,170,220,Non-Veg,Walking,Had fruits
+03-10-2021,148,149,Veg,None,Ate fried food
+05-10-2021,90,156,Veg,None,Drank soft drinks
+07-10-2021,176,165,Non-Veg,Walking,Ate rice
+09-10-2021,169,244,Non-Veg,Walking,Skipped exercise
+11-10-2021,119,145,Non-Veg,Yoga,Ate rice
+12-10-2021,119,263,Veg,None,Normal diet
+13-10-2021,170,272,Veg,None,Good diet control
+15-10-2021,99,272,Veg,Yoga,Normal diet
+16-10-2021,121,177,Veg,None,Normal diet
+18-10-2021,178,218,Veg,None,Drank soft drinks
+19-10-2021,158,248,Non-Veg,Walking,Drank soft drinks
+21-10-2021,116,207,Veg,Yoga,Ate fried food
+23-10-2021,122,187,Non-Veg,Walking,Ate rice
+25-10-2021,87,288,Veg,Walking,Ate rice
+27-10-2021,171,189,Veg,None,Normal diet
+28-10-2021,86,186,Non-Veg,Walking,Ate sweets
+30-10-2021,152,177,Veg,None,Ate rice
+01-11-2021,128,249,Veg,Yoga,Heavy dinner
+02-11-2021,114,240,Non-Veg,None,Normal diet
+04-11-2021,106,281,Veg,Yoga,Ate sweets
+06-11-2021,148,170,Veg,None,Skipped exercise
+07-11-2021,176,274,Veg,None,Skipped exercise
+09-11-2021,148,185,Non-Veg,Yoga,Ate sweets
+11-11-2021,176,233,Veg,Walking,Skipped exercise
+12-11-2021,107,190,Non-Veg,None,Ate sweets
+13-11-2021,114,201,Veg,Yoga,Ate outside food
+15-11-2021,128,136,Non-Veg,None,Ate fried food
+17-11-2021,176,219,Non-Veg,Walking,Normal diet
+18-11-2021,145,255,Veg,Walking,Ate outside food
+20-11-2021,103,198,Veg,Walking,Good diet control
+22-11-2021,171,242,Veg,Walking,Ate outside food
+23-11-2021,170,269,Non-Veg,Walking,Ate sweets
+25-11-2021,93,131,Non-Veg,Walking,Drank soft drinks
+26-11-2021,142,282,Veg,Walking,Drank soft drinks
+28-11-2021,87,200,Veg,Walking,Heavy dinner
+30-11-2021,169,139,Non-Veg,None,Ate sweets
+01-12-2021,104,293,Non-Veg,Yoga,Had fruits
+03-12-2021,163,170,Veg,Walking,Had fruits
+05-12-2021,172,234,Veg,None,Ate sweets
+07-12-2021,88,154,Veg,Walking,Ate sweets
+09-12-2021,129,203,Veg,Walking,Ate rice
+10-12-2021,135,202,Non-Veg,Yoga,Ate fried food
+11-12-2021,108,262,Veg,None,Normal diet
+13-12-2021,159,220,Non-Veg,Walking,Drank soft drinks
+14-12-2021,101,292,Non-Veg,None,Ate rice
+15-12-2021,153,234,Non-Veg,None,Skipped exercise
+17-12-2021,132,170,Non-Veg,Yoga,Drank soft drinks
+18-12-2021,107,213,Veg,Yoga,Good diet control
+19-12-2021,121,166,Veg,Yoga,Skipped exercise
+21-12-2021,162,156,Non-Veg,Yoga,Ate sweets
+22-12-2021,147,215,Non-Veg,None,Good diet control
+23-12-2021,100,263,Veg,None,Ate rice
+24-12-2021,131,235,Veg,Walking,Normal diet
+26-12-2021,158,243,Non-Veg,Yoga,Normal diet
+28-12-2021,92,155,Veg,Walking,Ate fried food
+30-12-2021,115,291,Veg,Yoga,Ate sweets
+01-01-2022,107,298,Non-Veg,Yoga,Had fruits
+02-01-2022,111,182,Veg,None,Drank soft drinks
+04-01-2022,163,191,Non-Veg,Yoga,Had fruits
+05-01-2022,166,207,Veg,Yoga,Ate outside food
+07-01-2022,143,135,Non-Veg,None,Normal diet
+09-01-2022,111,165,Non-Veg,Yoga,Ate fried food
+11-01-2022,172,210,Veg,Yoga,Ate sweets
+13-01-2022,160,281,Veg,None,Skipped exercise
+14-01-2022,143,235,Veg,None,Heavy dinner
+16-01-2022,115,179,Non-Veg,None,Heavy dinner
+17-01-2022,90,231,Veg,Walking,Skipped exercise
+19-01-2022,108,247,Veg,None,Ate sweets
+20-01-2022,151,180,Non-Veg,Yoga,Ate outside food
+21-01-2022,177,170,Non-Veg,Yoga,Drank soft drinks
+22-01-2022,144,226,Veg,None,Drank soft drinks
+24-01-2022,127,173,Non-Veg,Walking,Had fruits
+26-01-2022,120,133,Veg,None,Ate sweets
+27-01-2022,180,248,Veg,None,Ate outside food
+28-01-2022,90,160,Non-Veg,Walking,Heavy dinner
+29-01-2022,151,250,Veg,Walking,Ate sweets
+31-01-2022,151,245,Veg,Walking,Ate outside food
+02-02-2022,121,154,Veg,Walking,Ate sweets
+03-02-2022,178,156,Non-Veg,Yoga,Normal diet
+05-02-2022,151,222,Non-Veg,Yoga,Heavy dinner
+06-02-2022,100,228,Non-Veg,Walking,Good diet control
+07-02-2022,140,212,Veg,Yoga,Normal diet
+09-02-2022,156,152,Veg,Walking,Normal diet
+10-02-2022,102,275,Veg,Yoga,Normal diet
+11-02-2022,111,223,Veg,Yoga,Had fruits
+13-02-2022,92,242,Non-Veg,Yoga,Drank soft drinks
+15-02-2022,163,235,Non-Veg,None,Ate rice
+17-02-2022,99,250,Non-Veg,None,Skipped exercise
+19-02-2022,125,181,Non-Veg,Walking,Skipped exercise
+20-02-2022,162,150,Non-Veg,Yoga,Ate outside food
+21-02-2022,164,215,Non-Veg,Yoga,Ate sweets
+22-02-2022,119,210,Veg,Walking,Normal diet
+23-02-2022,161,252,Non-Veg,Yoga,Drank soft drinks
+24-02-2022,170,271,Non-Veg,Yoga,Heavy dinner
+25-02-2022,113,285,Veg,Yoga,Drank soft drinks
+26-02-2022,169,295,Non-Veg,Yoga,Heavy dinner
+28-02-2022,163,240,Veg,Walking,Ate fried food
+02-03-2022,94,130,Non-Veg,None,Ate sweets
+03-03-2022,87,233,Non-Veg,None,Ate fried food
+05-03-2022,165,212,Non-Veg,None,Ate outside food
+06-03-2022,135,175,Veg,Walking,Skipped exercise
+07-03-2022,158,231,Veg,Walking,Ate rice
+08-03-2022,122,153,Non-Veg,Walking,Ate fried food
+09-03-2022,152,161,Veg,Walking,Ate rice
+10-03-2022,148,293,Non-Veg,Walking,Had fruits
+11-03-2022,111,213,Non-Veg,None,Ate rice
+12-03-2022,99,291,Non-Veg,Yoga,Drank soft drinks
+13-03-2022,140,217,Veg,Walking,Skipped exercise
+15-03-2022,119,199,Non-Veg,None,Ate rice
+16-03-2022,156,260,Veg,Yoga,Normal diet
+17-03-2022,126,239,Veg,Walking,Good diet control
+19-03-2022,97,186,Non-Veg,Yoga,Skipped exercise
+21-03-2022,162,143,Non-Veg,Yoga,Good diet control
+23-03-2022,170,250,Veg,Walking,Normal diet
+24-03-2022,170,160,Veg,Yoga,Ate rice
+25-03-2022,159,139,Veg,None,Ate sweets
+26-03-2022,167,270,Veg,Yoga,Had fruits
+27-03-2022,105,238,Non-Veg,Walking,Skipped exercise
+28-03-2022,99,156,Veg,Yoga,Good diet control
+30-03-2022,105,251,Veg,Walking,Normal diet
+01-04-2022,147,286,Veg,None,Good diet control
+02-04-2022,179,269,Veg,Walking,Ate outside food
+03-04-2022,142,253,Non-Veg,Walking,Had fruits
+04-04-2022,176,227,Veg,Yoga,Normal diet
+06-04-2022,94,173,Non-Veg,None,Heavy dinner
+07-04-2022,143,256,Veg,None,Had fruits
+09-04-2022,127,169,Non-Veg,Walking,Ate sweets
+11-04-2022,88,272,Veg,None,Skipped exercise
+12-04-2022,176,224,Veg,Yoga,Ate rice
+13-04-2022,154,223,Non-Veg,None,Normal diet
+14-04-2022,94,254,Non-Veg,None,Good diet control
+16-04-2022,129,227,Veg,None,Skipped exercise
+17-04-2022,138,141,Veg,None,Ate fried food
+18-04-2022,142,183,Veg,Yoga,Ate outside food
+19-04-2022,94,296,Veg,Yoga,Ate sweets
+20-04-2022,180,175,Non-Veg,None,Drank soft drinks
+21-04-2022,143,288,Veg,None,Ate sweets
+22-04-2022,147,200,Veg,None,Ate outside food
+23-04-2022,129,237,Non-Veg,None,Had fruits
+24-04-2022,155,256,Veg,None,Ate fried food
+25-04-2022,163,276,Non-Veg,None,Normal diet
+27-04-2022,160,215,Veg,Walking,Ate rice
+29-04-2022,142,230,Veg,Yoga,Ate rice
+01-05-2022,85,298,Veg,None,Normal diet
+03-05-2022,160,238,Veg,None,Skipped exercise
+05-05-2022,169,158,Veg,Walking,Had fruits
+07-05-2022,156,227,Veg,None,Had fruits
+08-05-2022,136,130,Non-Veg,Yoga,Skipped exercise
+09-05-2022,108,236,Non-Veg,Walking,Ate fried food
+10-05-2022,172,230,Veg,Yoga,Had fruits
+11-05-2022,174,215,Veg,Walking,Ate outside food
+13-05-2022,135,246,Veg,None,Ate outside food
+14-05-2022,112,131,Veg,Yoga,Ate sweets
+16-05-2022,164,213,Non-Veg,None,Normal diet
+17-05-2022,85,295,Non-Veg,Walking,Heavy dinner
+19-05-2022,116,214,Non-Veg,Walking,Ate fried food
+21-05-2022,89,208,Non-Veg,Yoga,Heavy dinner
+23-05-2022,148,262,Veg,Yoga,Skipped exercise
+24-05-2022,86,184,Non-Veg,Walking,Drank soft drinks
+26-05-2022,104,276,Veg,Walking,Ate rice
+27-05-2022,137,285,Veg,Yoga,Ate sweets
+28-05-2022,106,287,Non-Veg,None,Ate fried food
+30-05-2022,94,205,Non-Veg,Walking,Skipped exercise
+31-05-2022,90,176,Veg,Walking,Normal diet
+02-06-2022,151,217,Veg,Yoga,Normal diet
+03-06-2022,136,269,Veg,Walking,Ate sweets
+04-06-2022,140,228,Non-Veg,Yoga,Skipped exercise
+05-06-2022,103,238,Veg,None,Had fruits
+06-06-2022,94,246,Non-Veg,Walking,Normal diet
+07-06-2022,100,286,Non-Veg,None,Ate fried food
+08-06-2022,130,215,Non-Veg,Walking,Heavy dinner
+10-06-2022,96,269,Veg,None,Good diet control
+12-06-2022,149,131,Veg,Yoga,Good diet control
+13-06-2022,150,152,Veg,Yoga,Heavy dinner
+15-06-2022,88,300,Veg,None,Normal diet
+16-06-2022,121,175,Veg,Yoga,Ate outside food
+17-06-2022,162,191,Veg,Walking,Ate sweets
+18-06-2022,115,220,Veg,None,Ate rice
+19-06-2022,113,265,Non-Veg,Walking,Had fruits
+20-06-2022,116,283,Veg,Walking,Ate fried food
+22-06-2022,110,214,Veg,None,Good diet control
+24-06-2022,137,140,Veg,None,Heavy dinner
+25-06-2022,168,217,Veg,Yoga,Had fruits
+26-06-2022,167,269,Veg,Walking,Ate fried food
+27-06-2022,111,165,Veg,Walking,Ate outside food
+29-06-2022,125,149,Veg,Walking,Ate fried food
+01-07-2022,124,263,Veg,Walking,Had fruits
+02-07-2022,99,257,Non-Veg,Yoga,Ate fried food
+03-07-2022,153,192,Non-Veg,None,Drank soft drinks
+05-07-2022,173,206,Veg,None,Drank soft drinks
+06-07-2022,171,191,Veg,None,Ate fried food
+08-07-2022,159,178,Veg,Walking,Ate rice
+09-07-2022,179,252,Veg,None,Skipped exercise
+10-07-2022,104,167,Non-Veg,Walking,Ate rice
+12-07-2022,97,160,Non-Veg,Walking,Skipped exercise
+13-07-2022,155,181,Veg,Walking,Had fruits
+15-07-2022,95,147,Veg,Yoga,Drank soft drinks
+16-07-2022,180,130,Non-Veg,Yoga,Normal diet
+17-07-2022,136,267,Non-Veg,None,Ate sweets
+19-07-2022,179,222,Veg,Walking,Normal diet
+21-07-2022,144,286,Veg,None,Skipped exercise
+22-07-2022,172,152,Veg,Yoga,Drank soft drinks
+23-07-2022,85,147,Non-Veg,Yoga,Ate fried food
+24-07-2022,126,156,Veg,None,Normal diet
+26-07-2022,118,139,Veg,Yoga,Drank soft drinks
+27-07-2022,146,300,Non-Veg,Walking,Skipped exercise
+29-07-2022,133,149,Non-Veg,Yoga,Drank soft drinks
+30-07-2022,115,149,Non-Veg,None,Normal diet
+31-07-2022,139,148,Veg,None,Good diet control
+01-08-2022,135,135,Veg,Yoga,Ate fried food
+02-08-2022,162,165,Non-Veg,Yoga,Heavy dinner
+03-08-2022,130,209,Non-Veg,None,Good diet control
+05-08-2022,129,254,Non-Veg,Walking,Skipped exercise
+07-08-2022,102,138,Non-Veg,Yoga,Good diet control
+08-08-2022,102,221,Non-Veg,Walking,Normal diet
+09-08-2022,140,147,Non-Veg,Yoga,Ate fried food
+11-08-2022,112,187,Veg,None,Ate rice
+12-08-2022,114,211,Non-Veg,Walking,Good diet control
+13-08-2022,144,210,Non-Veg,Yoga,Normal diet
+14-08-2022,150,288,Veg,Yoga,Ate sweets
+16-08-2022,155,241,Veg,None,Ate outside food
+17-08-2022,96,293,Veg,None,Ate outside food
+18-08-2022,146,295,Veg,Walking,Drank soft drinks
+20-08-2022,88,251,Non-Veg,None,Skipped exercise
+21-08-2022,171,171,Veg,Walking,Normal diet
+23-08-2022,178,162,Veg,Walking,Ate fried food
+24-08-2022,87,181,Veg,Walking,Ate sweets
+25-08-2022,102,143,Veg,Walking,Good diet control
+26-08-2022,160,130,Veg,Walking,Ate outside food
+27-08-2022,163,150,Veg,Yoga,Ate sweets
+29-08-2022,120,164,Veg,None,Ate rice
+30-08-2022,120,161,Non-Veg,Walking,Ate fried food
+01-09-2022,97,198,Non-Veg,None,Ate fried food
+03-09-2022,104,160,Veg,None,Good diet control
+04-09-2022,143,293,Non-Veg,Yoga,Ate sweets
+06-09-2022,160,273,Non-Veg,None,Good diet control
+08-09-2022,129,195,Veg,Yoga,Ate outside food
+09-09-2022,106,261,Non-Veg,Walking,Normal diet
+10-09-2022,157,133,Non-Veg,Walking,Ate fried food
+11-09-2022,150,234,Non-Veg,Yoga,Ate sweets
+13-09-2022,155,275,Veg,None,Good diet control
+14-09-2022,105,294,Non-Veg,Yoga,Ate outside food
+16-09-2022,160,173,Non-Veg,Walking,Ate sweets
+18-09-2022,176,154,Veg,Walking,Ate outside food
+19-09-2022,163,250,Non-Veg,Walking,Ate fried food
+21-09-2022,93,227,Non-Veg,Walking,Good diet control
+23-09-2022,101,213,Veg,None,Heavy dinner
+25-09-2022,88,142,Veg,None,Normal diet
+27-09-2022,179,133,Veg,None,Skipped exercise
+28-09-2022,172,270,Veg,Walking,Ate outside food
+30-09-2022,103,256,Veg,Walking,Ate fried food
+02-10-2022,94,152,Non-Veg,None,Drank soft drinks
+04-10-2022,143,203,Veg,None,Drank soft drinks
+05-10-2022,129,225,Veg,Walking,Ate fried food
+06-10-2022,167,286,Veg,Yoga,Had fruits
+08-10-2022,163,245,Non-Veg,None,Ate outside food
+10-10-2022,94,265,Non-Veg,Walking,Ate fried food
+12-10-2022,105,281,Non-Veg,None,Normal diet
+13-10-2022,113,184,Non-Veg,None,Ate rice
+14-10-2022,158,167,Non-Veg,Walking,Drank soft drinks
+16-10-2022,107,242,Veg,Yoga,Ate rice
+18-10-2022,110,147,Veg,Walking,Ate fried food
+19-10-2022,139,149,Veg,None,Ate fried food
+20-10-2022,126,207,Non-Veg,Yoga,Drank soft drinks
+21-10-2022,91,269,Veg,Yoga,Skipped exercise
+22-10-2022,166,178,Non-Veg,None,Skipped exercise
+23-10-2022,87,232,Veg,Walking,Skipped exercise
+24-10-2022,99,196,Veg,None,Ate outside food
+26-10-2022,112,213,Non-Veg,Yoga,Had fruits
+28-10-2022,143,189,Veg,None,Normal diet
+29-10-2022,177,148,Veg,Walking,Drank soft drinks
+31-10-2022,90,251,Non-Veg,None,Ate rice
+01-11-2022,137,259,Veg,Walking,Drank soft drinks
+02-11-2022,126,295,Non-Veg,Walking,Ate sweets
+04-11-2022,159,250,Non-Veg,None,Ate outside food
+05-11-2022,168,243,Non-Veg,Yoga,Skipped exercise
+06-11-2022,176,239,Non-Veg,Walking,Ate fried food
+08-11-2022,175,207,Non-Veg,Walking,Ate fried food
+10-11-2022,95,158,Veg,Walking,Good diet control
+11-11-2022,101,282,Non-Veg,None,Skipped exercise
+13-11-2022,85,210,Non-Veg,None,Good diet control
+14-11-2022,156,236,Non-Veg,None,Good diet control
+16-11-2022,139,227,Veg,Yoga,Ate fried food
+18-11-2022,176,181,Veg,Walking,Had fruits
+20-11-2022,171,209,Veg,None,Normal diet
+22-11-2022,149,298,Non-Veg,None,Good diet control
+23-11-2022,151,181,Non-Veg,None,Ate outside food
+25-11-2022,128,157,Veg,Yoga,Heavy dinner
+26-11-2022,148,290,Non-Veg,Walking,Ate fried food
+27-11-2022,99,191,Non-Veg,Walking,Good diet control
+28-11-2022,148,252,Non-Veg,None,Normal diet
+29-11-2022,169,242,Non-Veg,Yoga,Ate fried food
+01-12-2022,133,180,Non-Veg,None,Ate outside food
+03-12-2022,145,132,Non-Veg,None,Normal diet
+05-12-2022,98,299,Non-Veg,None,Normal diet
+07-12-2022,134,193,Veg,Yoga,Ate outside food
+08-12-2022,175,251,Veg,None,Normal diet
+09-12-2022,147,263,Non-Veg,Walking,Good diet control
+11-12-2022,129,217,Veg,Yoga,Normal diet
+13-12-2022,95,190,Non-Veg,None,Had fruits
+14-12-2022,147,234,Veg,Walking,Heavy dinner
+15-12-2022,116,249,Veg,Yoga,Ate rice
+16-12-2022,117,164,Veg,Walking,Ate rice
+17-12-2022,144,273,Veg,Yoga,Heavy dinner
+18-12-2022,152,169,Veg,Walking,Ate outside food
+19-12-2022,122,247,Veg,Walking,Skipped exercise
+21-12-2022,97,262,Veg,None,Had fruits
+22-12-2022,97,135,Non-Veg,Walking,Ate sweets
+23-12-2022,92,266,Non-Veg,Walking,Ate fried food
+25-12-2022,149,164,Non-Veg,Yoga,Ate outside food
+26-12-2022,96,262,Non-Veg,None,Ate outside food
+28-12-2022,91,217,Veg,Yoga,Good diet control
+29-12-2022,149,285,Veg,Walking,Ate sweets
+30-12-2022,124,240,Veg,Yoga,Ate fried food
+01-01-2023,149,139,Non-Veg,None,Ate outside food
+03-01-2023,89,288,Non-Veg,Walking,Skipped exercise
+04-01-2023,147,289,Non-Veg,None,Ate fried food
+05-01-2023,145,141,Veg,Walking,Ate rice
+07-01-2023,116,254,Non-Veg,Walking,Had fruits
+09-01-2023,179,186,Veg,Walking,Ate outside food
+11-01-2023,135,222,Veg,None,Had fruits
+12-01-2023,133,215,Veg,None,Skipped exercise
+13-01-2023,110,260,Veg,Yoga,Ate sweets
+14-01-2023,178,196,Veg,Walking,Ate sweets
+15-01-2023,173,190,Veg,Walking,Ate rice
+17-01-2023,156,135,Non-Veg,Walking,Heavy dinner
+19-01-2023,141,244,Veg,Walking,Ate sweets
+20-01-2023,104,163,Non-Veg,None,Ate rice
+22-01-2023,153,299,Veg,Yoga,Ate rice
+24-01-2023,142,213,Veg,Yoga,Ate rice
+25-01-2023,97,259,Veg,None,Heavy dinner
+26-01-2023,136,261,Veg,Walking,Normal diet
+28-01-2023,93,140,Veg,Yoga,Ate fried food
+29-01-2023,172,136,Veg,None,Good diet control
+31-01-2023,122,258,Non-Veg,None,Ate rice
+02-02-2023,110,177,Veg,Yoga,Skipped exercise
+04-02-2023,177,183,Veg,Walking,Good diet control
+06-02-2023,121,211,Veg,Walking,Drank soft drinks
+08-02-2023,133,239,Veg,Walking,Ate fried food
+09-02-2023,108,259,Veg,Walking,Ate fried food
+11-02-2023,157,267,Veg,Walking,Ate rice
+12-02-2023,161,287,Veg,Walking,Drank soft drinks
+14-02-2023,148,294,Non-Veg,Yoga,Ate rice
+16-02-2023,90,157,Veg,Walking,Ate sweets
+17-02-2023,140,239,Non-Veg,None,Heavy dinner
+18-02-2023,163,218,Veg,Walking,Ate fried food
+20-02-2023,95,139,Veg,None,Drank soft drinks
+21-02-2023,153,150,Non-Veg,Yoga,Ate rice
+22-02-2023,175,155,Non-Veg,None,Normal diet
+23-02-2023,159,131,Veg,Yoga,Drank soft drinks
+24-02-2023,164,207,Non-Veg,None,Drank soft drinks
+25-02-2023,170,136,Non-Veg,None,Ate rice
+26-02-2023,118,142,Non-Veg,Yoga,Drank soft drinks
+27-02-2023,143,278,Non-Veg,Walking,Heavy dinner
+28-02-2023,143,276,Non-Veg,Walking,Ate sweets
+02-03-2023,112,279,Non-Veg,Yoga,Ate outside food
+03-03-2023,137,274,Veg,None,Ate fried food
+05-03-2023,142,238,Non-Veg,Yoga,Had fruits
+07-03-2023,139,212,Non-Veg,Walking,Heavy dinner
+09-03-2023,150,268,Veg,None,Heavy dinner
+10-03-2023,133,186,Non-Veg,None,Heavy dinner
+12-03-2023,141,217,Non-Veg,Walking,Drank soft drinks
+14-03-2023,91,130,Veg,None,Heavy dinner
+16-03-2023,111,295,Veg,None,Drank soft drinks
+17-03-2023,86,284,Non-Veg,Yoga,Good diet control
+18-03-2023,137,247,Non-Veg,Walking,Good diet control
+19-03-2023,129,228,Veg,Yoga,Skipped exercise
+20-03-2023,135,231,Veg,Walking,Good diet control
+21-03-2023,88,159,Veg,None,Ate sweets
+23-03-2023,156,164,Veg,Walking,Good diet control
+25-03-2023,99,195,Veg,Yoga,Ate outside food
+27-03-2023,174,186,Non-Veg,Yoga,Ate fried food
+28-03-2023,147,207,Veg,Walking,Drank soft drinks
+30-03-2023,116,221,Non-Veg,Yoga,Ate sweets
+31-03-2023,112,243,Non-Veg,None,Good diet control
+01-04-2023,168,137,Veg,Yoga,Normal diet
+03-04-2023,130,208,Non-Veg,Walking,Had fruits
+04-04-2023,157,229,Veg,None,Had fruits
+06-04-2023,87,148,Veg,Walking,Good diet control
+08-04-2023,103,160,Non-Veg,Yoga,Good diet control
+10-04-2023,116,252,Non-Veg,None,Ate rice
+11-04-2023,110,223,Non-Veg,None,Had fruits
+12-04-2023,180,157,Non-Veg,Walking,Good diet control
+13-04-2023,152,133,Non-Veg,None,Ate outside food
+15-04-2023,115,154,Non-Veg,Yoga,Ate outside food
+17-04-2023,158,251,Veg,Walking,Ate rice
+19-04-2023,132,300,Non-Veg,None,Ate fried food
+20-04-2023,159,296,Veg,Walking,Ate sweets
+21-04-2023,145,221,Veg,Walking,Good diet control
+22-04-2023,151,238,Veg,Yoga,Ate fried food
+24-04-2023,161,217,Non-Veg,Yoga,Skipped exercise
+26-04-2023,137,185,Veg,None,Ate sweets
+27-04-2023,103,192,Veg,Yoga,Ate outside food
+28-04-2023,138,162,Veg,None,Normal diet
+29-04-2023,106,161,Veg,None,Had fruits
+30-04-2023,159,277,Veg,None,Drank soft drinks
+01-05-2023,87,290,Veg,Yoga,Skipped exercise
+03-05-2023,100,197,Non-Veg,Walking,Drank soft drinks
+04-05-2023,178,222,Non-Veg,None,Skipped exercise
+06-05-2023,160,282,Veg,Yoga,Good diet control
+08-05-2023,175,149,Veg,None,Drank soft drinks
+10-05-2023,113,168,Veg,None,Drank soft drinks
+11-05-2023,97,265,Non-Veg,Walking,Skipped exercise
+13-05-2023,180,212,Non-Veg,Walking,Skipped exercise
+15-05-2023,116,286,Non-Veg,Walking,Skipped exercise
+16-05-2023,179,277,Non-Veg,Yoga,Ate sweets
+18-05-2023,95,291,Veg,Walking,Ate fried food
+20-05-2023,94,289,Veg,Walking,Had fruits
+22-05-2023,125,195,Non-Veg,Yoga,Good diet control
+24-05-2023,152,247,Non-Veg,Walking,Ate sweets
+26-05-2023,176,232,Veg,Yoga,Skipped exercise
+27-05-2023,146,158,Non-Veg,Walking,Drank soft drinks
+29-05-2023,157,224,Non-Veg,Yoga,Drank soft drinks
+31-05-2023,167,209,Veg,Yoga,Ate rice
+02-06-2023,118,262,Veg,Walking,Normal diet
+04-06-2023,93,297,Veg,Walking,Ate outside food
+06-06-2023,94,133,Veg,Yoga,Good diet control
+07-06-2023,136,260,Veg,Yoga,Heavy dinner
+09-06-2023,150,281,Non-Veg,Walking,Normal diet
+11-06-2023,100,230,Veg,Yoga,Ate sweets
+12-06-2023,166,282,Veg,Walking,Had fruits
+13-06-2023,152,158,Non-Veg,Walking,Ate fried food
+14-06-2023,123,246,Non-Veg,None,Heavy dinner
+16-06-2023,180,296,Non-Veg,None,Ate outside food
+17-06-2023,111,167,Veg,Yoga,Normal diet
+19-06-2023,160,199,Non-Veg,None,Good diet control
+21-06-2023,173,150,Non-Veg,Yoga,Heavy dinner
+23-06-2023,90,265,Veg,None,Skipped exercise
+25-06-2023,87,269,Non-Veg,Walking,Normal diet
+27-06-2023,141,267,Non-Veg,None,Ate fried food
+29-06-2023,114,260,Veg,Yoga,Ate fried food
+30-06-2023,85,226,Non-Veg,Walking,Drank soft drinks
+02-07-2023,97,158,Veg,Walking,Good diet control
+03-07-2023,127,198,Veg,Yoga,Ate fried food
+04-07-2023,143,178,Veg,None,Skipped exercise
+06-07-2023,102,242,Non-Veg,Yoga,Normal diet
+08-07-2023,148,200,Veg,Yoga,Drank soft drinks
+10-07-2023,131,277,Non-Veg,Walking,Ate fried food
+12-07-2023,141,249,Non-Veg,None,Normal diet
+13-07-2023,142,227,Veg,Walking,Ate rice
+14-07-2023,85,148,Non-Veg,Walking,Ate fried food
+16-07-2023,144,270,Non-Veg,None,Ate sweets
+18-07-2023,155,255,Non-Veg,Walking,Skipped exercise
+20-07-2023,151,173,Non-Veg,Walking,Skipped exercise
+21-07-2023,164,155,Non-Veg,Yoga,Ate rice
+22-07-2023,171,286,Veg,Walking,Ate outside food
+24-07-2023,88,137,Non-Veg,Walking,Good diet control
+25-07-2023,125,169,Veg,None,Ate fried food
+27-07-2023,149,202,Non-Veg,None,Good diet control
+29-07-2023,158,160,Non-Veg,None,Normal diet
+30-07-2023,163,246,Veg,None,Had fruits
+01-08-2023,104,232,Non-Veg,None,Skipped exercise
+02-08-2023,167,155,Veg,Yoga,Ate sweets
+04-08-2023,135,231,Veg,Walking,Drank soft drinks
+06-08-2023,126,264,Non-Veg,Walking,Normal diet
+07-08-2023,128,202,Veg,None,Heavy dinner
+09-08-2023,161,172,Non-Veg,Walking,Ate outside food
+10-08-2023,102,147,Non-Veg,Yoga,Normal diet
+11-08-2023,121,243,Non-Veg,Walking,Normal diet
+12-08-2023,172,262,Non-Veg,Walking,Drank soft drinks
+13-08-2023,113,246,Non-Veg,None,Normal diet
+14-08-2023,97,150,Veg,None,Ate outside food
+15-08-2023,158,153,Non-Veg,Walking,Skipped exercise
+16-08-2023,121,217,Non-Veg,Yoga,Good diet control
+17-08-2023,180,134,Veg,Walking,Ate fried food
+18-08-2023,139,277,Non-Veg,None,Ate sweets
+19-08-2023,162,141,Veg,Walking,Good diet control
+20-08-2023,102,248,Veg,Walking,Good diet control
+22-08-2023,161,283,Non-Veg,Yoga,Good diet control
+24-08-2023,89,155,Non-Veg,Walking,Heavy dinner
+25-08-2023,165,183,Veg,Yoga,Ate fried food
+26-08-2023,150,228,Non-Veg,Yoga,Had fruits
+27-08-2023,88,264,Non-Veg,Walking,Ate outside food
+28-08-2023,175,299,Veg,None,Ate rice
+30-08-2023,178,292,Veg,Walking,Ate sweets
+31-08-2023,150,141,Non-Veg,Yoga,Ate outside food
+01-09-2023,149,134,Non-Veg,Yoga,Heavy dinner
+03-09-2023,175,246,Veg,Walking,Drank soft drinks
+04-09-2023,151,161,Veg,None,Had fruits
+06-09-2023,133,223,Veg,Walking,Heavy dinner
+08-09-2023,140,230,Veg,Walking,Normal diet
+09-09-2023,123,195,Non-Veg,None,Good diet control
+10-09-2023,167,149,Non-Veg,None,Ate outside food
+11-09-2023,110,278,Veg,Yoga,Ate fried food
+13-09-2023,155,171,Non-Veg,Yoga,Drank soft drinks
+14-09-2023,143,199,Non-Veg,None,Ate outside food
+16-09-2023,107,210,Veg,Walking,Ate fried food
+17-09-2023,125,248,Non-Veg,None,Normal diet
+18-09-2023,112,158,Non-Veg,None,Drank soft drinks
+20-09-2023,167,137,Non-Veg,Yoga,Ate sweets
+21-09-2023,124,269,Veg,None,Ate outside food
+22-09-2023,157,289,Non-Veg,Yoga,Had fruits
+24-09-2023,85,261,Non-Veg,Yoga,Ate fried food
+26-09-2023,125,284,Veg,Yoga,Heavy dinner
+27-09-2023,89,269,Veg,Walking,Ate outside food
+29-09-2023,107,199,Veg,None,Good diet control
+01-10-2023,116,191,Veg,None,Drank soft drinks
+03-10-2023,164,205,Non-Veg,Walking,Drank soft drinks
+04-10-2023,92,144,Non-Veg,None,Ate fried food
+06-10-2023,179,289,Veg,Walking,Skipped exercise
+08-10-2023,144,283,Non-Veg,Walking,Drank soft drinks
+10-10-2023,102,211,Non-Veg,Walking,Ate sweets
+11-10-2023,125,260,Veg,Yoga,Ate fried food
+12-10-2023,98,246,Non-Veg,Walking,Ate rice
+13-10-2023,86,290,Veg,Walking,Skipped exercise
+15-10-2023,92,174,Non-Veg,Walking,Good diet control
+16-10-2023,151,244,Non-Veg,None,Ate sweets
+17-10-2023,176,182,Non-Veg,None,Drank soft drinks
+19-10-2023,151,171,Non-Veg,None,Heavy dinner
+21-10-2023,140,278,Non-Veg,Yoga,Had fruits
+23-10-2023,116,223,Non-Veg,Yoga,Skipped exercise
+24-10-2023,95,281,Non-Veg,Walking,Skipped exercise
+26-10-2023,134,181,Veg,None,Ate rice
+28-10-2023,119,147,Non-Veg,Yoga,Ate rice
+30-10-2023,164,290,Veg,Yoga,Had fruits
+01-11-2023,162,284,Non-Veg,None,Had fruits
+02-11-2023,126,251,Non-Veg,Yoga,Ate fried food
+04-11-2023,169,293,Veg,Walking,Normal diet
+06-11-2023,95,203,Veg,Yoga,Good diet control
+08-11-2023,112,183,Non-Veg,Yoga,Ate rice
+09-11-2023,136,196,Non-Veg,Walking,Ate outside food
+10-11-2023,96,209,Veg,Walking,Ate fried food
+11-11-2023,110,294,Non-Veg,Walking,Had fruits
+13-11-2023,146,182,Veg,Walking,Normal diet
+14-11-2023,146,258,Non-Veg,None,Had fruits
+15-11-2023,157,223,Veg,Walking,Ate rice
+17-11-2023,130,145,Veg,Yoga,Ate outside food
+18-11-2023,104,250,Veg,Walking,Ate fried food
+19-11-2023,157,280,Veg,Walking,Normal diet
+20-11-2023,123,163,Non-Veg,Walking,Drank soft drinks
+22-11-2023,154,145,Non-Veg,None,Heavy dinner
+23-11-2023,129,170,Non-Veg,None,Drank soft drinks
+24-11-2023,86,214,Veg,None,Ate rice
+25-11-2023,117,160,Veg,None,Normal diet
+26-11-2023,174,258,Veg,None,Had fruits
+27-11-2023,129,162,Non-Veg,Yoga,Ate rice
+28-11-2023,171,243,Veg,Yoga,Ate rice
+29-11-2023,156,155,Non-Veg,None,Normal diet
+01-12-2023,114,284,Non-Veg,None,Ate fried food
+03-12-2023,176,169,Non-Veg,Walking,Heavy dinner
+04-12-2023,148,205,Veg,Walking,Heavy dinner
+05-12-2023,101,177,Veg,None,Ate outside food
+07-12-2023,98,197,Veg,Yoga,Ate sweets
+09-12-2023,150,203,Veg,Yoga,Drank soft drinks
+10-12-2023,105,131,Veg,None,Ate fried food
+12-12-2023,137,181,Veg,Yoga,Ate fried food
+13-12-2023,104,267,Non-Veg,Walking,Normal diet
+15-12-2023,116,248,Veg,Yoga,Ate sweets
+17-12-2023,141,172,Non-Veg,Walking,Had fruits
+18-12-2023,129,211,Veg,Yoga,Ate sweets
+19-12-2023,130,149,Non-Veg,Yoga,Ate fried food
+21-12-2023,129,251,Non-Veg,Walking,Ate outside food
+23-12-2023,98,275,Veg,Yoga,Normal diet
+25-12-2023,132,211,Veg,Walking,Skipped exercise
+27-12-2023,139,211,Veg,Yoga,Ate fried food
+29-12-2023,141,231,Non-Veg,Yoga,Ate outside food
+31-12-2023,91,179,Non-Veg,None,Good diet control
+01-01-2024,110,177,Non-Veg,Yoga,Skipped exercise
+02-01-2024,179,132,Veg,Yoga,Ate rice
+04-01-2024,125,195,Veg,Walking,Good diet control
+05-01-2024,128,204,Non-Veg,None,Ate outside food
+06-01-2024,130,154,Veg,Yoga,Ate rice
+08-01-2024,178,217,Non-Veg,Walking,Skipped exercise
+10-01-2024,109,140,Veg,Walking,Ate rice
+12-01-2024,113,166,Non-Veg,Yoga,Ate sweets
+14-01-2024,173,202,Non-Veg,Yoga,Normal diet
+15-01-2024,115,165,Veg,Walking,Drank soft drinks
+17-01-2024,141,233,Non-Veg,None,Skipped exercise
+19-01-2024,155,261,Veg,None,Drank soft drinks
+21-01-2024,132,132,Non-Veg,None,Drank soft drinks
+22-01-2024,121,252,Non-Veg,None,Had fruits
+24-01-2024,111,174,Non-Veg,Walking,Drank soft drinks
+25-01-2024,148,146,Veg,Walking,Drank soft drinks
+27-01-2024,158,189,Veg,None,Normal diet
+29-01-2024,89,180,Non-Veg,Yoga,Ate outside food
+31-01-2024,162,223,Veg,None,Ate rice
+01-02-2024,94,293,Non-Veg,Walking,Heavy dinner
+03-02-2024,97,186,Veg,Walking,Ate fried food
+05-02-2024,100,292,Non-Veg,Yoga,Had fruits
+07-02-2024,118,166,Non-Veg,Walking,Ate outside food
+09-02-2024,125,162,Non-Veg,None,Heavy dinner
+10-02-2024,98,235,Veg,None,Good diet control
+11-02-2024,108,134,Non-Veg,Yoga,Skipped exercise
+13-02-2024,176,275,Veg,Yoga,Ate fried food
+15-02-2024,126,267,Veg,Walking,Ate fried food
+17-02-2024,120,276,Non-Veg,Walking,Ate fried food
+18-02-2024,123,167,Non-Veg,Walking,Had fruits
+19-02-2024,131,251,Veg,Walking,Skipped exercise
+21-02-2024,109,290,Veg,None,Good diet control
+22-02-2024,116,227,Non-Veg,None,Normal diet
+23-02-2024,151,245,Non-Veg,None,Had fruits
+25-02-2024,85,149,Non-Veg,Walking,Heavy dinner
+26-02-2024,151,288,Veg,Walking,Normal diet
+27-02-2024,177,293,Veg,Yoga,Drank soft drinks
+28-02-2024,105,234,Non-Veg,Yoga,Ate rice
+01-03-2024,101,254,Veg,None,Heavy dinner
+02-03-2024,146,138,Non-Veg,None,Good diet control
+04-03-2024,135,160,Veg,Walking,Heavy dinner
+06-03-2024,108,159,Veg,Walking,Ate outside food
+08-03-2024,121,202,Non-Veg,Yoga,Drank soft drinks
+09-03-2024,86,286,Veg,Yoga,Ate sweets
+11-03-2024,148,286,Veg,None,Ate outside food
+12-03-2024,107,285,Veg,None,Ate sweets
+14-03-2024,174,157,Veg,Yoga,Drank soft drinks
+16-03-2024,138,265,Non-Veg,Yoga,Drank soft drinks
+17-03-2024,168,199,Non-Veg,Walking,Normal diet
+19-03-2024,88,149,Veg,Walking,Skipped exercise
+21-03-2024,156,268,Veg,Yoga,Skipped exercise
+22-03-2024,108,187,Non-Veg,Yoga,Ate sweets
+23-03-2024,89,185,Non-Veg,None,Ate sweets
+25-03-2024,174,274,Non-Veg,Yoga,Heavy dinner
+26-03-2024,146,142,Non-Veg,None,Ate outside food
+27-03-2024,148,132,Non-Veg,Yoga,Skipped exercise
+29-03-2024,137,155,Non-Veg,None,Ate outside food
+31-03-2024,179,229,Non-Veg,Walking,Ate sweets
+01-04-2024,109,153,Non-Veg,Yoga,Ate fried food
+03-04-2024,157,200,Veg,None,Skipped exercise
+04-04-2024,165,278,Non-Veg,Yoga,Ate sweets
+05-04-2024,144,212,Non-Veg,Yoga,Heavy dinner
+07-04-2024,144,169,Non-Veg,Yoga,Ate fried food
+09-04-2024,150,266,Veg,Yoga,Drank soft drinks
+11-04-2024,130,198,Non-Veg,None,Ate outside food
+12-04-2024,109,228,Non-Veg,Walking,Had fruits
+14-04-2024,102,157,Non-Veg,Walking,Ate outside food
+15-04-2024,143,134,Veg,None,Heavy dinner
+16-04-2024,109,297,Veg,None,Had fruits
+17-04-2024,152,254,Non-Veg,None,Skipped exercise
+18-04-2024,131,192,Veg,None,Good diet control
+20-04-2024,138,269,Non-Veg,Walking,Good diet control
+21-04-2024,139,220,Veg,None,Drank soft drinks
+22-04-2024,147,164,Non-Veg,Walking,Normal diet
+23-04-2024,120,221,Veg,Walking,Ate sweets
+25-04-2024,158,243,Non-Veg,None,Ate fried food
+26-04-2024,88,182,Non-Veg,Walking,Ate rice
+28-04-2024,131,170,Veg,Walking,Ate outside food
+30-04-2024,126,216,Veg,Yoga,Good diet control
+01-05-2024,163,142,Veg,Walking,Heavy dinner
+03-05-2024,124,260,Non-Veg,Yoga,Ate fried food
+04-05-2024,171,144,Non-Veg,Walking,Skipped exercise
+06-05-2024,173,137,Veg,None,Had fruits
+08-05-2024,177,170,Non-Veg,Walking,Ate rice
+10-05-2024,173,227,Veg,Yoga,Had fruits
+12-05-2024,171,271,Veg,Walking,Ate sweets
+14-05-2024,179,264,Non-Veg,Walking,Ate sweets
+16-05-2024,131,293,Veg,None,Ate sweets
+17-05-2024,154,171,Veg,Walking,Ate sweets
+18-05-2024,106,265,Veg,Yoga,Normal diet
+19-05-2024,100,270,Veg,None,Heavy dinner
+21-05-2024,162,238,Veg,Walking,Drank soft drinks
+22-05-2024,99,210,Veg,Walking,Ate fried food
+23-05-2024,160,228,Non-Veg,Yoga,Ate sweets
+24-05-2024,138,194,Non-Veg,Yoga,Ate rice
+25-05-2024,162,130,Veg,None,Heavy dinner
+26-05-2024,154,271,Non-Veg,None,Skipped exercise
+27-05-2024,125,300,Non-Veg,Walking,Heavy dinner
+29-05-2024,148,141,Non-Veg,None,Skipped exercise
+31-05-2024,130,130,Non-Veg,Yoga,Had fruits
+01-06-2024,164,188,Veg,Walking,Heavy dinner
+02-06-2024,87,224,Non-Veg,Walking,Good diet control
+03-06-2024,136,169,Non-Veg,None,Heavy dinner
+04-06-2024,126,219,Veg,None,Normal diet
+05-06-2024,103,256,Veg,None,Normal diet
+06-06-2024,117,195,Veg,None,Ate sweets
+07-06-2024,177,295,Non-Veg,None,Drank soft drinks
+09-06-2024,94,216,Veg,Yoga,Heavy dinner
+10-06-2024,95,192,Veg,None,Good diet control
+12-06-2024,94,243,Veg,Yoga,Heavy dinner
+14-06-2024,178,187,Veg,Walking,Ate rice
+16-06-2024,159,244,Veg,Yoga,Ate fried food
+17-06-2024,125,205,Non-Veg,Yoga,Ate fried food
+19-06-2024,106,182,Non-Veg,None,Drank soft drinks
+20-06-2024,110,268,Non-Veg,Yoga,Normal diet
+22-06-2024,97,253,Veg,Walking,Normal diet
+23-06-2024,105,276,Non-Veg,Walking,Ate sweets
+25-06-2024,179,256,Non-Veg,Walking,Heavy dinner
+26-06-2024,108,229,Non-Veg,Walking,Ate outside food
+28-06-2024,97,187,Non-Veg,None,Ate sweets
+29-06-2024,143,195,Non-Veg,None,Normal diet
+01-07-2024,173,225,Non-Veg,Walking,Skipped exercise
+02-07-2024,141,234,Veg,Yoga,Ate outside food
+03-07-2024,141,200,Veg,Yoga,Good diet control
+04-07-2024,130,238,Veg,None,Had fruits
+05-07-2024,112,262,Non-Veg,None,Ate outside food
+06-07-2024,136,281,Non-Veg,Yoga,Ate rice
+07-07-2024,118,201,Non-Veg,Yoga,Good diet control
+09-07-2024,156,174,Non-Veg,Yoga,Drank soft drinks
+11-07-2024,157,210,Non-Veg,None,Ate outside food
+13-07-2024,114,282,Non-Veg,None,Ate sweets
+14-07-2024,154,254,Non-Veg,Yoga,Drank soft drinks
+15-07-2024,135,172,Non-Veg,Yoga,Good diet control
+16-07-2024,143,283,Veg,Walking,Ate outside food
+17-07-2024,109,162,Non-Veg,Yoga,Skipped exercise
+19-07-2024,96,179,Veg,Walking,Ate sweets
+20-07-2024,166,284,Veg,Yoga,Good diet control
+22-07-2024,118,247,Veg,Yoga,Ate rice
+24-07-2024,144,178,Veg,None,Skipped exercise
+25-07-2024,104,160,Non-Veg,None,Ate sweets
+27-07-2024,129,300,Non-Veg,Yoga,Skipped exercise
+28-07-2024,171,200,Non-Veg,None,Ate outside food
+30-07-2024,137,193,Non-Veg,Walking,Had fruits
+31-07-2024,131,181,Non-Veg,None,Ate fried food
+02-08-2024,95,210,Veg,None,Normal diet
+04-08-2024,107,291,Non-Veg,None,Had fruits
+06-08-2024,125,279,Non-Veg,Walking,Skipped exercise
+08-08-2024,121,231,Non-Veg,Yoga,Ate sweets
+09-08-2024,115,195,Non-Veg,Walking,Normal diet
+11-08-2024,97,230,Veg,None,Skipped exercise
+12-08-2024,136,131,Veg,None,Heavy dinner
+14-08-2024,94,299,Non-Veg,Walking,Normal diet
+15-08-2024,132,154,Veg,Yoga,Heavy dinner
+16-08-2024,95,245,Veg,Yoga,Skipped exercise
+18-08-2024,146,257,Non-Veg,Yoga,Ate outside food
+19-08-2024,147,243,Veg,Walking,Ate sweets
+20-08-2024,154,226,Non-Veg,Yoga,Ate fried food
+22-08-2024,104,193,Veg,Yoga,Ate outside food
+23-08-2024,132,224,Veg,Walking,Ate rice
+25-08-2024,101,239,Non-Veg,Walking,Ate rice
+26-08-2024,135,155,Non-Veg,None,Drank soft drinks
+27-08-2024,89,217,Veg,None,Normal diet
+28-08-2024,159,213,Veg,None,Ate fried food
+30-08-2024,136,178,Veg,Yoga,Ate fried food
+01-09-2024,96,133,Non-Veg,None,Ate outside food
+03-09-2024,126,251,Veg,None,Ate outside food
+05-09-2024,144,190,Veg,Yoga,Normal diet
+07-09-2024,104,251,Non-Veg,None,Good diet control
+09-09-2024,123,258,Veg,Walking,Ate rice
+10-09-2024,156,282,Veg,None,Ate outside food
+11-09-2024,98,237,Veg,Yoga,Had fruits
+12-09-2024,151,148,Veg,None,Ate outside food
+13-09-2024,106,262,Veg,None,Heavy dinner
+15-09-2024,139,207,Veg,Yoga,Ate fried food
+16-09-2024,94,148,Veg,Walking,Good diet control
+18-09-2024,120,290,Veg,Yoga,Good diet control
+19-09-2024,111,245,Non-Veg,None,Ate outside food
+21-09-2024,149,200,Veg,None,Skipped exercise
+22-09-2024,136,150,Veg,Walking,Ate outside food
+23-09-2024,159,292,Non-Veg,Yoga,Ate outside food
+25-09-2024,92,290,Non-Veg,None,Ate fried food
+27-09-2024,162,257,Veg,Yoga,Skipped exercise
+28-09-2024,111,197,Veg,None,Ate sweets
+30-09-2024,164,204,Non-Veg,Walking,Normal diet
+02-10-2024,123,219,Veg,Yoga,Drank soft drinks
+03-10-2024,121,188,Non-Veg,Yoga,Skipped exercise
+04-10-2024,110,226,Non-Veg,None,Good diet control
+05-10-2024,119,202,Non-Veg,Yoga,Had fruits
+06-10-2024,108,277,Veg,None,Ate rice
+08-10-2024,136,133,Veg,None,Heavy dinner
+10-10-2024,88,145,Non-Veg,Walking,Ate rice
+11-10-2024,131,152,Veg,Walking,Ate outside food
+12-10-2024,103,186,Non-Veg,Walking,Good diet control
+13-10-2024,121,130,Non-Veg,Yoga,Ate outside food
+15-10-2024,143,130,Non-Veg,Walking,Ate outside food
+16-10-2024,148,296,Non-Veg,None,Drank soft drinks
+18-10-2024,141,244,Non-Veg,None,Skipped exercise
+20-10-2024,92,213,Non-Veg,Yoga,Ate outside food
+21-10-2024,91,173,Veg,None,Ate fried food
+22-10-2024,130,226,Non-Veg,None,Ate fried food
+24-10-2024,165,191,Non-Veg,Walking,Ate rice
+25-10-2024,174,163,Veg,Walking,Good diet control
+27-10-2024,144,237,Non-Veg,Yoga,Normal diet
+29-10-2024,108,280,Veg,Yoga,Ate rice
+31-10-2024,175,209,Non-Veg,Walking,Drank soft drinks
+01-11-2024,105,132,Veg,Yoga,Ate fried food
+03-11-2024,159,300,Veg,Yoga,Ate fried food
+04-11-2024,101,264,Non-Veg,Yoga,Had fruits
+06-11-2024,86,245,Non-Veg,None,Ate rice
+08-11-2024,101,179,Non-Veg,Yoga,Heavy dinner
+10-11-2024,88,206,Non-Veg,Walking,Normal diet
+11-11-2024,161,201,Non-Veg,Yoga,Normal diet
+13-11-2024,109,187,Veg,None,Normal diet
+15-11-2024,152,284,Non-Veg,None,Normal diet
+17-11-2024,143,209,Non-Veg,Walking,Good diet control
+18-11-2024,100,181,Veg,Yoga,Skipped exercise
+19-11-2024,180,207,Veg,None,Drank soft drinks
+21-11-2024,103,207,Veg,Walking,Drank soft drinks
+22-11-2024,85,130,Veg,Yoga,Normal diet
+23-11-2024,134,130,Veg,Yoga,Drank soft drinks
+24-11-2024,157,288,Veg,None,Normal diet
+25-11-2024,128,218,Non-Veg,Walking,Ate sweets
+27-11-2024,160,144,Non-Veg,None,Drank soft drinks
+28-11-2024,168,241,Non-Veg,None,Skipped exercise
+30-11-2024,128,131,Non-Veg,Yoga,Ate rice
+02-12-2024,114,171,Non-Veg,None,Heavy dinner
+03-12-2024,129,253,Non-Veg,Walking,Ate sweets
+05-12-2024,127,184,Veg,Walking,Good diet control
+07-12-2024,94,138,Veg,Yoga,Ate rice
+09-12-2024,95,255,Non-Veg,None,Ate fried food
+10-12-2024,99,201,Veg,Yoga,Ate outside food
+11-12-2024,104,228,Non-Veg,Yoga,Drank soft drinks
+12-12-2024,153,249,Veg,None,Ate fried food
+14-12-2024,136,236,Veg,Walking,Heavy dinner
+16-12-2024,156,177,Veg,None,Ate fried food
+18-12-2024,113,152,Veg,None,Had fruits
+19-12-2024,158,208,Veg,Walking,Drank soft drinks
+20-12-2024,149,146,Non-Veg,Walking,Ate fried food
+21-12-2024,163,272,Veg,Yoga,Ate fried food
+23-12-2024,98,257,Veg,Walking,Ate fried food
+24-12-2024,166,286,Non-Veg,None,Skipped exercise
+25-12-2024,116,160,Non-Veg,Yoga,Ate fried food
+26-12-2024,114,212,Non-Veg,Yoga,Ate rice
+27-12-2024,159,293,Non-Veg,None,Heavy dinner
+28-12-2024,93,155,Veg,Yoga,Heavy dinner
+30-12-2024,107,223,Non-Veg,None,Normal diet
+01-01-2025,150,289,Non-Veg,Yoga,Ate sweets
+03-01-2025,148,288,Veg,Yoga,Had fruits
+04-01-2025,170,166,Veg,Walking,Ate outside food
+06-01-2025,121,207,Non-Veg,Walking,Ate rice
+07-01-2025,141,206,Non-Veg,Yoga,Ate sweets
+09-01-2025,106,234,Non-Veg,None,Drank soft drinks
+10-01-2025,100,157,Non-Veg,Walking,Ate fried food
+11-01-2025,130,149,Veg,Yoga,Had fruits
+12-01-2025,106,159,Veg,Yoga,Drank soft drinks
+14-01-2025,139,168,Non-Veg,Yoga,Good diet control
+15-01-2025,170,219,Veg,None,Had fruits
+17-01-2025,136,213,Non-Veg,Walking,Skipped exercise
+18-01-2025,149,131,Non-Veg,Yoga,Good diet control
+19-01-2025,170,281,Non-Veg,Yoga,Ate fried food
+21-01-2025,124,231,Veg,Yoga,Good diet control
+23-01-2025,167,206,Non-Veg,Yoga,Good diet control
+25-01-2025,167,278,Veg,Yoga,Ate sweets
+27-01-2025,167,175,Non-Veg,Walking,Ate sweets
+28-01-2025,136,172,Veg,Walking,Normal diet
+29-01-2025,161,187,Non-Veg,Yoga,Had fruits
+30-01-2025,165,215,Veg,None,Skipped exercise
+31-01-2025,132,277,Veg,Yoga,Heavy dinner
+01-02-2025,145,245,Veg,Walking,Normal diet
+03-02-2025,104,263,Veg,Yoga,Drank soft drinks
+05-02-2025,170,220,Non-Veg,Walking,Ate sweets
+06-02-2025,100,189,Veg,Yoga,Ate fried food
+07-02-2025,148,246,Veg,Walking,Ate outside food
+08-02-2025,116,269,Non-Veg,None,Drank soft drinks
+10-02-2025,93,155,Veg,Yoga,Ate sweets
+11-02-2025,137,260,Veg,Walking,Ate fried food
+12-02-2025,180,149,Non-Veg,Walking,Ate fried food
+14-02-2025,147,172,Veg,Walking,Ate sweets
+15-02-2025,126,279,Non-Veg,None,Had fruits
+16-02-2025,155,250,Veg,Yoga,Normal diet
+18-02-2025,142,158,Non-Veg,Walking,Normal diet
+20-02-2025,113,146,Veg,Yoga,Ate fried food
+22-02-2025,158,268,Veg,Walking,Good diet control
+23-02-2025,134,150,Veg,Walking,Ate sweets
+25-02-2025,90,247,Veg,None,Ate fried food
+27-02-2025,155,212,Non-Veg,None,Had fruits
+28-02-2025,141,152,Veg,Walking,Ate rice
+02-03-2025,87,266,Veg,None,Heavy dinner
+04-03-2025,129,192,Non-Veg,Walking,Drank soft drinks
+05-03-2025,163,141,Non-Veg,None,Ate sweets
+06-03-2025,122,177,Non-Veg,None,Had fruits
+07-03-2025,90,155,Non-Veg,Walking,Drank soft drinks
+08-03-2025,104,258,Veg,Yoga,Ate fried food
+09-03-2025,156,281,Non-Veg,None,Normal diet
+10-03-2025,164,258,Non-Veg,Walking,Heavy dinner
+12-03-2025,93,136,Non-Veg,None,Heavy dinner
+14-03-2025,149,269,Non-Veg,None,Had fruits
+15-03-2025,177,228,Non-Veg,Yoga,Heavy dinner
+16-03-2025,145,191,Veg,None,Ate fried food
+17-03-2025,156,218,Non-Veg,Walking,Normal diet
+19-03-2025,118,231,Non-Veg,None,Ate fried food
+20-03-2025,125,210,Veg,Yoga,Ate sweets
+21-03-2025,140,192,Non-Veg,Walking,Skipped exercise
+23-03-2025,95,168,Veg,None,Skipped exercise
+25-03-2025,122,213,Non-Veg,Walking,Heavy dinner
+27-03-2025,176,234,Non-Veg,Yoga,Ate fried food
+28-03-2025,146,297,Veg,Yoga,Skipped exercise
+30-03-2025,129,190,Veg,Yoga,Ate fried food
+31-03-2025,101,259,Veg,Yoga,Drank soft drinks
+02-04-2025,113,210,Veg,None,Normal diet
+04-04-2025,144,241,Veg,None,Ate sweets
+05-04-2025,180,216,Non-Veg,Walking,Ate sweets
+07-04-2025,122,132,Veg,None,Ate sweets
+08-04-2025,162,229,Non-Veg,None,Ate fried food
+10-04-2025,151,218,Non-Veg,Yoga,Ate rice
+11-04-2025,105,234,Veg,None,Ate sweets
+12-04-2025,104,297,Non-Veg,Walking,Ate sweets
+14-04-2025,142,193,Veg,Walking,Drank soft drinks
+16-04-2025,135,196,Non-Veg,Walking,Ate sweets
+18-04-2025,118,154,Veg,Yoga,Ate outside food
+20-04-2025,129,209,Veg,Walking,Normal diet
+21-04-2025,171,232,Non-Veg,Yoga,Had fruits
+22-04-2025,153,298,Veg,Walking,Heavy dinner
+23-04-2025,104,198,Non-Veg,Walking,Ate sweets
+24-04-2025,137,225,Veg,Yoga,Drank soft drinks
+26-04-2025,142,241,Veg,None,Drank soft drinks
+28-04-2025,108,193,Non-Veg,None,Had fruits
+30-04-2025,135,186,Non-Veg,Yoga,Ate outside food
+02-05-2025,122,224,Veg,None,Ate rice
+03-05-2025,175,147,Non-Veg,None,Ate rice
+05-05-2025,122,214,Veg,None,Skipped exercise
+07-05-2025,132,192,Non-Veg,None,Good diet control
+09-05-2025,122,195,Veg,Yoga,Good diet control
+10-05-2025,92,277,Non-Veg,Walking,Drank soft drinks
+11-05-2025,121,223,Veg,Walking,Ate sweets
+13-05-2025,157,245,Veg,Walking,Ate rice
+14-05-2025,160,181,Non-Veg,Yoga,Ate outside food
+15-05-2025,146,274,Veg,Walking,Ate fried food
+17-05-2025,168,252,Veg,Yoga,Ate rice
+19-05-2025,94,153,Non-Veg,Yoga,Skipped exercise
+20-05-2025,90,204,Veg,Walking,Had fruits
+21-05-2025,106,255,Veg,Yoga,Ate rice
+22-05-2025,179,225,Non-Veg,Yoga,Ate rice
+23-05-2025,174,155,Veg,None,Heavy dinner
+24-05-2025,163,204,Veg,None,Skipped exercise
+26-05-2025,147,225,Veg,Walking,Drank soft drinks
+27-05-2025,167,193,Non-Veg,None,Good diet control
+29-05-2025,126,148,Veg,None,Had fruits
+31-05-2025,131,201,Veg,Walking,Ate fried food
+02-06-2025,161,238,Non-Veg,Yoga,Ate sweets
+04-06-2025,110,181,Non-Veg,Walking,Ate rice
+05-06-2025,145,151,Non-Veg,Yoga,Normal diet
+07-06-2025,113,296,Veg,Walking,Normal diet
+09-06-2025,168,184,Non-Veg,None,Had fruits
+10-06-2025,171,298,Veg,Yoga,Ate outside food
+12-06-2025,93,160,Veg,None,Ate outside food
+13-06-2025,126,257,Veg,Walking,Ate outside food
+14-06-2025,107,256,Veg,Yoga,Ate rice
+15-06-2025,175,239,Veg,Yoga,Heavy dinner
+16-06-2025,138,292,Veg,Walking,Ate sweets
+18-06-2025,164,220,Veg,Yoga,Normal diet
+20-06-2025,106,252,Veg,Walking,Ate rice
+21-06-2025,89,144,Veg,Yoga,Heavy dinner
+23-06-2025,109,276,Non-Veg,Yoga,Normal diet
+24-06-2025,120,300,Non-Veg,Yoga,Heavy dinner
+26-06-2025,167,133,Non-Veg,Walking,Ate rice
+28-06-2025,147,238,Veg,Walking,Skipped exercise
+30-06-2025,139,181,Non-Veg,Yoga,Good diet control
+01-07-2025,168,178,Veg,Walking,Good diet control
+03-07-2025,143,241,Non-Veg,Walking,Drank soft drinks
+04-07-2025,173,181,Veg,None,Skipped exercise
+06-07-2025,91,197,Non-Veg,Yoga,Ate outside food
+07-07-2025,103,294,Veg,None,Good diet control
+08-07-2025,103,229,Non-Veg,Yoga,Ate sweets
+09-07-2025,99,238,Veg,None,Had fruits
+11-07-2025,112,200,Veg,Yoga,Good diet control
+12-07-2025,160,209,Non-Veg,Walking,Heavy dinner
+13-07-2025,147,153,Veg,Yoga,Drank soft drinks
+14-07-2025,136,207,Veg,Walking,Good diet control
+16-07-2025,110,216,Non-Veg,Walking,Ate sweets
+17-07-2025,90,170,Non-Veg,Walking,Heavy dinner
+18-07-2025,137,189,Non-Veg,Walking,Heavy dinner
+20-07-2025,163,194,Veg,Yoga,Had fruits
+22-07-2025,99,281,Non-Veg,None,Ate fried food
+24-07-2025,125,209,Non-Veg,None,Drank soft drinks
+25-07-2025,122,287,Veg,None,Skipped exercise
+26-07-2025,104,269,Non-Veg,Yoga,Heavy dinner
+28-07-2025,104,190,Veg,Walking,Drank soft drinks
+30-07-2025,139,250,Non-Veg,None,Ate rice
+31-07-2025,175,229,Veg,None,Drank soft drinks
+02-08-2025,174,150,Veg,Walking,Had fruits
+04-08-2025,177,136,Veg,Yoga,Ate sweets
+06-08-2025,85,263,Veg,None,Drank soft drinks
+08-08-2025,113,241,Veg,Walking,Had fruits
+09-08-2025,162,277,Veg,Yoga,Heavy dinner
+11-08-2025,178,281,Veg,Walking,Good diet control
+13-08-2025,148,176,Veg,Walking,Normal diet
+15-08-2025,104,231,Veg,Walking,Skipped exercise
+16-08-2025,110,156,Non-Veg,Yoga,Ate sweets
+18-08-2025,131,291,Non-Veg,None,Drank soft drinks
+19-08-2025,114,214,Veg,Yoga,Good diet control
+21-08-2025,168,205,Non-Veg,Yoga,Ate outside food
+23-08-2025,135,160,Non-Veg,None,Ate outside food
+24-08-2025,142,255,Non-Veg,Walking,Ate sweets
+25-08-2025,173,172,Veg,None,Normal diet
+26-08-2025,176,137,Veg,None,Skipped exercise
+28-08-2025,175,259,Veg,Walking,Normal diet
+30-08-2025,144,214,Non-Veg,Walking,Ate fried food
+31-08-2025,90,283,Veg,None,Good diet control
+01-09-2025,147,297,Non-Veg,Walking,Had fruits
+03-09-2025,176,135,Non-Veg,None,Skipped exercise
+05-09-2025,178,296,Veg,Yoga,Drank soft drinks
+07-09-2025,171,139,Veg,Walking,Ate rice
+08-09-2025,130,219,Veg,Yoga,Ate sweets
+09-09-2025,149,235,Non-Veg,Walking,Good diet control
+11-09-2025,147,281,Veg,Yoga,Good diet control
+13-09-2025,116,176,Non-Veg,None,Had fruits
+15-09-2025,115,276,Non-Veg,Walking,Ate rice
+16-09-2025,170,168,Non-Veg,None,Ate fried food
+17-09-2025,148,215,Non-Veg,None,Good diet control
+19-09-2025,151,272,Veg,Yoga,Heavy dinner
+21-09-2025,89,208,Non-Veg,None,Heavy dinner
+22-09-2025,139,155,Veg,Walking,Ate rice
+23-09-2025,141,219,Non-Veg,Walking,Drank soft drinks
+25-09-2025,163,199,Veg,None,Drank soft drinks
+27-09-2025,125,199,Non-Veg,None,Good diet control
+28-09-2025,158,139,Veg,Yoga,Ate outside food
+29-09-2025,86,162,Non-Veg,Walking,Ate rice
+01-10-2025,101,209,Non-Veg,Yoga,Ate fried food
+03-10-2025,164,218,Non-Veg,Yoga,Had fruits
+04-10-2025,124,240,Veg,Walking,Ate rice
+05-10-2025,135,297,Veg,None,Drank soft drinks
+07-10-2025,138,240,Veg,Yoga,Had fruits
+09-10-2025,135,255,Veg,Walking,Normal diet
+11-10-2025,94,158,Veg,Yoga,Drank soft drinks
+13-10-2025,143,157,Veg,Walking,Drank soft drinks
+14-10-2025,130,284,Veg,None,Good diet control
+16-10-2025,107,142,Veg,None,Good diet control
+18-10-2025,153,136,Veg,Yoga,Drank soft drinks
+19-10-2025,104,188,Veg,None,Ate sweets
+21-10-2025,153,157,Non-Veg,Walking,Ate fried food
+23-10-2025,122,167,Veg,Walking,Ate sweets
+25-10-2025,92,263,Non-Veg,Walking,Normal diet
+26-10-2025,111,214,Non-Veg,Walking,Ate fried food
+27-10-2025,162,266,Non-Veg,Walking,Skipped exercise
+29-10-2025,153,231,Non-Veg,Yoga,Ate rice
+31-10-2025,141,201,Non-Veg,None,Ate sweets
+01-11-2025,128,157,Veg,Walking,Skipped exercise
+02-11-2025,169,150,Veg,Walking,Heavy dinner
+03-11-2025,103,181,Non-Veg,Yoga,Ate fried food
+05-11-2025,139,228,Veg,Walking,Drank soft drinks
+07-11-2025,105,223,Veg,Walking,Ate rice
+08-11-2025,119,146,Non-Veg,None,Good diet control
+10-11-2025,85,240,Veg,Yoga,Heavy dinner
+11-11-2025,177,139,Veg,Walking,Drank soft drinks
+12-11-2025,180,278,Veg,Walking,Heavy dinner
+13-11-2025,86,159,Non-Veg,Walking,Ate rice
+14-11-2025,135,160,Veg,None,Had fruits
+16-11-2025,158,151,Veg,Walking,Ate outside food
+17-11-2025,92,291,Non-Veg,None,Ate sweets
+18-11-2025,161,285,Veg,Walking,Ate fried food
+20-11-2025,132,273,Non-Veg,Walking,Had fruits
+22-11-2025,121,269,Non-Veg,Walking,Ate outside food
+24-11-2025,150,133,Non-Veg,Walking,Good diet control
+26-11-2025,112,244,Veg,Yoga,Ate outside food
+28-11-2025,174,264,Non-Veg,Walking,Had fruits
+30-11-2025,123,143,Non-Veg,Yoga,Normal diet
+02-12-2025,96,262,Non-Veg,None,Drank soft drinks
+04-12-2025,90,251,Non-Veg,None,Heavy dinner
+06-12-2025,180,199,Veg,Walking,Normal diet
+07-12-2025,102,294,Veg,Yoga,Ate fried food
+08-12-2025,142,211,Veg,Walking,Ate fried food
+10-12-2025,118,224,Veg,None,Good diet control
+12-12-2025,123,293,Non-Veg,Walking,Skipped exercise
+13-12-2025,153,252,Non-Veg,Yoga,Ate outside food
+14-12-2025,126,200,Veg,Yoga,Skipped exercise
+16-12-2025,102,283,Veg,Walking,Ate rice
+18-12-2025,110,183,Veg,Yoga,Normal diet
+19-12-2025,179,240,Non-Veg,Walking,Ate rice
+20-12-2025,163,178,Non-Veg,Yoga,Good diet control
+21-12-2025,155,168,Veg,Yoga,Ate outside food
+22-12-2025,157,262,Non-Veg,None,Ate rice
+23-12-2025,105,167,Veg,None,Had fruits
+25-12-2025,130,242,Veg,Yoga,Normal diet
+01-01-2026,169,170,Non-Veg,Walking,Heavy dinner
+02-01-2026,99,159,Non-Veg,Yoga,Good diet control
+03-01-2026,175,222,Non-Veg,Walking,Ate rice
+04-01-2026,155,260,Non-Veg,Yoga,Had fruits
+05-01-2026,170,215,Non-Veg,None,Ate outside food
+06-01-2026,173,203,Non-Veg,Yoga,Good diet control
+07-01-2026,127,265,Veg,Walking,Ate sweets
+08-01-2026,167,269,Non-Veg,Walking,Ate outside food
+09-01-2026,134,258,Non-Veg,Yoga,Ate outside food
+10-01-2026,88,174,Veg,Yoga,Ate outside food
+11-01-2026,122,132,Veg,None,Had fruits
+12-01-2026,144,295,Veg,Yoga,Drank soft drinks

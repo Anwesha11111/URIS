@@ -1,0 +1,65 @@
+{
+  "model_type": "AdaBoostClassifier",
+  "n_estimators": 50,
+  "learning_rate": 0.5,
+  "feature_names": [
+    "Fasting_Sugar",
+    "Post_Meal_Sugar",
+    "Fasting_Deviation",
+    "PostMeal_Deviation",
+    "Diet_Encoded",
+    "Exercise_Encoded",
+    "Has_Sweets",
+    "Has_Fried",
+    "Has_SoftDrinks",
+    "Has_GoodDiet",
+    "Skipped_Exercise"
+  ],
+  "scaler_mean": [
+    132.3025,
+    214.70541666666668,
+    32.3025,
+    74.70541666666666,
+    0.5004166666666666,
+    1.0025,
+    0.10333333333333333,
+    0.1075,
+    0.1025,
+    0.1,
+    0.095
+  ],
+  "scaler_scale": [
+    27.601633292554745,
+    49.37515708659962,
+    27.601633292554748,
+    49.37515708659962,
+    0.4999998263888587,
+    0.8164927535910327,
+    0.3043937508483963,
+    0.3097478813486866,
+    0.30330471476717935,
+    0.3,
+    0.293214938227915
+  ],
+  "feature_importance": [
+    0.18968893104605244,
+    0.23699239518241744,
+    0.25454806807284563,
+    0.3187706056986847,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "risk_categories": [
+    "Low Risk (0-25)",
+    "Moderate Risk (26-50)",
+    "High Risk (51-75)",
+    "Critical Risk (76-100)"
+  ],
+  "accuracy": 0.7583333333333333,
+  "f1_score": 0.6869180633147114
+}

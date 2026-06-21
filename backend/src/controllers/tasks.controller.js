@@ -10,11 +10,31 @@ const { validatePagination } = require('../utils/validate');
 const { randomUUID } = require('crypto');
 const logger = require('../utils/logger');
 
-async function getTasksOverview(req, res, next) {
+// ── FIX 13: Throttle cache — prevents sync/stale-detection on every page load ─
+// Heavy operations (Plane sync, stale detection, blocker generation) run at most
+// once per 5 minutes across all requests. Page loads just read from DB.
+const SYNC_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes
+let _lastSyncAt = 0;
+
+async function _runBackgroundOpsIfDue() {
+  const now = Date.now();
+  if (now - _lastSyncAt < SYNC_THROTTLE_MS) return;
+  _lastSyncAt = now; // mark immediately to prevent concurrent triggers
   try {
     await syncTasksFromPlane();
-    const staleCount = await detectAndMarkStaleTasks();
+    await detectAndMarkStaleTasks();
     await generateBlockerAlerts();
+    logger.info('Background task ops (sync/stale/blocker) completed');
+  } catch (err) {
+    _lastSyncAt = 0; // reset so next request retries
+    logger.warn({ err: err.message }, 'Background task ops failed');
+  }
+}
+
+async function getTasksOverview(req, res, next) {
+  try {
+    // FIX 13: Fire-and-forget background ops — never block the response
+    _runBackgroundOpsIfDue().catch(() => {});
 
     const filter = await getTaskFilter(req.user);
     const overview = await getTasksOverviewForAllInterns();
@@ -25,7 +45,7 @@ async function getTasksOverview(req, res, next) {
       return true;
     });
 
-    return ok(res, filteredOverview, `Tasks overview fetched. ${staleCount} stale task(s) detected.`);
+    return ok(res, filteredOverview, 'Tasks overview fetched.');
   } catch (err) {
     next(err);
   }

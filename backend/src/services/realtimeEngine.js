@@ -218,33 +218,6 @@ function init(httpServer, allowedOrigins) {
         logger.debug({ userId, chatId }, 'Socket left chat room');
       }
     });
-
-    // ── Typing indicators (socket-only, no DB) ────────────────────────────
-    // Client emits 'chat:typing' when the user starts typing.
-    // Client emits 'chat:stop_typing' when they stop (on blur or send).
-    // We broadcast to everyone else in the room — NOT back to the sender.
-    //
-    // LOW-5: throttle chat:typing per socket per chat to 1 broadcast per 500ms.
-    // A user typing fast fires this event at keyboard speed (10-20/s). Without
-    // a throttle every keystroke becomes a broadcast to the entire chat room.
-    // 500ms is imperceptible to the recipient but cuts the event rate by ~20×.
-    socket.on('chat:typing', ({ chatId } = {}) => {
-      if (!chatId || typeof chatId !== 'string') return;
-      if (isThrottled(`typing:${socket.id}:${chatId}`, 500)) return;
-      socket.to(`chat:${chatId}`).emit('chat:user_typing', {
-        chatId,
-        userId,
-        userName: socket.data.userName ?? userId,
-      });
-    });
-
-    socket.on('chat:stop_typing', ({ chatId } = {}) => {
-      if (!chatId || typeof chatId !== 'string') return;
-      socket.to(`chat:${chatId}`).emit('chat:user_stop_typing', {
-        chatId,
-        userId,
-      });
-    });
   });
 
   logger.info('Socket.IO realtime engine initialised');

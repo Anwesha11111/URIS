@@ -57,57 +57,14 @@ export default function ChatViewPage() {
   const [readMap, setReadMap]         = useState<ReadMap>({})
   const [loading, setLoading]         = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [sending, setSending]         = useState(false)
-  const [content, setContent]         = useState(() => (chatId ? getDraft(chatId) : ''))
-  const [error, setError]             = useState('')
-  const [chatName, setChatName]       = useState('')
-  const [chatType, setChatType]       = useState<'PRIVATE' | 'GROUP' | null>(null)
-  // FEAT-S4: online presence for the other participant in PRIVATE chats
-  const [otherUserId, setOtherUserId]         = useState<string | null>(null)
-  const [otherUserOnline, setOtherUserOnline] = useState(false)
-  // FEAT-S2: block status — true if current user has blocked the other participant
-  const [isBlocked, setIsBlocked]     = useState(false)
-  const [blockLoading, setBlockLoading] = useState(false)
-  const [typingUsers, setTypingUsers] = useState<Record<string, string>>({})
+  const [sending, setSending]     = useState(false)
+  const [content, setContent]     = useState('')
+  const [error, setError]         = useState('')
+  const [chatName, setChatName]   = useState('')
 
-  // ── Search state ──────────────────────────────────────────────────────────
-  const [showSearch, setShowSearch]         = useState(false)
-  const [searchQuery, setSearchQuery]       = useState('')
-  const [searchResults, setSearchResults]   = useState<Message[] | null>(null)
-  const [searchLoading, setSearchLoading]   = useState(false)
-
-  // ── Edit state ────────────────────────────────────────────────────────────
-  const [editingId, setEditingId]     = useState<string | null>(null)
-  const [editContent, setEditContent] = useState('')
-  const [editLoading, setEditLoading] = useState(false)
-
-  const bottomRef        = useRef<HTMLDivElement>(null)
-  const inputRef         = useRef<HTMLTextAreaElement>(null)
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // LOW-3: track mount state so the debounced stop_typing callback never fires
-  // after the component has unmounted and the chat room has been left.
-  // Using a ref (not state) avoids triggering a re-render on unmount.
-  const mountedRef       = useRef(true)
-  useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
-  }, [])
-
-  // MED-2: track the page the user has explicitly loaded, independent of the
-  // server's pagination snapshot. Real-time messages appended via socket do not
-  // change this counter, so "Load older messages" always requests the correct
-  // next historical page rather than skipping rows that arrived after load.
-  const loadedPageRef    = useRef(1)
-  // MED-2: whether there are more historical pages to fetch. Stored as both a
-  // ref (for use inside callbacks without stale closure) and state (to drive
-  // the "Load older messages" button visibility reactively).
-  const hasMorePagesRef  = useRef(false)
-  const [hasMorePages, setHasMorePages] = useState(false)
-
-  // Session expiry detection — if the socket was rejected due to an expired token,
-  // show a visible banner prompting re-login (SEC-7).
-  const socketStatus = useRealtimeStore(s => s.status)
-  const isSessionExpired = socketStatus === 'auth_expired'
+  const bottomRef   = useRef<HTMLDivElement>(null)
+  const socketRef   = useRef<Socket | null>(null)
+  const inputRef    = useRef<HTMLTextAreaElement>(null)
 
   // ── Load messages ──────────────────────────────────────────────────────────
   const loadMessages = useCallback(async (page = 1, append = false) => {
@@ -177,112 +134,28 @@ export default function ChatViewPage() {
   useEffect(() => {
     if (!chatId) return
 
-    const socket = getSocket()
-    if (!socket) return
+    const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'
+    const socket = socketIO(backendUrl, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+    })
+    socketRef.current = socket
 
-    // Join the chat room on the shared socket.
-    // The server validates ChatParticipant membership before allowing the join.
-    socket.emit('chat:join', { chatId })
-
-    // HIGH-1 fix: on reconnect, re-join the room (Socket.IO rooms are server-side
-    // state — a reconnected socket starts with no rooms) and re-fetch page 1 to
-    // recover any messages that arrived during the disconnection window.
-    const handleReconnect = () => {
+    socket.on('connect', () => {
       socket.emit('chat:join', { chatId })
-      void loadMessages(1, false)
-    }
+    })
 
-    // Update the header name live when a group is renamed from the manage page
-    const handleRenamed = (data: { chatId: string; name: string }) => {
+    socket.on('newMessage', (data: { message: Message; chatId: string }) => {
       if (data.chatId !== chatId) return
-      setChatName(data.name)
-    }
-
-    // If this user is removed from the group or the group is deleted, go back to chat list
-    const handleParticipantRemoved = (data: { chatId: string; userId: string }) => {
-      if (data.chatId !== chatId) return
-      if (data.userId === user?.id) nav('/chat')
-    }
-
-    // FEAT-S1: update the read map when a participant marks the chat as read,
-    // so the sender's tick indicators switch from sent → seen in real-time.
-    const handleChatRead = (data: { chatId: string; userId: string; lastReadAt: string }) => {
-      if (data.chatId !== chatId) return
-      setReadMap(prev => ({ ...prev, [data.userId]: data.lastReadAt }))
-    }
-    const handleNewMessage = (data: { message: Message; chatId: string }) => {
-      if (data.chatId !== chatId) return
-      // Skip if already appended optimistically by the sender (BUG-C1 fix)
-      setMessages(prev => {
-        if (prev.some(m => m.id === data.message.id)) return prev
-        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-        return [...prev, data.message]
-      })
-    }
-
-    // CRIT-2 fix: apply edits broadcast by the server to the local message list.
-    // Without this handler, edits made by other participants are invisible until reload.
-    const handleMessageEdited = (data: { message: Message; chatId: string }) => {
-      if (data.chatId !== chatId) return
-      setMessages(prev =>
-        prev.map(m => m.id === data.message.id ? { ...m, content: data.message.content, editedAt: data.message.editedAt } : m)
-      )
-    }
-
-    // CRIT-2 fix: apply soft-deletes broadcast by the server to the local message list.
-    // Without this handler, deletes made by other participants are invisible until reload.
-    const handleMessageDeleted = (data: { messageId: string; chatId: string }) => {
-      if (data.chatId !== chatId) return
-      setMessages(prev =>
-        prev.map(m => m.id === data.messageId ? { ...m, isDeleted: true } : m)
-      )
-    }
-
-    // Typing indicator — add the typing user to the map
-    const handleUserTyping = (data: { chatId: string; userId: string; userName: string }) => {
-      if (data.chatId !== chatId || data.userId === user?.id) return
-      setTypingUsers(prev => ({ ...prev, [data.userId]: data.userName || 'Someone' }))
-    }
-
-    // Stop typing — remove the user from the map
-    const handleUserStopTyping = (data: { chatId: string; userId: string }) => {
-      if (data.chatId !== chatId) return
-      setTypingUsers(prev => {
-        const next = { ...prev }
-        delete next[data.userId]
-        return next
-      })
-    }
-
-    // 'connect' fires on the initial connection AND on every successful reconnect.
-    // We only want the reconnect behaviour (re-join + re-fetch), not on first mount
-    // (the initial load useEffect already handles that). Socket.IO sets
-    // socket.recovered=true when the connection was restored transparently, but
-    // we can't rely on that across all transports, so we always re-fetch.
-    // The newMessage deduplication by id prevents double-rendering.
-    socket.on('connect', handleReconnect)
-    socket.on('newMessage', handleNewMessage)
-    socket.on('messageEdited', handleMessageEdited)
-    socket.on('messageDeleted', handleMessageDeleted)
-    socket.on('chat:user_typing', handleUserTyping)
-    socket.on('chat:user_stop_typing', handleUserStopTyping)
-    socket.on('chat:renamed', handleRenamed)
-    socket.on('chat:participant_removed', handleParticipantRemoved)
-    socket.on('chat:read', handleChatRead)
+      setMessages(prev => [...prev, data.message])
+      // Scroll to bottom on new incoming message
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    })
 
     return () => {
-      socket.off('connect', handleReconnect)
-      socket.off('newMessage', handleNewMessage)
-      socket.off('messageEdited', handleMessageEdited)
-      socket.off('messageDeleted', handleMessageDeleted)
-      socket.off('chat:user_typing', handleUserTyping)
-      socket.off('chat:user_stop_typing', handleUserStopTyping)
-      socket.off('chat:renamed', handleRenamed)
-      socket.off('chat:participant_removed', handleParticipantRemoved)
-      socket.off('chat:read', handleChatRead)
       socket.emit('chat:leave', { chatId })
-      // Clear any pending typing timeout
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      socket.disconnect()
+      socketRef.current = null
     }
   }, [chatId, user?.id, loadMessages, nav])
 
@@ -313,6 +186,10 @@ export default function ChatViewPage() {
     const text = content.trim()
     if (!text || !chatId || sending) return
 
+    // Stop typing indicator before sending
+    if (typingTimer.current) clearTimeout(typingTimer.current)
+    socketRef.current?.emit('chat:typing_stop', { chatId })
+
     setSending(true)
     setContent('')
     // MED-3: clear the draft immediately on send attempt
@@ -325,30 +202,27 @@ export default function ChatViewPage() {
         `/chat/chats/${chatId}/messages`,
         { content: text }
       )
-      return res.data.data
-    }
-
-    try {
-      let message: Message
-      try {
-        message = await attemptSend()
-      } catch {
-        // First attempt failed — wait 800 ms then retry once
-        await new Promise(resolve => setTimeout(resolve, 800))
-        message = await attemptSend()
-      }
       // Optimistically append (socket will also fire for other participants)
-      setMessages(prev => [...prev, message])
+      setMessages(prev => [...prev, res.data.data])
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     } catch {
-      // Both attempts failed — restore draft so the user doesn't lose their text
-      setError('Failed to send message. Your text has been restored.')
-      setContent(text)
-      if (chatId) saveDraft(chatId, text)
+      setError('Failed to send message')
+      setContent(text) // restore on failure
     } finally {
       setSending(false)
       inputRef.current?.focus()
     }
+  }
+
+  // FIX 15: emit typing events with debounce
+  const handleTyping = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value)
+    if (!chatId || !socketRef.current) return
+    socketRef.current.emit('chat:typing', { chatId, userName: user?.name || 'Someone' })
+    if (typingTimer.current) clearTimeout(typingTimer.current)
+    typingTimer.current = setTimeout(() => {
+      socketRef.current?.emit('chat:typing_stop', { chatId })
+    }, 2000) // stop after 2s of inactivity
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -614,33 +488,11 @@ export default function ChatViewPage() {
 
           {/* Input bar */}
           <div className="flex-shrink-0 pt-3 border-t border-gold/10">
-            {/* Typing indicator */}
-            {Object.keys(typingUsers).length > 0 && (
-              <div className="flex items-center gap-1.5 mb-1.5 px-1">
-                {/* Animated dots */}
-                <span className="flex gap-0.5 items-end">
-                  {[0, 1, 2].map(i => (
-                    <span key={i} className="w-1 h-1 rounded-full bg-ice/30"
-                      style={{ animation: `bounce 1.2s ${i * 0.2}s infinite` }} />
-                  ))}
-                </span>
-                <p className="nav-label text-[0.5rem] text-ice/35 italic">
-                  {Object.values(typingUsers).join(', ')}
-                  {Object.keys(typingUsers).length === 1 ? ' is typing…' : ' are typing…'}
-                </p>
-              </div>
-            )}
             <div className="flex items-end gap-2">
               <textarea
                 ref={inputRef}
                 value={content}
-                onChange={e => {
-                  setContent(e.target.value)
-                  emitTyping()
-                  // MED-3: persist draft on every keystroke so content survives
-                  // accidental navigation, refresh, or a failed send.
-                  if (chatId) saveDraft(chatId, e.target.value)
-                }}
+                onChange={e => setContent(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onBlur={emitStopTyping}
                 placeholder="Type a message... (Enter to send, Shift+Enter for new line)"

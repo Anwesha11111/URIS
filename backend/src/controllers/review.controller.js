@@ -30,6 +30,7 @@ async function getMyReviews(req, res, next) {
       timeliness: r.timeliness,
       initiative: r.initiative,
       complexity: r.complexity,
+      notes:      r.notes ?? null,
       // PPS = Quality×0.40 + Timeliness×0.35 + Independence×0.25
       pps:        parseFloat((r.quality * 0.40 + r.timeliness * 0.35 + r.initiative * 0.25).toFixed(2)),
       createdAt:  r.createdAt,
@@ -69,6 +70,7 @@ async function getReviewForTask(req, res, next) {
         timeliness: review.timeliness,
         initiative: review.initiative,
         complexity: review.complexity,
+        notes:      review.notes ?? null,  // FIX 9 — include persisted notes
         pps:        parseFloat((review.quality * 0.40 + review.timeliness * 0.35 + review.initiative * 0.25).toFixed(2)),
         createdAt:  review.createdAt,
       });
@@ -150,6 +152,7 @@ async function submitReview(req, res, next) {
         timeliness: timelinessScore,
         initiative: independenceScore,   // DB column kept as 'initiative' for backward compat
         complexity: taskComplexity,      // use actual task complexity for weighted performance index
+        notes:      reviewNotes || null, // persist reviewer notes permanently
       },
     });
 
@@ -160,15 +163,17 @@ async function submitReview(req, res, next) {
       perTaskPps,
     });
 
-    // Notify the intern that their work has been reviewed
+    // Notify the intern that their work has been reviewed — include task title
     const scoreLabel = perTaskPps >= 4 ? 'Excellent' : perTaskPps >= 3 ? 'Good' : 'Needs improvement';
+    const reviewedTask = await prisma.task.findUnique({ where: { id: taskId }, select: { title: true } });
+    const taskTitle = reviewedTask?.title ?? 'your task';
     await prisma.alert.create({
       data: {
         internId,
         taskId,
         type:     'review_submitted',
         severity: 'warning',
-        message:  `Your work on task has been reviewed. Score: ${perTaskPps}/5 (${scoreLabel}).${reviewNotes ? ` Note: "${reviewNotes}"` : ''}`,
+        message:  `Your work on "${taskTitle}" has been reviewed. Score: ${perTaskPps}/5 (${scoreLabel}).${reviewNotes ? ` Note: "${reviewNotes}"` : ''}`,
       },
     });
 

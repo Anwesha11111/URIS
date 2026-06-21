@@ -1,0 +1,26 @@
+{
+    "contacts": [
+        {
+            "id": 1,
+            "name": "Primary Caretaker",
+            "phone": "+919980845526",
+            "relationship": "Caretaker",
+            "priority": 1
+        },
+        {
+            "id": 2,
+            "name": "Family Member",
+            "phone": "+919611207500",
+            "relationship": "Family",
+            "priority": 2
+        },
+        {
+            "id": 3,
+            "name": "Doctor",
+            "phone": "+91984548526",
+            "relationship": "Medical",
+            "priority": 3
+        }
+    ],
+    "lastUpdated": "2026-01-24T07:14:53+05:30"
+}

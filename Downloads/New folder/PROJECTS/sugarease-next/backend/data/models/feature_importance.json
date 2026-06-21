@@ -1,0 +1,46 @@
+[
+  {
+    "Feature": "PostMeal_Deviation",
+    "Importance": 0.3187706056986847
+  },
+  {
+    "Feature": "Fasting_Deviation",
+    "Importance": 0.25454806807284563
+  },
+  {
+    "Feature": "Post_Meal_Sugar",
+    "Importance": 0.23699239518241744
+  },
+  {
+    "Feature": "Fasting_Sugar",
+    "Importance": 0.18968893104605244
+  },
+  {
+    "Feature": "Diet_Encoded",
+    "Importance": 0.0
+  },
+  {
+    "Feature": "Exercise_Encoded",
+    "Importance": 0.0
+  },
+  {
+    "Feature": "Has_Sweets",
+    "Importance": 0.0
+  },
+  {
+    "Feature": "Has_Fried",
+    "Importance": 0.0
+  },
+  {
+    "Feature": "Has_SoftDrinks",
+    "Importance": 0.0
+  },
+  {
+    "Feature": "Has_GoodDiet",
+    "Importance": 0.0
+  },
+  {
+    "Feature": "Skipped_Exercise",
+    "Importance": 0.0
+  }
+]
