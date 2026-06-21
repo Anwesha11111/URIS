@@ -101,8 +101,8 @@ const register = Joi.object({
       'string.email': 'email must be a valid email address',
       'any.required': 'email is required',
     }),
-    password: Joi.string().min(6).required().messages({
-      'string.min':   'password must be at least 6 characters',
+    password: Joi.string().min(8).required().messages({
+      'string.min':   'password must be at least 8 characters',
       'any.required': 'password is required',
     }),
     name: Joi.string().trim().max(100).optional().allow('', null),

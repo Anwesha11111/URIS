@@ -496,7 +496,8 @@ export default function InternDashboard() {
               </div>
             </>
           )}
-          )}
+          </>
+        )}
 
         </div>
       </main>
