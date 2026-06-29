@@ -601,6 +601,23 @@ const getAuditLogs = Joi.object({
   }),
 });
 
+// ── Users ──────────────────────────────────────────────────────────────────────
+
+const updateUser = Joi.object({
+  body: Joi.object({
+    email: Joi.string().email({ tlds: { allow: false } }).optional().messages({
+      'string.email': 'email must be a valid email address',
+    }),
+    status: Joi.string().valid('active', 'inactive', 'alumni').optional().messages({
+      'any.only': 'status must be one of: active, inactive, alumni',
+    }),
+  }).min(1).required(),
+  params: Joi.object({
+    userId: uuid.required().messages({ 'any.required': 'userId param is required' }),
+  }).required(),
+  query: Joi.object(),
+});
+
 // ── Demo ───────────────────────────────────────────────────────────────────────
 
 const runDemo = Joi.object({
@@ -774,6 +791,82 @@ const sendMessage = Joi.object({
   query:  Joi.object(),
 });
 
+const {
+  ALL_WORK_CATEGORIES,
+  PERFORMANCE_RATINGS,
+  RECOMMENDATION_STATUSES,
+  VERIFICATION_STATUSES,
+  ARCHIVE_STATUSES,
+} = require('../constants/internshipArchive');
+
+const internshipArchiveFields = {
+  fullName:            Joi.string().trim().min(1).max(200),
+  profilePhotoUrl:     Joi.string().max(500).allow('', null),
+  email:               Joi.string().email().max(200),
+  department:          Joi.string().max(100).allow('', null),
+  reportingLead:       Joi.string().max(200).allow('', null),
+  currentRole:         Joi.string().valid(...VALID_ROLES),
+  internshipRole:      Joi.string().valid(...VALID_ROLES),
+  internshipStartDate: isoDate.allow(null),
+  internshipEndDate:   isoDate.allow(null),
+  duration:            Joi.string().max(100).allow('', null),
+  status:              Joi.string().valid(...ARCHIVE_STATUSES),
+  workCategories:      Joi.array().items(Joi.string().valid(...ALL_WORK_CATEGORIES)),
+  keyContributions:      Joi.string().max(10000).allow('', null),
+  featuredAchievements:  Joi.string().max(10000).allow('', null),
+  adminReview:           Joi.string().max(10000).allow('', null),
+  performanceRating:     Joi.string().valid(...PERFORMANCE_RATINGS).allow(null),
+  recommendationStatus:  Joi.string().valid(...RECOMMENDATION_STATUSES),
+  internalNotes:         Joi.string().max(10000).allow('', null),
+  verificationId:        Joi.string().max(100).allow('', null),
+  verificationUrl:       Joi.string().max(500).allow('', null),
+  certificateNumber:     Joi.string().max(100).allow('', null),
+  verificationStatus:    Joi.string().valid(...VERIFICATION_STATUSES),
+  qrGenerated:           Joi.boolean(),
+  qrImagePath:           Joi.string().max(500).allow('', null),
+};
+
+const upsertInternshipArchive = Joi.object({
+  body:   Joi.object(internshipArchiveFields).min(1),
+  params: Joi.object({
+    internId: uuid.required(),
+  }).required(),
+  query:  Joi.object(),
+});
+
+const finishInternshipWithArchive = Joi.object({
+  body: Joi.object({
+    internId: uuid.required(),
+    archive:  Joi.object(internshipArchiveFields).default({}),
+  }).required(),
+  params: Joi.object(),
+  query:  Joi.object(),
+});
+
+// ── Assign intern to team (create team if needed) ─────────────────────────────
+
+const assignInternTeam = Joi.object({
+  body: Joi.object({
+    teamId: uuid.optional().messages({
+      'string.guid': 'teamId must be a valid UUID',
+    }),
+    teamName: Joi.string().trim().min(1).max(100).optional().messages({
+      'string.min': 'teamName must not be empty',
+      'string.max': 'teamName must not exceed 100 characters',
+    }),
+    membershipRole: Joi.string()
+      .valid('MEMBER', 'LEAD', 'member', 'lead')
+      .default('MEMBER')
+      .messages({ 'any.only': 'membershipRole must be MEMBER or LEAD' }),
+  })
+  .or('teamId', 'teamName')
+  .messages({ 'object.missing': 'Either teamId or teamName is required' }),
+  params: Joi.object({
+    internId: uuid.required().messages({ 'any.required': 'internId param is required' }),
+  }).required(),
+  query: Joi.object(),
+});
+
 // ── Exports ────────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -818,6 +911,8 @@ module.exports = {
     createGroupChat,
     getMessages,
     sendMessage,
+    upsertInternshipArchive,
+    finishInternshipWithArchive,
     // alerts
     resolveAlert,
     getAlerts,
@@ -829,6 +924,10 @@ module.exports = {
     joinTeam,
     // audit logs
     getAuditLogs,
+    // users
+    updateUser,
+    // assign intern team
+    assignInternTeam,
     // demo
     runDemo,
   },

@@ -5,6 +5,7 @@ import { LayoutDashboard, CalendarDays, ClipboardList, Star, Users, Bell, LogOut
 import { useAuthStore, selectUser, selectIsAdmin } from '../store/authStore'
 import { useAlertStore } from '../store/alertStore'
 import { useRealtimeStore } from '../store/realtimeStore'
+import { useChatStore } from '../store/chatStore'
 import TeamSwitcher from './TeamSwitcher'
 
 import { getPermissions } from '../utils/permissions'
@@ -152,6 +153,7 @@ export default function Sidebar() {
 
   // Read unread count from shared store — no local fetch
   const unread = useAlertStore(s => s.unread)
+  const unreadChatCount = useChatStore(s => s.totalUnread)
 
   // Realtime store — live socket status and critical alert count
   const { status: socketStatus, counters } = useRealtimeStore()
@@ -166,6 +168,11 @@ export default function Sidebar() {
         const active    = loc.pathname === item.to
         const showBadge = (item.to === '/notifications' && !isAdmin && unread > 0)
                        || (item.to === '/alerts' && isAdmin && unread > 0)
+                       || (item.to === '/chat' && unreadChatCount > 0)
+        
+        // Use chat specific count for the chat badge, otherwise use alert unread
+        const badgeCount = item.to === '/chat' ? unreadChatCount : unread
+        
         // Pending approval badge on Controls (/admin) — CORE_ADMIN only
         const showApprovalBadge = item.to === '/admin' && pendingCount > 0
         // Live pulse dot on Intelligence when socket is connected
@@ -178,10 +185,10 @@ export default function Sidebar() {
               <item.icon size={13} />
               {item.label}
               {showBadge && (
-                <motion.span key={unread} initial={{ scale: 0.5 }} animate={{ scale: 1 }}
+                <motion.span key={item.to === '/chat' ? unreadChatCount : unread} initial={{ scale: 0.5 }} animate={{ scale: 1 }}
                   className="ml-auto flex items-center justify-center min-w-[16px] h-4 px-0.5 rounded-full font-bold text-[0.46rem]"
-                  style={{ background: showCritical ? '#f87171' : '#f59e0b', color: '#fff', boxShadow: `0 0 6px ${showCritical ? '#f8717166' : '#f59e0b66'}` }}>
-                  {unread > 9 ? '9+' : unread}
+                  style={{ background: showCritical && item.to !== '/chat' ? '#f87171' : '#f59e0b', color: '#fff', boxShadow: `0 0 6px ${showCritical && item.to !== '/chat' ? '#f8717166' : '#f59e0b66'}` }}>
+                  {badgeCount > 9 ? '9+' : badgeCount}
                 </motion.span>
               )}
               {showApprovalBadge && !showBadge && (

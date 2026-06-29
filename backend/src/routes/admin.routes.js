@@ -20,7 +20,22 @@ const {
   deleteIntern,
   updateIntern,
   rejectUser,
+  updateUserHandler,
+  assignInternTeam,
+  resetUserPassword,
+  sendCredentials,
+  sendCredentialsBulk,
+  previewOnboardingEmail,
+  logOnboardingAction,
 } = require('../controllers/admin.controller');
+const {
+  getPrefill,
+  getArchive,
+  listAllArchives,
+  updateArchive,
+  regenerateQr,
+  getWorkCategories,
+} = require('../controllers/internshipArchive.controller');
 const { verifyToken, requireRole } = require('../middleware/auth.middleware');
 const { validate }                 = require('../middleware/validate.middleware');
 const { schemas }                  = require('../validation/schemas');
@@ -46,9 +61,16 @@ router.get('/availability-deadline',    verifyToken,                            
 router.post('/availability-deadline',   verifyToken, requireRole(...ADMIN_ROLES),                                     setAvailabilityDeadline);
 router.get('/form-reminder-url',        verifyToken,                                                                   getFormReminderUrl);
 router.post('/form-reminder-url',       verifyToken, requireRole(...ADMIN_ROLES),                                     setFormReminderUrl);
-router.post('/finish-internship',       verifyToken, requireRole(...ADMIN_ROLES),                                     finishInternship);
+router.post('/finish-internship',       verifyToken, requireRole(...ADMIN_ROLES), validate(schemas.finishInternshipWithArchive), finishInternship);
+router.get('/internship-archives',      verifyToken, requireRole(...ADMIN_ROLES),                                     listAllArchives);
+router.get('/internship-archive/categories', verifyToken, requireRole(...ADMIN_ROLES),                              getWorkCategories);
+router.get('/internship-archive/prefill/:internId', verifyToken, requireRole(...ADMIN_ROLES),                      getPrefill);
+router.get('/internship-archive/:internId', verifyToken, requireRole(...ADMIN_ROLES),                               getArchive);
+router.put('/internship-archive/:internId', verifyToken, requireRole(...ADMIN_ROLES), validate(schemas.upsertInternshipArchive), updateArchive);
+router.post('/internship-archive/:internId/regenerate-qr', verifyToken, requireRole(...ADMIN_ROLES), regenerateQr);
 router.delete('/interns/:internId',     verifyToken, requireRole(ROLES.CORE_ADMIN),                                   deleteIntern);
 router.patch('/interns/:internId',      verifyToken, requireRole(...ADMIN_ROLES),                                     updateIntern);
+router.patch('/interns/:internId/team', verifyToken, requireRole(ROLES.CORE_ADMIN), validate(schemas.assignInternTeam), assignInternTeam);
 
 // ── Phase 2: Security & Governance (also exposed via /operational) ────────────
 router.post('/block-ip',                verifyToken, requireRole(ROLES.CORE_ADMIN),                                   blockIP);
@@ -57,5 +79,13 @@ router.get('/blocked-ips',              verifyToken, requireRole(ROLES.CORE_ADMI
 router.get('/login-logs',               verifyToken, requireRole(ROLES.CORE_ADMIN),                                   getLoginLogs);
 router.post('/change-role',             verifyToken, requireRole(ROLES.CORE_ADMIN),                                   changeUserRole);
 router.get('/users',                    verifyToken, requireRole(ROLES.CORE_ADMIN),                                   getAllUsers);
+router.patch('/users/:userId',          verifyToken, requireRole(ROLES.CORE_ADMIN), validate(schemas.updateUser),     updateUserHandler);
+router.post('/users/:userId/reset-password', verifyToken, requireRole(ROLES.CORE_ADMIN),                              resetUserPassword);
+
+// ── Phase 5B: Onboarding Email & Credentials ──────────────────────────────────
+router.post('/users/:userId/send-credentials', verifyToken, requireRole(ROLES.CORE_ADMIN),                            sendCredentials);
+router.post('/users/bulk-send-credentials', verifyToken, requireRole(ROLES.CORE_ADMIN),                               sendCredentialsBulk);
+router.get('/onboarding/preview-email', verifyToken, requireRole(ROLES.CORE_ADMIN),                                   previewOnboardingEmail);
+router.post('/onboarding/log-action', verifyToken, requireRole(ROLES.CORE_ADMIN),                                     logOnboardingAction);
 
 module.exports = router;

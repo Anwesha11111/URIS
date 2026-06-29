@@ -80,7 +80,7 @@ async function changePassword(userId, { currentPassword, newPassword }) {
   const hash = await bcrypt.hash(newPassword, SALT_ROUNDS);
   await prisma.user.update({
     where: { id: userId },
-    data:  { password: hash, passwordChangedAt: new Date() },
+    data:  { password: hash, passwordChangedAt: new Date(), mustChangePassword: false },
   });
 
   void logAction(userId, AUDIT_ACTIONS.PASSWORD_CHANGED, AUDIT_ENTITIES.USER, userId, {});
@@ -151,7 +151,7 @@ async function resetPassword(token, newPassword) {
 
   await prisma.user.update({
     where: { id: matched.userId },
-    data:  { password: hash, passwordChangedAt: new Date() },
+    data:  { password: hash, passwordChangedAt: new Date(), mustChangePassword: false },
   });
 
   await prisma.passwordResetToken.update({

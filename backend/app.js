@@ -38,7 +38,7 @@ const supportRoutes      = require('./src/routes/support.routes');
 const archiveRoutes      = require('./src/routes/archive.routes');
 const operationalRoutes  = require('./src/routes/operational.routes');
 const presenceRoutes     = require('./src/routes/presence.routes');
-const delegationRoutes   = require('./src/routes/delegation.routes');
+const verifyRoutes       = require('./src/routes/verify.routes');
 const { errorHandler }   = require('./src/middleware/error.middleware');
 const { ipBlockMiddleware } = require('./src/middleware/ipBlock.middleware');
 
@@ -144,6 +144,7 @@ app.use('/teams',        teamRoutes);
 app.use('/health',       healthRoutes);
 app.use('/nextcloud',    nextcloudRoutes);
 app.use('/portfolio',    portfolioRoutes);
+app.use('/verify',       verifyRoutes);
 app.use('/analytics',    analyticsRoutes);
 app.use('/governance',   governanceRoutes);
 app.use('/workflow',     workflowRoutes);
@@ -154,8 +155,7 @@ app.use('/profile',      profileRoutes);
 app.use('/google',       googleRoutes);   // Google data: /google/worklog, /google/calendar
 app.use('/document',     documentRoutes); // Document submission: /document/submit, /document/mine, /document/lead/:internId
 app.use('/chat',         chatRoutes);     // Chat system: /chat/friend-requests, /chat/chats, /chat/messages
-app.use('/presence',     presenceRoutes);
-app.use('/delegation',   delegationRoutes); // Virtual presence: /presence/check-in, /presence/check-out, /presence/window
+app.use('/presence',     presenceRoutes); // Virtual presence: /presence/check-in, /presence/check-out, /presence/window
 // Serve uploaded profile pictures — /tmp in production (Render), local in dev
 const uploadDir = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
@@ -163,6 +163,12 @@ const uploadDir = process.env.UPLOAD_DIR
     ? '/tmp/uploads/profile-pictures'
     : path.join(__dirname, 'uploads', 'profile-pictures');
 app.use('/uploads/profile-pictures', express.static(uploadDir));
+const verificationQrDir = process.env.UPLOAD_DIR
+  ? path.join(path.resolve(process.env.UPLOAD_DIR), 'verification-qr')
+  : process.env.NODE_ENV === 'production'
+    ? '/tmp/uploads/verification-qr'
+    : path.join(__dirname, 'uploads', 'verification-qr');
+app.use('/uploads/verification-qr', express.static(verificationQrDir));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 

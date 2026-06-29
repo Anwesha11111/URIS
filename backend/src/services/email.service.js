@@ -319,6 +319,31 @@ function renderNewChatMessage({ recipientName = 'User', senderName = 'Someone', 
   };
 }
 
+function renderOnboardingCredentials({ name = 'User', email = '', loginUrl = '', tempPassword = '' }) {
+  const url = loginUrl || (process.env.FRONTEND_URL || 'http://localhost:5173') + '/login';
+  
+  const body = `
+    ${sectionLabel('Account Access')}
+    ${heading('Welcome to URIS')}
+    ${goldRule()}
+    ${bodyText(`Hi <strong style="color:#e8f0fb;">${name}</strong>, your account has been provisioned. Please use the temporary credentials below to log in for the first time.`)}
+    
+    ${infoCard('Email Address', email, '#e8f0fb')}
+    ${infoCard('Temporary Password', tempPassword, '#c9a84c')}
+    
+    ${alertBanner('You must change this password immediately upon your first login.', '#f59e0b', 'rgba(245,158,11,0.08)', 'rgba(245,158,11,0.25)')}
+    
+    ${ctaButton('Log In to URIS', url)}
+    ${bodyText('If you have any issues accessing the system, please contact your administrator.')}
+  `;
+  
+  return {
+    subject: 'Your URIS Temporary Credentials',
+    html: layout({ title: 'Welcome to URIS', previewText: 'Your account has been provisioned. Inside are your temporary credentials.', body }),
+    text: `Hi ${name}, welcome to URIS. Log in at ${url} with email: ${email} and temporary password: ${tempPassword}. You must change your password immediately.`,
+  };
+}
+
 // ── Template registry ─────────────────────────────────────────────────────────
 
 const TEMPLATES = {
@@ -329,6 +354,7 @@ const TEMPLATES = {
   'gdoc-reminder':     renderGdocReminder,
   'operational-alert': renderOperationalAlert,
   'new-chat-message':  renderNewChatMessage,
+  'onboarding-credentials': renderOnboardingCredentials,
 };
 
 // ── Main send function ────────────────────────────────────────────────────────

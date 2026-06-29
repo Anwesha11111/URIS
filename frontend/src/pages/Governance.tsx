@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Shield, CheckCircle, X, Clock, Loader2, AlertTriangle,
   ChevronDown, ChevronUp, Key, Users, TrendingUp, Lock, Edit2, Save, RotateCcw,
-  Activity, ShieldAlert, Radio, Ban, ShieldCheck,
+  Activity, ShieldAlert, Radio, Ban, ShieldCheck, Archive,
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
@@ -12,13 +12,16 @@ import { ROLES } from '../constants/roles'
 import {
   listApprovals, approveRequest, rejectRequest, cancelApprovalRequest,
   getMyPermissions, getAllUsers, getRoleHistory, getAccessMatrix, updateAccessMatrix, getSecurityOverview,
-  submitPromotionRequest, getGovernanceIntelligenceOverview, blockIP,
+  submitPromotionRequest, getGovernanceIntelligenceOverview, blockIP, adminUpdateUser, adminResetUserPassword,
+  sendCredentials, sendCredentialsBulk, getOnboardingEmailPreview, logOnboardingAction,
   type ApprovalRequest, type PermissionsResponse,
   type GovernanceUser, type RoleHistoryRecord, type AccessMatrixResponse, type SecurityOverview,
   type GovernanceIntelligenceOverview,
 } from '../services/governance.service'
-import { getDelegationList, grantDelegation, revokeDelegation, type DelegateUser } from '../services/delegation.service'
 import { extractErrorMessage } from '../services/error'
+import { listInternshipArchives, type InternshipArchiveRecord } from '../services/internshipArchive.service'
+import InternshipArchiveModal from '../components/InternshipArchiveModal'
+import TeamManagementPanel from '../components/TeamManagementPanel'
 
 const GOLD    = '#c9a84c'
 const ICE_DIM = 'rgba(184,212,240,0.25)'
@@ -27,7 +30,7 @@ const AMBER   = '#f59e0b'
 const RED     = '#f87171'
 const BLUE    = '#60a5fa'
 
-type Tab = 'approvals' | 'promotions' | 'users' | 'role-history' | 'delegation' | 'access-matrix' | 'security' | 'permissions'
+type Tab = 'approvals' | 'promotions' | 'users' | 'role-history' | 'access-matrix' | 'security' | 'permissions' | 'internship-archives' | 'team-management' | 'onboarding'
 
 const ALL_ROLES = Object.values(ROLES).filter(r => r !== 'admin' && r !== 'intern')
 
@@ -307,13 +310,120 @@ function PromotionsTab({ users, onSubmit }: {
   )
 }
 
+// ── User Edit Modal ─────────────────────────────────────────────────────────────
+function UserEditModal({ user, onClose, onSaved }: {
+  user: GovernanceUser; onClose: () => void; onSaved: () => void
+}) {
+  const [email, setEmail] = useState(user.email)
+  const [status, setStatus] = useState(user.status)
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setMsg(null)
+    try {
+      await adminUpdateUser(user.id, { email, status })
+      setMsg({ ok: true, text: 'User updated successfully.' })
+      setTimeout(() => {
+        onSaved()
+        onClose()
+      }, 1000)
+    } catch (err) {
+      setMsg({ ok: false, text: extractErrorMessage(err, 'Failed to update user.') })
+      setLoading(false)
+    }
+  }
+
+  const [resetLoading, setResetLoading] = useState(false)
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
+
+  async function handleResetPassword() {
+    if (!confirm(`Are you sure you want to reset the password for ${user.email}?`)) return
+    setResetLoading(true)
+    setMsg(null)
+    setTempPassword(null)
+    try {
+      const res = await adminResetUserPassword(user.id)
+      setTempPassword(res.tempPassword)
+      setMsg({ ok: true, text: 'Password reset successfully.' })
+    } catch (err) {
+      setMsg({ ok: false, text: extractErrorMessage(err, 'Failed to reset password.') })
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/80 backdrop-blur-sm">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="glass-card w-full max-w-md p-6 rounded-sm border-gold/20 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-ice/40 hover:text-frost">
+          <X size={16} />
+        </button>
+        <h2 className="font-display font-black text-xl text-gold mb-1">Edit User</h2>
+        <p className="font-body text-xs text-ice/60 mb-4">Editing settings for {user.name || user.email}</p>
+        
+        <form onSubmit={handleSave} className="space-y-4">
+          <div>
+            <label className="nav-label text-[0.55rem] text-ice/60 block mb-1">EMAIL ADDRESS</label>
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+              className="uris-input w-full" />
+          </div>
+          <div>
+            <label className="nav-label text-[0.55rem] text-ice/60 block mb-1">ACCOUNT STATUS</label>
+            <select value={status} onChange={e => setStatus(e.target.value)} className="uris-input w-full">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="alumni">Alumni</option>
+              <option value="archived" disabled>Archived (Use Archive tool)</option>
+              <option value="removed" disabled>Removed</option>
+              <option value="pending" disabled>Pending</option>
+            </select>
+          </div>
+          
+          {msg && <FeedbackBanner ok={msg.ok} text={msg.text} />}
+
+          {tempPassword && (
+            <div className="p-3 rounded-sm mb-4" style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}>
+              <p className="font-body text-sm text-green-400 mb-1">Temporary Password:</p>
+              <code className="font-mono text-lg text-green-300">{tempPassword}</code>
+              <p className="font-body text-xs text-green-400/80 mt-2">Please copy and share this with the user securely. They will be forced to change it on their next login.</p>
+            </div>
+          )}
+          
+          <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-ice/10">
+            <button type="button" onClick={handleResetPassword} disabled={resetLoading || loading}
+              className="px-4 py-2 text-xs nav-label rounded-sm bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50 mr-auto flex items-center gap-2">
+              {resetLoading && <Loader2 size={12} className="animate-spin" />}
+              RESET PASSWORD
+            </button>
+            <button type="button" onClick={onClose} className="px-4 py-2 text-xs nav-label text-ice/60 hover:text-frost">
+              CANCEL
+            </button>
+            <button type="submit" disabled={loading || resetLoading}
+              className="px-4 py-2 text-xs nav-label rounded-sm bg-gold/10 text-gold border border-gold/20 flex items-center gap-2 hover:bg-gold/20 transition-colors disabled:opacity-50">
+              {loading && <Loader2 size={12} className="animate-spin" />}
+              SAVE CHANGES
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  )
+}
+
 // ── Users Tab ─────────────────────────────────────────────────────────────────
-function UsersTab({ users }: { users: GovernanceUser[] }) {
+function UsersTab({ users, onRefresh }: { users: GovernanceUser[]; onRefresh: () => void }) {
   const [filter, setFilter] = useState('')
+  const [editingUser, setEditingUser] = useState<GovernanceUser | null>(null)
+  
   const filtered = users.filter(u =>
     !filter || u.status === filter
   )
   const statuses = ['active', 'inactive', 'archived', 'removed', 'pending', 'alumni']
+  
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -344,6 +454,7 @@ function UsersTab({ users }: { users: GovernanceUser[] }) {
               <th className="text-center">Status</th>
               <th className="text-left">Teams</th>
               <th className="text-center">Joined</th>
+              <th className="text-center">Actions</th>
             </tr></thead>
             <tbody>
               {filtered.map(u => (
@@ -356,12 +467,30 @@ function UsersTab({ users }: { users: GovernanceUser[] }) {
                   <td className="text-center font-mono text-xs text-ice/40">
                     {new Date(u.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
                   </td>
+                  <td className="text-center">
+                    <button onClick={() => setEditingUser(u)}
+                      className="nav-label text-[0.48rem] px-2 py-1 rounded-sm transition-colors"
+                      style={{ background: 'rgba(184,212,240,0.05)', color: ICE_DIM, border: '1px solid rgba(184,212,240,0.1)' }}>
+                      EDIT
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+      
+      {editingUser && (
+        <UserEditModal 
+          user={editingUser} 
+          onClose={() => setEditingUser(null)} 
+          onSaved={() => {
+            onRefresh()
+            setEditingUser(null)
+          }} 
+        />
+      )}
     </div>
   )
 }
@@ -404,163 +533,6 @@ function RoleHistoryTab({ records }: { records: RoleHistoryRecord[] }) {
           </tbody>
         </table>
       </div>
-    </div>
-  )
-}
-
-// ── Core Admin Delegation Panel ───────────────────────────────────────────────
-function DelegationPanel() {
-  const [users, setUsers]         = useState<DelegateUser[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [togglingId, setTogglingId] = useState<string | null>(null)
-  const [msg, setMsg]             = useState<{ id: string; ok: boolean; text: string } | null>(null)
-
-  useEffect(() => {
-    getDelegationList()
-      .then(d => setUsers(d.users))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
-
-  const handleToggle = async (user: DelegateUser) => {
-    setTogglingId(user.id)
-    setMsg(null)
-    try {
-      if (user.isDelegated) {
-        await revokeDelegation(user.id)
-        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isDelegated: false } : u))
-        setMsg({ id: user.id, ok: true, text: `Core Admin delegation revoked from ${user.name || user.email}.` })
-      } else {
-        await grantDelegation(user.id)
-        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isDelegated: true } : u))
-        setMsg({ id: user.id, ok: true, text: `${user.name || user.email} can now act as Core Admin.` })
-      }
-    } catch (err: unknown) {
-      setMsg({ id: user.id, ok: false, text: extractErrorMessage(err, 'Failed to update delegation.') })
-    } finally {
-      setTogglingId(null)
-    }
-  }
-
-  if (loading) return (
-    <div className="flex items-center justify-center py-12">
-      <Loader2 size={20} className="animate-spin" style={{ color: GOLD }} />
-    </div>
-  )
-
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="glass-card rounded-sm p-5" style={{ border: '1px solid rgba(96,165,250,0.15)' }}>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-1.5 rounded-sm" style={{ background: 'rgba(96,165,250,0.1)' }}>
-            <ShieldCheck size={13} style={{ color: BLUE }} />
-          </div>
-          <div>
-            <p className="nav-label text-[0.55rem]" style={{ color: `${BLUE}88` }}>CORE ADMIN DELEGATION</p>
-            <p className="font-body text-xs" style={{ color: ICE_DIM }}>
-              Toggle ON to grant a user effective Core Admin powers. Their role stays unchanged — only their capabilities are elevated.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Global feedback */}
-      <AnimatePresence>
-        {msg && (
-          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex items-center gap-2 p-3 rounded-sm"
-            style={{
-              background: msg.ok ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)',
-              border: `1px solid ${msg.ok ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
-            }}>
-            {msg.ok
-              ? <CheckCircle size={12} style={{ color: GREEN, flexShrink: 0 }} />
-              : <AlertTriangle size={12} style={{ color: RED, flexShrink: 0 }} />}
-            <p className="font-body text-sm flex-1" style={{ color: msg.ok ? GREEN : RED }}>{msg.text}</p>
-            <button onClick={() => setMsg(null)} className="text-ice/30 hover:text-ice/60"><X size={11} /></button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* User list */}
-      {users.length === 0 ? (
-        <div className="glass-card rounded-sm p-10 text-center">
-          <p className="font-body text-sm" style={{ color: ICE_DIM }}>No admin users found.</p>
-        </div>
-      ) : (
-        <div className="glass-card rounded-sm overflow-hidden" style={{ border: '1px solid rgba(96,165,250,0.08)' }}>
-          {users.map((u, i) => {
-            const isToggling = togglingId === u.id
-            return (
-              <motion.div key={u.id}
-                initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="flex items-center justify-between px-5 py-3.5"
-                style={{
-                  borderBottom: i < users.length - 1 ? '1px solid rgba(96,165,250,0.06)' : 'none',
-                  background: u.isDelegated ? 'rgba(96,165,250,0.04)' : 'transparent',
-                }}>
-
-                {/* User info */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-body text-sm text-frost/90">{u.name || u.email.split('@')[0]}</p>
-                    {u.isDelegated && (
-                      <span className="nav-label text-[0.44rem] px-1.5 py-0.5 rounded-full"
-                        style={{ background: 'rgba(96,165,250,0.12)', color: BLUE }}>
-                        ACTING AS CORE ADMIN
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-mono text-[0.5rem] text-ice/30 mt-0.5 truncate">{u.email}</p>
-                  <span className="nav-label text-[0.44rem] mt-0.5 inline-block"
-                    style={{ color: 'rgba(184,212,240,0.3)' }}>
-                    {u.role.replace(/_/g, ' ')}
-                  </span>
-                </div>
-
-                {/* Toggle */}
-                <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                  <span className="nav-label text-[0.48rem]"
-                    style={{ color: u.isDelegated ? BLUE : 'rgba(184,212,240,0.2)' }}>
-                    {u.isDelegated ? 'ON' : 'OFF'}
-                  </span>
-                  {isToggling ? (
-                    <div className="w-12 h-6 flex items-center justify-center">
-                      <Loader2 size={14} className="animate-spin" style={{ color: BLUE }} />
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => void handleToggle(u)}
-                      className="relative inline-flex h-6 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 transition-all duration-200 ease-in-out focus:outline-none"
-                      style={{
-                        backgroundColor: u.isDelegated ? BLUE : 'rgba(184,212,240,0.1)',
-                        borderColor: u.isDelegated ? BLUE : 'rgba(184,212,240,0.15)',
-                      }}
-                      role="switch"
-                      aria-checked={u.isDelegated}
-                      title={u.isDelegated ? 'Revoke Core Admin delegation' : 'Grant Core Admin delegation'}>
-                      <span
-                        className="pointer-events-none inline-block h-4 w-4 rounded-full shadow transition-transform duration-200 ease-in-out"
-                        style={{
-                          background: u.isDelegated ? '#fff' : 'rgba(184,212,240,0.45)',
-                          transform: u.isDelegated ? 'translateX(22px)' : 'translateX(2px)',
-                          marginTop: '1px',
-                        }}
-                      />
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
-      )}
-
-      <p className="nav-label text-[0.45rem] text-center" style={{ color: 'rgba(184,212,240,0.15)' }}>
-        Delegation is immediate and persists until revoked. All changes are logged in the Audit Trail.
-      </p>
     </div>
   )
 }
@@ -1226,6 +1198,371 @@ function GovernanceExplainabilitySection({ enterpriseHealth, operationalRisk, te
   )
 }
 
+// ── Internship Archives Tab ───────────────────────────────────────────────────
+function InternshipArchivesTab() {
+  const [archives, setArchives] = useState<InternshipArchiveRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED'>('ALL')
+  const [editModal, setEditModal] = useState<{ internId: string; name: string } | null>(null)
+
+  const load = () => {
+    setLoading(true)
+    listInternshipArchives(filter === 'ALL' ? undefined : filter)
+      .then(setArchives)
+      .catch(() => setArchives([]))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [filter])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {(['ALL', 'ACTIVE', 'COMPLETED'] as const).map(s => (
+          <button key={s} onClick={() => setFilter(s)}
+            className="px-3 py-1.5 rounded-sm nav-label text-[0.55rem] transition-all"
+            style={{
+              background: filter === s ? 'rgba(201,168,76,0.12)' : 'transparent',
+              border: `1px solid ${filter === s ? 'rgba(201,168,76,0.3)' : 'rgba(201,168,76,0.1)'}`,
+              color: filter === s ? GOLD : ICE_DIM,
+            }}>
+            {s}
+          </button>
+        ))}
+      </div>
+
+      {loading && <div className="flex justify-center py-16"><Loader2 size={20} className="animate-spin" style={{ color: GOLD }} /></div>}
+
+      {!loading && archives.length === 0 && (
+        <div className="glass-card rounded-sm p-10 text-center">
+          <p className="font-body text-sm" style={{ color: ICE_DIM }}>No internship archive records yet.</p>
+        </div>
+      )}
+
+      {!loading && archives.length > 0 && (
+        <div className="glass-card rounded-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="uris-table w-full">
+              <thead><tr>
+                <th className="text-left">Name</th>
+                <th className="text-left">Department</th>
+                <th className="text-center">Internship Role</th>
+                <th className="text-center">Status</th>
+                <th className="text-center">Rating</th>
+                <th className="text-center">End Date</th>
+                <th className="text-center">Actions</th>
+              </tr></thead>
+              <tbody>
+                {archives.map(a => (
+                  <tr key={a.id ?? a.internId}>
+                    <td className="font-body text-sm text-frost/80">{a.fullName}</td>
+                    <td className="font-body text-xs text-ice/50">{a.department || '—'}</td>
+                    <td className="text-center"><RoleBadge role={a.internshipRole.toLowerCase()} /></td>
+                    <td className="text-center"><StatusBadge status={a.status === 'COMPLETED' ? 'alumni' : 'active'} /></td>
+                    <td className="text-center font-body text-xs text-ice/50">{a.performanceRating?.replace(/_/g, ' ') ?? '—'}</td>
+                    <td className="text-center font-mono text-xs text-ice/40">
+                      {a.internshipEndDate ? new Date(a.internshipEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+                    </td>
+                    <td className="text-center">
+                      <button onClick={() => setEditModal({ internId: a.internId, name: a.fullName })}
+                        className="nav-label text-[0.48rem] px-2 py-1 rounded-sm"
+                        style={{ background: 'rgba(201,168,76,0.1)', color: GOLD, border: '1px solid rgba(201,168,76,0.2)' }}>
+                        EDIT
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {editModal && (
+        <InternshipArchiveModal
+          internId={editModal.internId}
+          internName={editModal.name}
+          mode="edit"
+          onClose={() => setEditModal(null)}
+          onSaved={load}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Onboarding Tab ────────────────────────────────────────────────────────────
+function OnboardingTab({ users, onRefresh }: { users: GovernanceUser[]; onRefresh: () => void }) {
+  const [filter, setFilter] = useState<'ALL' | 'NOT_SENT' | 'SENDING' | 'SENT' | 'FAILED'>('ALL')
+  const [search, setSearch] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string; manualMode?: boolean } | null>(null)
+  const [generatedCreds, setGeneratedCreds] = useState<Record<string, string>>({})
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null)
+  
+  // Auto-clear credentials after 15 minutes
+  useEffect(() => {
+    if (Object.keys(generatedCreds).length > 0) {
+      const timer = setTimeout(() => {
+        setGeneratedCreds({})
+        setMsg({ ok: true, text: 'For security reasons, generated passwords have been cleared from memory. Refresh the page.' })
+      }, 15 * 60 * 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [generatedCreds])
+
+  const filtered = users.filter(u => {
+    if (filter !== 'ALL' && u.onboardingEmailStatus !== filter) return false
+    if (search && !u.name?.toLowerCase().includes(search.toLowerCase()) && !u.email.toLowerCase().includes(search.toLowerCase())) return false
+    // Only show active and pending users in the onboarding queue
+    if (u.status !== 'active' && u.status !== 'pending') return false
+    return true
+  })
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedIds(next)
+  }
+
+  const selectAll = () => {
+    if (selectedIds.size === filtered.length) setSelectedIds(new Set())
+    else setSelectedIds(new Set(filtered.map(u => u.id)))
+  }
+
+  const handleSendCredentials = async (userId: string) => {
+    setLoading(true); setMsg(null)
+    try {
+      const res = await sendCredentials(userId)
+      if (res.tempPassword) {
+        setGeneratedCreds(prev => ({ ...prev, [userId]: res.tempPassword! }))
+      }
+      setMsg({ 
+        ok: res.emailSent, 
+        text: res.emailSent ? 'Credentials generated and email sent successfully.' : (res.isManualMode ? 'Manual mode: Credentials generated but Resend is not configured.' : `Failed to send email: ${res.error}`),
+        manualMode: res.isManualMode
+      })
+      onRefresh()
+    } catch (err) {
+      setMsg({ ok: false, text: extractErrorMessage(err, 'Failed to send credentials.') })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBulkSend = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Are you sure you want to generate and send credentials for ${selectedIds.size} users?`)) return
+    
+    setLoading(true); setMsg(null)
+    try {
+      const results = await sendCredentialsBulk(Array.from(selectedIds))
+      const creds: Record<string, string> = {}
+      let sentCount = 0
+      let failedCount = 0
+      let manualMode = false
+      
+      for (const res of results) {
+        if (res.tempPassword) creds[res.userId] = res.tempPassword
+        if (res.emailSent) sentCount++
+        else failedCount++
+        if (res.isManualMode) manualMode = true
+      }
+      
+      setGeneratedCreds(prev => ({ ...prev, ...creds }))
+      setSelectedIds(new Set())
+      
+      if (manualMode) {
+        setMsg({ ok: true, text: `Manual mode: Generated ${Object.keys(creds).length} credentials. Emails were NOT sent.`, manualMode: true })
+      } else if (failedCount === 0) {
+        setMsg({ ok: true, text: `Successfully generated and sent ${sentCount} credentials.` })
+      } else {
+        setMsg({ ok: false, text: `Generated credentials, but ${failedCount} emails failed to send. ${sentCount} succeeded.` })
+      }
+      
+      onRefresh()
+    } catch (err) {
+      setMsg({ ok: false, text: extractErrorMessage(err, 'Failed to bulk send credentials.') })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const showPreview = async () => {
+    try {
+      const html = await getOnboardingEmailPreview()
+      setPreviewHtml(html)
+    } catch (err) {
+      alert('Failed to load email preview')
+    }
+  }
+
+  const copyCredsToClipboard = () => {
+    const text = Object.entries(generatedCreds).map(([id, pwd]) => {
+      const user = users.find(u => u.id === id)
+      return `${user?.email || id}: ${pwd}`
+    }).join('\n')
+    navigator.clipboard.writeText(text)
+    void logOnboardingAction('COPY_CREDENTIALS', undefined, Object.keys(generatedCreds).length)
+    alert('Copied to clipboard!')
+  }
+
+  const exportCredsCsv = () => {
+    const header = 'Email,Name,TemporaryPassword\n'
+    const rows = Object.entries(generatedCreds).map(([id, pwd]) => {
+      const user = users.find(u => u.id === id)
+      return `${user?.email || ''},${user?.name || ''},${pwd}`
+    }).join('\n')
+    const blob = new Blob([header + rows], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'onboarding_credentials.csv'; a.click()
+    URL.revokeObjectURL(url)
+    void logOnboardingAction('EXPORT_CREDENTIALS', undefined, Object.keys(generatedCreds).length)
+  }
+
+  const hasCreds = Object.keys(generatedCreds).length > 0
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-navy-900/50 p-4 rounded-sm border border-ice/5">
+        <div className="flex flex-wrap items-center gap-2">
+          {(['ALL', 'NOT_SENT', 'SENDING', 'SENT', 'FAILED'] as const).map(s => (
+            <button key={s} onClick={() => setFilter(s)}
+              className="px-3 py-1.5 rounded-sm nav-label text-[0.55rem] transition-all"
+              style={{
+                background: filter === s ? 'rgba(201,168,76,0.12)' : 'transparent',
+                border: `1px solid ${filter === s ? 'rgba(201,168,76,0.3)' : 'rgba(201,168,76,0.1)'}`,
+                color: filter === s ? GOLD : ICE_DIM,
+              }}>
+              {s.replace('_', ' ')}
+            </button>
+          ))}
+          <div className="w-px h-6 bg-ice/10 mx-2" />
+          <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
+            className="uris-input text-xs px-2 py-1.5 w-48" />
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={showPreview} className="btn-ghost py-1.5 px-3 text-[0.6rem] flex items-center gap-2">
+            PREVIEW EMAIL
+          </button>
+          <button onClick={handleBulkSend} disabled={loading || selectedIds.size === 0}
+            className="btn-gold py-1.5 px-3 text-[0.6rem] flex items-center gap-2 disabled:opacity-50">
+            {loading ? <Loader2 size={12} className="animate-spin" /> : <Key size={12} />}
+            BULK SEND ({selectedIds.size})
+          </button>
+        </div>
+      </div>
+
+      {msg && (
+        <div className={`p-4 rounded-sm flex flex-col gap-2 ${msg.manualMode ? 'bg-amber-500/10 border border-amber-500/20' : (msg.ok ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20')}`}>
+          <div className="flex items-center gap-2">
+            {msg.manualMode ? <AlertTriangle size={16} className="text-amber-400" /> : (msg.ok ? <CheckCircle size={16} className="text-green-400" /> : <X size={16} className="text-red-400" />)}
+            <p className={`font-body text-sm ${msg.manualMode ? 'text-amber-400' : (msg.ok ? 'text-green-400' : 'text-red-400')}`}>{msg.text}</p>
+          </div>
+          {msg.manualMode && (
+            <p className="font-body text-xs text-amber-400/80 mt-1">
+              Emails could not be dispatched. You must securely copy or export the credentials below and distribute them to users manually.
+            </p>
+          )}
+        </div>
+      )}
+
+      {hasCreds && (
+        <div className="bg-navy-800/80 border border-ice/20 rounded-sm p-4 animate-in fade-in slide-in-from-top-4 duration-300 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-amber-500 to-red-500" />
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-display font-black text-lg text-white">Temporary Credentials</h3>
+              <p className="font-body text-xs text-ice/60">These plain-text passwords are not stored in the database and will be cleared from memory in 15 minutes.</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={copyCredsToClipboard} className="btn-ghost py-1.5 px-3 text-xs">COPY ALL</button>
+              <button onClick={exportCredsCsv} className="btn-gold py-1.5 px-3 text-xs">EXPORT CSV</button>
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto pr-2 space-y-2">
+            {Object.entries(generatedCreds).map(([id, pwd]) => {
+              const u = users.find(u => u.id === id)
+              return (
+                <div key={id} className="flex items-center justify-between bg-navy-900 p-2 rounded-sm border border-ice/5">
+                  <div className="font-mono text-xs text-ice/80">{u?.email}</div>
+                  <div className="font-mono text-sm text-green-400 select-all">{pwd}</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="glass-card rounded-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="uris-table w-full">
+            <thead><tr>
+              <th className="w-8 text-center"><input type="checkbox" onChange={selectAll} checked={selectedIds.size === filtered.length && filtered.length > 0} className="uris-checkbox" /></th>
+              <th className="text-left">Name / Email</th>
+              <th className="text-center">Role</th>
+              <th className="text-center">Status</th>
+              <th className="text-center">Email Status</th>
+              <th className="text-center">Generated</th>
+              <th className="text-center">Actions</th>
+            </tr></thead>
+            <tbody>
+              {filtered.map(u => (
+                <tr key={u.id} className={selectedIds.has(u.id) ? 'bg-gold/5' : ''}>
+                  <td className="text-center"><input type="checkbox" checked={selectedIds.has(u.id)} onChange={() => toggleSelect(u.id)} className="uris-checkbox" /></td>
+                  <td>
+                    <p className="font-body text-sm text-frost/80">{u.name || '—'}</p>
+                    <p className="font-mono text-xs text-ice/40">{u.email}</p>
+                  </td>
+                  <td className="text-center"><RoleBadge role={u.role.toLowerCase()} /></td>
+                  <td className="text-center"><StatusBadge status={u.status} /></td>
+                  <td className="text-center">
+                    <span className="nav-label text-[0.5rem] px-2 py-0.5 rounded-full"
+                      style={{ 
+                        background: u.onboardingEmailStatus === 'SENT' ? 'rgba(74,222,128,0.1)' : u.onboardingEmailStatus === 'FAILED' ? 'rgba(248,113,113,0.1)' : 'rgba(184,212,240,0.05)', 
+                        color: u.onboardingEmailStatus === 'SENT' ? GREEN : u.onboardingEmailStatus === 'FAILED' ? RED : ICE_DIM 
+                      }}>
+                      {u.onboardingEmailStatus.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="text-center font-mono text-xs text-ice/40">
+                    {u.credentialsGeneratedAt ? new Date(u.credentialsGeneratedAt).toLocaleDateString('en-GB') : '—'}
+                  </td>
+                  <td className="text-center">
+                    <button onClick={() => handleSendCredentials(u.id)} disabled={loading}
+                      className="nav-label text-[0.48rem] px-2 py-1 rounded-sm transition-colors disabled:opacity-50"
+                      style={{ background: 'rgba(201,168,76,0.1)', color: GOLD, border: '1px solid rgba(201,168,76,0.2)' }}>
+                      GENERATE
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} className="text-center py-8 text-ice/50 font-body text-sm">No users found for this filter.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {previewHtml && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/90 backdrop-blur-sm">
+          <div className="w-full max-w-4xl h-[80vh] flex flex-col bg-white rounded-sm overflow-hidden relative">
+            <div className="flex items-center justify-between p-3 bg-navy-900 border-b border-ice/20">
+              <h3 className="font-display text-white text-sm">Email Preview</h3>
+              <button onClick={() => setPreviewHtml(null)} className="text-ice/60 hover:text-white"><X size={16} /></button>
+            </div>
+            <iframe srcDoc={previewHtml} className="w-full flex-1 border-none" title="Email Preview" />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Governance() {
   const user    = useAuthStore(selectUser)
@@ -1316,12 +1653,23 @@ export default function Governance() {
     setAccessMatrix(updated)
   }
 
+  async function handleRefreshUsers() {
+    try {
+      const d = await getAllUsers({ limit: 200 })
+      setUsers(d.users)
+    } catch (err) {
+      setMsg({ ok: false, text: extractErrorMessage(err, 'Failed to refresh users.') })
+    }
+  }
+
   const TABS: { key: Tab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
     { key: 'approvals',     label: 'APPROVALS',     icon: CheckCircle, },
     { key: 'promotions',    label: 'PROMOTIONS',     icon: TrendingUp,  adminOnly: true },
     { key: 'users',         label: 'USERS',          icon: Users,       adminOnly: true },
+    { key: 'team-management', label: 'TEAM MANAGEMENT', icon: Users,    adminOnly: true },
+    { key: 'internship-archives', label: 'INTERNSHIP ARCHIVES', icon: Archive, adminOnly: true },
+    { key: 'onboarding',    label: 'ONBOARDING',     icon: Key,         adminOnly: true },
     { key: 'role-history',  label: 'ROLE HISTORY',   icon: Clock,       adminOnly: true },
-    { key: 'delegation',    label: 'DELEGATION',     icon: ShieldCheck, adminOnly: true },
     { key: 'access-matrix', label: 'PERMISSIONS',    icon: Lock,        adminOnly: true },
     { key: 'security',      label: 'SECURITY',       icon: Shield,      adminOnly: true },
     { key: 'permissions',   label: 'MY PERMISSIONS', icon: Key },
@@ -1377,9 +1725,11 @@ export default function Governance() {
               <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
                 {tab === 'approvals'     && <ApprovalsTab pending={pending} history={history} currentUserId={user?.id ?? ''} onApprove={handleApprove} onReject={handleReject} onCancel={handleCancel} loading={actionLoading} subTab={approvalSubTab} setSubTab={setApprovalSubTab} />}
                 {tab === 'promotions'    && <PromotionsTab users={users} onSubmit={handlePromotion} />}
-                {tab === 'users'         && <UsersTab users={users} />}
+                {tab === 'users'         && <UsersTab users={users} onRefresh={handleRefreshUsers} />}
+                {tab === 'team-management' && <TeamManagementPanel />}
+                {tab === 'internship-archives' && <InternshipArchivesTab />}
+                {tab === 'onboarding'    && <OnboardingTab users={users} onRefresh={handleRefreshUsers} />}
                 {tab === 'role-history'  && <RoleHistoryTab records={roleHistory} />}
-                {tab === 'delegation'    && <DelegationPanel />}
                 {tab === 'access-matrix' && <AccessMatrixTab matrix={accessMatrix} onSave={handleSaveMatrix} />}
                 {tab === 'security'      && <SecurityTab security={security} />}
                 {tab === 'permissions'   && <PermissionsTab perms={perms} />}

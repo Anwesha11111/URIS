@@ -21,10 +21,12 @@ import AuditLogs          from './features/admin/AuditLogs'
 import Notifications      from './pages/Notifications'
 import Portfolio          from './pages/Portfolio'
 import PortfolioEdit      from './pages/PortfolioEdit'
+import Verify             from './pages/Verify'
 import Profile            from './pages/Profile'
 import Settings           from './pages/Settings'
 import ForgotPassword     from './pages/ForgotPassword'
 import ResetPassword      from './pages/ResetPassword'
+import ForcePasswordChange from './pages/ForcePasswordChange'
 import Integrations       from './pages/Integrations'
 import ChatPage           from './routes/chat'
 import ChatFindPage       from './routes/chat-find'
@@ -86,8 +88,11 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password"  element={<ResetPassword />} />
           <Route path="/portfolio/:slug" element={<Portfolio />} />
+          <Route path="/verify/:verificationId" element={<Verify />} />
 
           {/* Protected — any authenticated user */}
+          <Route path="/force-password-change"
+            element={<ProtectedRoute><ForcePasswordChange /></ProtectedRoute>} />
           <Route path="/dashboard"
             element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/availability"

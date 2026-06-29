@@ -315,6 +315,37 @@ export default function ChatViewPage() {
     } catch { /* non-fatal */ } finally { setBlockLoading(false) }
   }
 
+  // ── Edit & Delete messages ─────────────────────────────────────────────────
+  const handleStartEdit = (msg: Message) => {
+    setEditingId(msg.id)
+    setEditContent(msg.content)
+  }
+
+  const handleSaveEdit = async (msgId: string) => {
+    const text = editContent.trim()
+    if (!text || editLoading) return
+    setEditLoading(true)
+    try {
+      const res = await api.patch<{ success: boolean; data: Message }>(`/chat/messages/${msgId}`, { content: text })
+      setMessages(prev => prev.map(m => m.id === msgId ? res.data.data : m))
+      setEditingId(null)
+    } catch {
+      setError('Failed to edit message')
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
+  const handleDelete = async (msgId: string) => {
+    if (!window.confirm('Are you sure you want to delete this message?')) return
+    try {
+      await api.delete(`/chat/messages/${msgId}`)
+      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, isDeleted: true } : m))
+    } catch {
+      setError('Failed to delete message')
+    }
+  }
+
   // ── Load older messages ────────────────────────────────────────────────────
   const handleLoadMore = () => {
     if (!hasMorePagesRef.current || loadingMore) return
@@ -458,11 +489,40 @@ export default function ChatViewPage() {
                             style={{ color: isMe ? 'rgba(201,168,76,0.35)' : 'rgba(184,212,240,0.3)' }}>
                             Message deleted
                           </p>
+                        ) : editingId === msg.id ? (
+                          <div className="flex flex-col gap-2 mt-1">
+                            <textarea
+                              value={editContent}
+                              onChange={e => setEditContent(e.target.value)}
+                              className="uris-input text-sm p-2 w-full resize-none"
+                              style={{ background: 'rgba(7,8,15,0.5)', minHeight: '3rem' }}
+                              rows={2}
+                            />
+                            <div className="flex gap-3 justify-end items-center">
+                              <button onClick={() => setEditingId(null)} className="text-[0.6rem] nav-label text-ice/60 hover:text-ice/90 transition-colors">CANCEL</button>
+                              <button onClick={() => void handleSaveEdit(msg.id)} disabled={editLoading} className="text-[0.6rem] nav-label text-gold hover:text-gold/80 transition-colors disabled:opacity-50">SAVE</button>
+                            </div>
+                          </div>
                         ) : (
-                          <p className="font-body text-sm leading-snug"
-                            style={{ color: isMe ? '#e2c76e' : 'rgba(232,240,251,0.85)' }}>
-                            {msg.content}
-                          </p>
+                          <div className="group relative">
+                            <p className="font-body text-sm leading-snug whitespace-pre-wrap"
+                              style={{ color: isMe ? '#e2c76e' : 'rgba(232,240,251,0.85)' }}>
+                              {msg.content}
+                            </p>
+                            {/* Action overlay */}
+                            {isMe && (
+                              <div className="absolute top-0 right-0 -mr-6 -mt-3 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 z-10" style={{ pointerEvents: editingId ? 'none' : 'auto' }}>
+                                <div className="bg-navy-950 border border-gold/20 rounded-sm flex items-center shadow-md">
+                                  <button onClick={() => handleStartEdit(msg)} className="p-1.5 text-ice/40 hover:text-gold transition-colors" title="Edit">
+                                    <Edit2 size={12} />
+                                  </button>
+                                  <button onClick={() => void handleDelete(msg.id)} className="p-1.5 text-ice/40 hover:text-red-400 transition-colors" title="Delete">
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         )}
                         <p className="nav-label text-[0.44rem] mt-1 flex items-center gap-1"
                           style={{ color: isMe ? 'rgba(201,168,76,0.5)' : 'rgba(184,212,240,0.25)' }}>

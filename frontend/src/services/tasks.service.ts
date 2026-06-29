@@ -67,7 +67,7 @@ export interface TaskListResponse {
   pagination: TaskPagination
 }
 
-export async function getAllTasks(params?: { status?: string; page?: number; limit?: number }): Promise<Task[]> {
+export async function getAllTasks(params?: { status?: string; page?: number; limit?: number; teamId?: string }): Promise<Task[]> {
   const res = await api.get<{ success: boolean; data: TaskListResponse }>('/tasks', { params })
   // Support both old shape (data is array) and new shape (data.tasks is array)
   const data = res.data.data
@@ -75,7 +75,7 @@ export async function getAllTasks(params?: { status?: string; page?: number; lim
   return data.tasks ?? []
 }
 
-export async function getTasksPaginated(params?: { status?: string; page?: number; limit?: number }): Promise<TaskListResponse> {
+export async function getTasksPaginated(params?: { status?: string; page?: number; limit?: number; teamId?: string }): Promise<TaskListResponse> {
   const res = await api.get<{ success: boolean; data: TaskListResponse }>('/tasks', { params })
   const data = res.data.data
   if (Array.isArray(data)) {

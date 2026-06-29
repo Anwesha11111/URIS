@@ -52,8 +52,7 @@ function requirePermission(permission) {
   assertValidPermission(permission);
 
   return async (req, res, next) => {
-    // Use effectiveRole (set by delegation) if available, else use JWT role
-    const role = req.user?.effectiveRole || req.user?.role;
+    const role = req.user?.role;
 
     // Load live overrides from configStore (DB-backed, in-process cache)
     let overrides = {};

@@ -7,6 +7,9 @@ const {
   getUserTeams,
   getUserTeamHistory,
   getTeamContribution,
+  updateTeam,
+  archiveTeam,
+  restoreTeam,
 } = require('../services/team.service');
 const { ok, created, validationError } = require('../utils/respond');
 
@@ -23,7 +26,8 @@ async function createTeamHandler(req, res, next) {
 
 async function listTeamsHandler(req, res, next) {
   try {
-    const teams = await listTeams();
+    const includeArchived = req.query.status === 'ALL' && req.user.role === 'CORE_ADMIN';
+    const teams = await listTeams(includeArchived);
     return ok(res, teams);
   } catch (err) { next(err); }
 }
@@ -39,7 +43,7 @@ async function joinTeamHandler(req, res, next) {
   try {
     const { teamId } = req.params;
     const userId     = req.user.id;
-    const role       = req.body.role ?? 'member';
+    const role       = req.body.role ?? 'MEMBER';
     const membership = await joinTeam({ userId, teamId, role });
     return ok(res, membership, 'Joined team.');
   } catch (err) { next(err); }
@@ -77,6 +81,51 @@ async function getContributionHandler(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// ── Admin ──────────────────────────────────────────────────────────────────
+
+async function updateTeamHandler(req, res, next) {
+  try {
+    const { teamId } = req.params;
+    const { name, description, status } = req.body;
+    const team = await updateTeam({ teamId, name, description, status });
+    return ok(res, team, 'Team updated.');
+  } catch (err) { next(err); }
+}
+
+async function archiveTeamHandler(req, res, next) {
+  try {
+    const { teamId } = req.params;
+    const team = await archiveTeam(teamId);
+    return ok(res, team, 'Team archived.');
+  } catch (err) { next(err); }
+}
+
+async function restoreTeamHandler(req, res, next) {
+  try {
+    const { teamId } = req.params;
+    const team = await restoreTeam(teamId);
+    return ok(res, team, 'Team restored.');
+  } catch (err) { next(err); }
+}
+
+async function adminJoinTeamHandler(req, res, next) {
+  try {
+    const { teamId } = req.params;
+    const { userId, role } = req.body;
+    if (!userId) return validationError(res, 'userId is required');
+    const membership = await joinTeam({ userId, teamId, role: role ?? 'MEMBER' });
+    return ok(res, membership, 'User added to team.');
+  } catch (err) { next(err); }
+}
+
+async function adminLeaveTeamHandler(req, res, next) {
+  try {
+    const { teamId, userId } = req.params;
+    const membership = await leaveTeam({ userId, teamId });
+    return ok(res, membership, 'User removed from team.');
+  } catch (err) { next(err); }
+}
+
 module.exports = {
   createTeamHandler,
   listTeamsHandler,
@@ -86,4 +135,9 @@ module.exports = {
   getMyTeamsHandler,
   getMyTeamHistoryHandler,
   getContributionHandler,
+  updateTeamHandler,
+  archiveTeamHandler,
+  restoreTeamHandler,
+  adminJoinTeamHandler,
+  adminLeaveTeamHandler,
 };

@@ -247,7 +247,7 @@ async function _executeAction(request, reviewerId) {
 
   switch (action) {
     case APPROVAL_ACTIONS.CHANGE_USER_ROLE: {
-      const { normalizeRole } = require('../constants/roles');
+      const { normalizeRole, ROLES } = require('../constants/roles');
       const normalizedRole = normalizeRole(payload.newRole);
       if (!normalizedRole) throw new Error(`Invalid role: ${payload.newRole}`);
 
@@ -268,10 +268,14 @@ async function _executeAction(request, reviewerId) {
     }
 
     case APPROVAL_ACTIONS.FINISH_INTERNSHIP: {
-      const intern = await prisma.intern.findUnique({ where: { id: targetId }, include: { user: true } });
-      if (!intern) throw Object.assign(new Error('Intern not found'), { status: 404 });
-      await prisma.user.update({ where: { id: intern.userId }, data: { status: 'alumni', role: 'PAST_EMPLOYEE' } });
-      return { internId: targetId, userId: intern.userId };
+      const { ROLES } = require('../constants/roles');
+      const { finishInternshipWithArchive } = require('./internshipArchiveService');
+      return finishInternshipWithArchive(
+        targetId,
+        payload.archive ?? {},
+        reviewerId,
+        ROLES.CORE_ADMIN,
+      );
     }
 
     case APPROVAL_ACTIONS.REMOVE_USER: {

@@ -140,6 +140,23 @@ async function getTasks(req, res, next) {
 
     // Combine role-based filter with request-based status filter
     if (status) filter.status = status.toLowerCase();
+    
+    // Phase 4A: Scope tasks to team if teamId is provided
+    if (req.query.teamId) {
+      const teamInterns = await prisma.userTeam.findMany({
+        where: { teamId: req.query.teamId, leftAt: null },
+        select: { user: { select: { intern: { select: { id: true } } } } }
+      });
+      const teamInternIds = teamInterns.map(t => t.user?.intern?.id).filter(Boolean);
+      
+      if (filter.internId && filter.internId.in) {
+        const allowed = new Set(filter.internId.in);
+        const scoped = teamInternIds.filter(id => allowed.has(id));
+        filter.internId.in = scoped;
+      } else if (filter.internId !== 'none') {
+        filter.internId = { in: teamInternIds };
+      }
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 

@@ -44,22 +44,7 @@ async function verifyToken(req, res, next) {
       id:         decoded.id,
       email:      decoded.email,
       role:       decoded.role,
-      isDelegate: false, // will be populated below
     };
-
-    // Check delegation — if this user has been granted CORE_ADMIN powers
-    // by the actual CORE_ADMIN, attach isDelegate: true so downstream
-    // middleware and business rules can treat them as effective CORE_ADMIN.
-    if (decoded.role !== 'CORE_ADMIN') {
-      try {
-        const { isDelegate } = require('../services/delegationService');
-        req.user.isDelegate = await isDelegate(decoded.id);
-        if (req.user.isDelegate) {
-          // Set effectiveRole so requireRole and requirePermission use it
-          req.user.effectiveRole = 'CORE_ADMIN';
-        }
-      } catch { /* non-fatal — delegation check failure doesn't block auth */ }
-    }
 
     next();
   } catch {
@@ -103,8 +88,7 @@ function requireRole(...roles) {
   const allowed = new Set(roles);
 
   return (req, res, next) => {
-    // Use effectiveRole (set by delegation) if available, else use JWT role
-    const roleToCheck = req.user?.effectiveRole || req.user?.role;
+    const roleToCheck = req.user?.role;
 
     if (!req.user || !allowed.has(roleToCheck)) {
       const { logAction } = require('../utils/auditLogger');

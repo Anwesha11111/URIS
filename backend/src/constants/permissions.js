@@ -104,6 +104,16 @@ const PERMISSION_ROLES = Object.freeze({
     ROLES.OPERATIONS_PROGRAM_MANAGER,
   ]),
 
+  CAN_MANAGE_INTERNSHIP_ARCHIVE: new Set([
+    ROLES.CORE_ADMIN,
+    ROLES.TECHNICAL_LEAD,
+    ROLES.OPERATIONS_LEAD,
+    ROLES.RESEARCH_LEAD,
+    ROLES.OPERATIONS_PROGRAM_MANAGER,
+    ROLES.OBSERVER_TEAM_LEAD,
+    ROLES.COLLABORATOR_LEAD,
+  ]),
+
   // ── Role management (sensitive — requires approval) ────────────────────────
   CAN_CHANGE_USER_ROLE: new Set([
     ROLES.CORE_ADMIN,

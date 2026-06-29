@@ -20,8 +20,12 @@ model User {
   dateOfBirth         DateTime?
   joiningDate         DateTime?
   passwordChangedAt   DateTime?
-  effectiveTli        Float                @default(0)
-  loadBand            LoadBand             @default(GREEN)
+  mustChangePassword    Boolean               @default(true)
+  onboardingEmailStatus OnboardingEmailStatus @default(NOT_SENT)
+  lastEmailSentAt       DateTime?
+  credentialsGeneratedAt DateTime?
+  effectiveTli          Float                 @default(0)
+  loadBand              LoadBand              @default(GREEN)
   tli                 Float                @default(0)
   activities          Activity[]
   auditLogs           AuditLog[]
@@ -75,6 +79,47 @@ model Intern {
   tasks                  Task[]
   virtualPresence        VirtualPresence[]
   availabilityWindows    AvailabilityWindow[]
+  internshipArchive      InternshipArchive?
+}
+
+model InternshipArchive {
+  id                   String                  @id @default(uuid())
+  internId             String                  @unique
+  fullName             String
+  profilePhotoUrl      String?
+  email                String
+  department           String?
+  reportingLead        String?
+  currentRole          Role
+  internshipRole       Role
+  internshipStartDate  DateTime?               @db.Date
+  internshipEndDate    DateTime?               @db.Date
+  duration             String?
+  status               InternshipArchiveStatus @default(ACTIVE)
+  workCategories       String[]                @default([])
+  keyContributions     String?
+  featuredAchievements String?
+  adminReview          String?
+  performanceRating    PerformanceRating?
+  recommendationStatus RecommendationStatus    @default(NOT_EVALUATED)
+  internalNotes        String?
+  verificationId       String?                 @unique
+  verificationToken    String?                 @unique
+  verificationUrl      String?
+  certificateNumber    String?
+  verificationStatus   VerificationStatus      @default(ACTIVE)
+  qrGenerated          Boolean                 @default(false)
+  qrImagePath          String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  createdById          String?
+  updatedById          String?
+  completedAt          DateTime?
+  intern               Intern                  @relation(fields: [internId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([internshipEndDate])
+  @@index([verificationStatus])
 }
 
 model PasswordResetToken {
@@ -236,20 +281,21 @@ model Team {
   id            String             @id @default(uuid())
   name          String             @unique
   description   String?
+  status        TeamStatus         @default(ACTIVE)
   createdAt     DateTime           @default(now())
   collaborating TaskCollaborator[]
   members       UserTeam[]
 }
 
 model UserTeam {
-  id       String    @id @default(uuid())
+  id       String             @id @default(uuid())
   userId   String
   teamId   String
-  role     String    @default("member")
-  joinedAt DateTime  @default(now())
+  role     TeamMembershipRole @default(MEMBER)
+  joinedAt DateTime           @default(now())
   leftAt   DateTime?
-  team     Team      @relation(fields: [teamId], references: [id])
-  user     User      @relation(fields: [userId], references: [id])
+  team     Team               @relation(fields: [teamId], references: [id])
+  user     User               @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([teamId])
@@ -520,4 +566,47 @@ enum LoadBand {
   GREEN
   AMBER
   RED
+}
+
+enum PerformanceRating {
+  OUTSTANDING
+  EXCELLENT
+  VERY_GOOD
+  GOOD
+  SATISFACTORY
+}
+
+enum RecommendationStatus {
+  HIGHLY_RECOMMENDED
+  RECOMMENDED
+  RECOMMENDED_WITH_RESERVATIONS
+  NOT_EVALUATED
+}
+
+enum VerificationStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum InternshipArchiveStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum TeamStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum TeamMembershipRole {
+  MEMBER
+  LEAD
+}
+
+enum OnboardingEmailStatus {
+  NOT_SENT
+  SENDING
+  SENT
+  FAILED
 }

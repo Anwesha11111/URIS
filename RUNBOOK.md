@@ -306,3 +306,68 @@ Check `DATABASE_URL` format: `postgresql://user:password@host:5432/dbname`. Ensu
 
 For a detailed list of all system features (such as Team Heat Capacity, Task Assignment & Overload Warning Banner, Task Deletion, Google Form integration, and Public Portfolios) and how to use them, please refer to [FEATURES.md](file:///c:/Users/DELL/Downloads/New%20folder/PROJECTS/URIS/URIS/FEATURES.md).
 
+---
+
+## 13. Production Backup & Rollback Plan
+
+Before inviting real users or upgrading versions, follow this procedure to ensure data integrity and safe rollbacks.
+
+### Neon Database Backup Procedure
+1. Log into the **Neon Console**.
+2. Select your project and navigate to **Branches**.
+3. Create a new branch from `main` to serve as a snapshot (e.g., `backup-v1.0.0-2026-06-29`). Neon's branching creates an instant copy-on-write snapshot without downtime.
+4. (Optional) Run a logical dump for off-site backup:
+   ```bash
+   pg_dump "postgres://user:password@endpoint.neon.tech/dbname" -Fc > backup_$(date +%F).dump
+   ```
+
+### Environment Variables Backup
+1. Access your hosting dashboard (e.g. Render, Vercel, Railway).
+2. Export or securely copy all environment variables to a local encrypted vault before any major deployment.
+3. Ensure variables like `JWT_SECRET`, `PLANE_WEBHOOK_SECRET`, and `DATABASE_URL` are fully documented.
+
+### Deployment Order & Steps
+Always deploy the backend first to handle migrations, followed by the frontend.
+
+**1. Backend Deployment Steps:**
+- Ensure Neon DB backup is taken.
+- Commit all code and push to the production branch.
+- The hosting provider will run the build phase:
+  ```bash
+  npm install
+  npx prisma generate
+  ```
+- **Prisma Migration Order**: The start script must run migrations before starting the server. If using an automated pipeline, execute:
+  ```bash
+  npx prisma migrate deploy
+  ```
+- Start the server:
+  ```bash
+  NODE_ENV=production node app.js
+  ```
+- Verify health endpoints (`/health/ready`).
+
+**2. Frontend Deployment Steps:**
+- Ensure the backend is fully deployed and healthy.
+- Ensure `VITE_API_BASE_URL` points to the newly deployed backend.
+- Build the frontend:
+  ```bash
+  npm install
+  npm run build
+  ```
+- Serve the `dist/` directory via static hosting.
+
+### How to Roll Back
+If a critical issue occurs after deployment, execute the following rollback plan:
+
+1. **Rollback the Database (Neon):**
+   - If migrations altered the schema destructively, restore the Neon branch created in the backup step.
+   - Go to Neon Console → Branches → select the backup branch → **Restore to this branch** or swap the connection string in your backend hosting to point to the backup branch.
+2. **Rollback the Backend Code:**
+   - In your hosting provider, navigate to the **Deployments** tab.
+   - Select the previous successful deployment and click **Redeploy / Rollback**.
+3. **Rollback the Frontend Code:**
+   - Similarly, in your frontend hosting dashboard, select the previous stable deployment and redeploy.
+4. **Verify Rollback:**
+   - Run a manual smoke test (Login, Chat, Task Assignment) to confirm system stability.
+
