@@ -31,6 +31,7 @@ export interface AuthUser {
   email:  string
   role:   UserRole
   teamId: string | null   // primary team context from JWT
+  mustChangePassword?: boolean
 }
 
 interface AuthState {
@@ -85,6 +86,10 @@ export const useAuthStore = create<AuthState>()(
         import('../store/realtimeStore')
           .then(({ useRealtimeStore }) => useRealtimeStore.getState().connect(token))
           .catch(() => { /* non-fatal */ })
+        // Initialize chat store
+        import('../store/chatStore')
+          .then(({ useChatStore }) => useChatStore.getState().init())
+          .catch(() => { /* non-fatal */ })
       },
 
       logout: () => {
@@ -96,6 +101,10 @@ export const useAuthStore = create<AuthState>()(
         // Clear team context on logout — dynamic import avoids circular deps
         import('../store/teamStore')
           .then(({ useTeamStore }) => useTeamStore.getState().clearTeams())
+          .catch(() => { /* non-fatal */ })
+        // Clear chat store
+        import('../store/chatStore')
+          .then(({ useChatStore }) => useChatStore.getState().clear())
           .catch(() => { /* non-fatal */ })
       },
 
@@ -130,6 +139,10 @@ export const useAuthStore = create<AuthState>()(
           if (state.token) {
             import('../store/realtimeStore')
               .then(({ useRealtimeStore }) => useRealtimeStore.getState().connect(state.token!))
+              .catch(() => { /* non-fatal */ })
+            // Initialize chat store
+            import('../store/chatStore')
+              .then(({ useChatStore }) => useChatStore.getState().init())
               .catch(() => { /* non-fatal */ })
           }
         }

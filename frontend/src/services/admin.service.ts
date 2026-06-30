@@ -63,8 +63,8 @@ export async function rejectUser(userId: string): Promise<void> {
   await api.post('/admin/reject-user', { userId })
 }
 
-export async function finishInternship(internId: string): Promise<void> {
-  await api.post('/admin/finish-internship', { internId })
+export async function finishInternship(internId: string, archive?: Record<string, unknown>): Promise<void> {
+  await api.post('/admin/finish-internship', { internId, archive: archive ?? {} })
 }
 
 // ── Integration Status ────────────────────────────────────────────────────────
@@ -114,6 +114,8 @@ export interface UpdateInternPayload {
   gdocUrl?: string
   joiningDate?: string
   dateOfBirth?: string
+  /** Dynamic role change — CORE_ADMIN only */
+  role?: string
 }
 
 export async function deleteIntern(internId: string): Promise<void> {
@@ -122,4 +124,34 @@ export async function deleteIntern(internId: string): Promise<void> {
 
 export async function updateIntern(internId: string, payload: UpdateInternPayload): Promise<void> {
   await api.patch(`/admin/interns/${internId}`, payload)
+}
+
+// ── Team Assignment ───────────────────────────────────────────────────────────
+
+export interface AssignInternTeamPayload {
+  /** Use an existing team by ID */
+  teamId?: string
+  /** Create-or-get a team by name (used when team doesn't exist yet) */
+  teamName?: string
+  /** MEMBER (default) or LEAD */
+  membershipRole?: 'MEMBER' | 'LEAD'
+}
+
+export interface AssignInternTeamResult {
+  internId:   string
+  userId:     string
+  team:       { id: string; name: string }
+  membership: { id: string; role: string; joinedAt: string }
+}
+
+/** Assign an intern to an existing team or create the team on-the-fly. */
+export async function assignInternTeam(
+  internId: string,
+  payload: AssignInternTeamPayload,
+): Promise<AssignInternTeamResult> {
+  const res = await api.patch<{ success: boolean; data: AssignInternTeamResult }>(
+    `/admin/interns/${internId}/team`,
+    payload,
+  )
+  return res.data.data
 }

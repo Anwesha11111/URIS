@@ -14,14 +14,28 @@ export interface TeamDetail {
   id:          string
   name:        string
   description: string | null
+  status:      string
   createdAt:   string
+  _count?:     { members: number }
   members:     Array<{
     id:       string
     userId:   string
     role:     string
     joinedAt: string
-    user:     { id: string; email: string; role: string }
+    leftAt:   string | null
+    user:     { id: string; email: string; role: string; name?: string }
   }>
+}
+
+export interface CreateTeamPayload {
+  name: string
+  description?: string
+}
+
+export interface UpdateTeamPayload {
+  name?: string
+  description?: string
+  status?: string
 }
 
 /** Fetch all teams the current user actively belongs to. */
@@ -47,8 +61,9 @@ export async function getMyTeams(): Promise<TeamMembership[]> {
 }
 
 /** Fetch all available teams (for admin or join flow). */
-export async function listAllTeams() {
-  const res = await api.get<{ success: boolean; data: TeamDetail[] }>('/teams')
+export async function listAllTeams(includeArchived = false) {
+  const url = includeArchived ? '/teams?status=ALL' : '/teams'
+  const res = await api.get<{ success: boolean; data: TeamDetail[] }>(url)
   return res.data.data
 }
 
@@ -68,4 +83,32 @@ export async function joinTeam(teamId: string): Promise<void> {
 /** Leave a team. */
 export async function leaveTeam(teamId: string): Promise<void> {
   await api.post(`/teams/${teamId}/leave`)
+}
+
+// ── Admin Functions ──────────────────────────────────────────────────────────
+
+export async function createTeam(payload: CreateTeamPayload): Promise<TeamDetail> {
+  const res = await api.post<{ success: boolean; data: TeamDetail }>('/teams', payload)
+  return res.data.data
+}
+
+export async function updateTeam(teamId: string, payload: UpdateTeamPayload): Promise<TeamDetail> {
+  const res = await api.patch<{ success: boolean; data: TeamDetail }>(`/teams/${teamId}`, payload)
+  return res.data.data
+}
+
+export async function archiveTeam(teamId: string): Promise<void> {
+  await api.post(`/teams/${teamId}/archive`)
+}
+
+export async function restoreTeam(teamId: string): Promise<void> {
+  await api.post(`/teams/${teamId}/restore`)
+}
+
+export async function adminAddMember(teamId: string, userId: string, role: 'MEMBER' | 'LEAD'): Promise<void> {
+  await api.post(`/teams/${teamId}/members`, { userId, role })
+}
+
+export async function adminRemoveMember(teamId: string, userId: string): Promise<void> {
+  await api.delete(`/teams/${teamId}/members/${userId}`)
 }

@@ -222,6 +222,7 @@ export default function ChatPage() {
   const handleOpenChat = async (chatId: string) => {
     api.patch(`/chat/chats/${chatId}/read`).catch(() => {})
     setChats(prev => prev.map(c => c.id === chatId ? { ...c, unreadCount: 0 } : c))
+    import('../store/chatStore').then(({ useChatStore }) => useChatStore.getState().handleChatRead(chatId))
     nav(`/chat/${chatId}`)
   }
 

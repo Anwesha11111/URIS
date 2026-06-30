@@ -12,7 +12,7 @@
  *   - Authorised      → render children
  */
 
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore, selectIsAuthenticated } from '../store/authStore'
 import { ROLES } from '../constants/roles'
 import type { Role } from '../constants/roles'
@@ -26,9 +26,14 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, allowRoles, adminOnly }: ProtectedRouteProps) {
   const isAuthenticated = useAuthStore(selectIsAuthenticated)
   const user            = useAuthStore(s => s.user)
+  const location        = useLocation()
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />
+  }
+
+  if (user.mustChangePassword && location.pathname !== '/force-password-change') {
+    return <Navigate to="/force-password-change" replace />
   }
 
   // Resolve the effective role restriction

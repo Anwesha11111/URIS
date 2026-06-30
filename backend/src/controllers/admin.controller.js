@@ -484,40 +484,161 @@ async function setFormReminderUrl(req, res, next) {
 
 async function finishInternship(req, res, next) {
   try {
-    const { internId } = req.body;
+    const { internId, archive } = req.body;
     if (!internId) return validationError(res, 'internId is required');
 
-    const intern = await prisma.intern.findUnique({ 
-      where: { id: internId },
-      include: { user: true }
-    });
+    const { finishInternshipWithArchive } = require('../services/internshipArchiveService');
+    const result = await finishInternshipWithArchive(
+      internId,
+      archive || {},
+      req.user?.id ?? null,
+      req.user.role,
+    );
 
-    if (!intern) return notFound(res, 'Intern not found');
-
-    // Guard: intern must have a linked user account
-    if (!intern.userId) return notFound(res, 'Intern has no linked user account');
-
-    // Update user status and role
-    await prisma.user.update({
-      where: { id: intern.userId },
-      data: {
-        status: 'alumni',
-        role: 'PAST_EMPLOYEE'
-      }
-    });
-
-    void logAction(req.user?.id ?? null, AUDIT_ACTIONS.FINISH_INTERNSHIP, AUDIT_ENTITIES.INTERN, internId, {
-      internEmail: intern.user.email,
-      internName: intern.user.name,
-    });
-
-    return ok(res, null, `Internship finished for ${intern.user.name}. Access removed.`);
+    return ok(res, result, `Internship finished. Archive record saved.`);
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { overrideScore, updateTaskStatus, getAdminOverview, getPendingUsers, approveUser, getAvailabilityDeadline, setAvailabilityDeadline, getFormReminderUrl, setFormReminderUrl, finishInternship, blockIP, unblockIP, listBlockedIPs, getLoginLogs, changeUserRole, getAllUsers, deleteIntern, updateIntern, rejectUser };
+async function updateUserHandler(req, res, next) {
+  try {
+    const { userId } = req.params;
+    const { email, status } = req.body;
+
+    if (!userId) return validationError(res, 'userId is required');
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return notFound(res, 'User not found');
+
+    const updateData = {};
+    if (email) {
+      const emailTrimmed = email.trim().toLowerCase();
+      if (emailTrimmed !== user.email) {
+        const existing = await prisma.user.findUnique({ where: { email: emailTrimmed } });
+        if (existing) {
+          return validationError(res, `Email ${emailTrimmed} is already in use by another user.`);
+        }
+        updateData.email = emailTrimmed;
+      }
+    }
+
+    if (status && status !== user.status) {
+      updateData.status = status;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return ok(res, user, 'No changes made.');
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    void logAction(req.user?.id ?? null, 'UPDATE_USER', AUDIT_ENTITIES.USER, userId, {
+      userId,
+      changes: updateData,
+    });
+
+    return ok(res, updatedUser, 'User updated successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { overrideScore, updateTaskStatus, getAdminOverview, getPendingUsers, approveUser, getAvailabilityDeadline, setAvailabilityDeadline, getFormReminderUrl, setFormReminderUrl, finishInternship, blockIP, unblockIP, listBlockedIPs, getLoginLogs, changeUserRole, getAllUsers, deleteIntern, updateIntern, rejectUser, updateUserHandler, assignInternTeam, resetUserPassword, sendCredentials, sendCredentialsBulk, previewOnboardingEmail, logOnboardingAction };
+
+// ── Assign intern to a team (create team if needed) ───────────────────────────
+//
+// PATCH /admin/interns/:internId/team
+// Body: { teamId?, teamName?, membershipRole? }
+//
+// Behaviour:
+//  - If teamId is supplied → use existing team (must exist)
+//  - If teamName is supplied without teamId → create team if it doesn't exist,
+//    then assign. This is the "create and assign" path for the Technical team interns.
+//  - membershipRole defaults to MEMBER. Pass 'LEAD' for leads.
+//  - Idempotent: calling with the same (internId, teamId) twice is safe.
+
+async function assignInternTeam(req, res, next) {
+  try {
+    const { internId } = req.params;
+    const { teamId, teamName, membershipRole = 'MEMBER' } = req.body;
+
+    if (!internId) return validationError(res, 'internId is required');
+    if (!teamId && !teamName) return validationError(res, 'Either teamId or teamName is required');
+
+    // Resolve the intern → get its linked userId
+    const intern = await prisma.intern.findUnique({
+      where:   { id: internId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    if (!intern)         return notFound(res, 'Intern not found');
+    if (!intern.userId)  return notFound(res, 'Intern has no linked user account');
+
+    // Resolve or create the team
+    let team;
+    if (teamId) {
+      team = await prisma.team.findUnique({ where: { id: teamId } });
+      if (!team) return notFound(res, 'Team not found');
+    } else {
+      // Create-or-get by name
+      const trimmedName = teamName.trim();
+      team = await prisma.team.findUnique({ where: { name: trimmedName } });
+      if (!team) {
+        team = await prisma.team.create({ data: { name: trimmedName } });
+        void logAction(req.user?.id ?? null, 'CREATE_TEAM', AUDIT_ENTITIES.SYSTEM, team.id, {
+          name: team.name, createdVia: 'assignInternTeam',
+        });
+      }
+    }
+
+    if (team.status !== 'ACTIVE') {
+      return validationError(res, `Team "${team.name}" is archived and cannot accept new members`);
+    }
+
+    const normalizedRole = membershipRole.toUpperCase();
+    if (!['MEMBER', 'LEAD'].includes(normalizedRole)) {
+      return validationError(res, 'membershipRole must be MEMBER or LEAD');
+    }
+
+    // Idempotent assignment — only create if no active membership exists
+    const existing = await prisma.userTeam.findFirst({
+      where: { userId: intern.userId, teamId: team.id, leftAt: null },
+    });
+
+    let membership;
+    if (existing) {
+      membership = existing;
+    } else {
+      membership = await prisma.userTeam.create({
+        data: { userId: intern.userId, teamId: team.id, role: normalizedRole },
+      });
+    }
+
+    void logAction(req.user?.id ?? null, 'ASSIGN_INTERN_TEAM', AUDIT_ENTITIES.USER, internId, {
+      internId,
+      userId:   intern.userId,
+      teamId:   team.id,
+      teamName: team.name,
+      membershipRole: normalizedRole,
+      wasAlreadyMember: !!existing,
+    });
+
+    return ok(res, {
+      internId,
+      userId:     intern.userId,
+      team:       { id: team.id, name: team.name },
+      membership: { id: membership.id, role: membership.role, joinedAt: membership.joinedAt },
+    }, existing
+      ? `${intern.user?.name || intern.user?.email} is already in "${team.name}"`
+      : `${intern.user?.name || intern.user?.email} assigned to "${team.name}"`
+    );
+  } catch (err) {
+    next(err);
+  }
+}
 
 // ── Get all users (for role management UI) ────────────────────────────────────
 
@@ -531,6 +652,10 @@ async function getAllUsers(req, res, next) {
         role:      true,
         status:    true,
         createdAt: true,
+        onboardingEmailStatus: true,
+        credentialsGeneratedAt: true,
+        lastEmailSentAt: true,
+        mustChangePassword: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -740,17 +865,36 @@ async function updateIntern(req, res, next) {
 
     const intern = await prisma.intern.findUnique({
       where: { id: internId },
-      include: { user: true },
+      include: { user: { select: { id: true, email: true, name: true, role: true } } },
     });
     if (!intern) return notFound(res, 'Intern not found');
 
-    const { name, gdocUrl, joiningDate, dateOfBirth } = req.body;
+    const { name, gdocUrl, joiningDate, dateOfBirth, role } = req.body;
 
     // Update User fields — only possible when intern has a linked user account
     const userUpdate = {};
     if (typeof name === 'string' && name.trim()) userUpdate.name = name.trim();
     if (joiningDate) userUpdate.joiningDate = new Date(joiningDate);
     if (dateOfBirth)  userUpdate.dateOfBirth  = new Date(dateOfBirth);
+
+    // Dynamic role change — CORE_ADMIN can toggle role (e.g. INTERN ↔ OPERATIONS_PROGRAM_MANAGER)
+    if (role !== undefined && role !== null) {
+      const normalizedRole = normalizeRole(role);
+      if (!normalizedRole) return validationError(res, `Invalid role "${role}"`);
+      if (normalizedRole !== intern.user?.role) {
+        userUpdate.role = normalizedRole;
+        // Write role history so the change is traceable
+        await prisma.userRoleHistory.create({
+          data: {
+            userId:      intern.userId,
+            previousRole: intern.user?.role ?? 'UNKNOWN',
+            newRole:     normalizedRole,
+            changedById: req.user?.id ?? null,
+            reason:      'Role updated via Admin Intern edit',
+          },
+        });
+      }
+    }
 
     if (Object.keys(userUpdate).length > 0) {
       if (!intern.userId) return notFound(res, 'Intern has no linked user account');
@@ -799,3 +943,219 @@ async function rejectUser(req, res, next) {
     next(err);
   }
 }
+
+// ── Reset User Password (Admin) ───────────────────────────────────────────────
+
+async function resetUserPassword(req, res, next) {
+  try {
+    const { userId } = req.params;
+    if (!userId) return validationError(res, 'userId is required');
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return notFound(res, 'User not found');
+
+    const crypto = require('crypto');
+    const bcrypt = require('bcrypt');
+    const randomPart = crypto.randomBytes(6).toString('hex');
+    const tempPassword = `Temp@${randomPart}A1!`;
+
+    const hash = await bcrypt.hash(tempPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        password: hash, 
+        passwordChangedAt: null, 
+        mustChangePassword: true,
+        onboardingEmailStatus: 'NOT_SENT'
+      },
+    });
+
+    void logAction(req.user?.id ?? null, 'ADMIN_RESET_PASSWORD', AUDIT_ENTITIES.USER, userId, {
+      userId,
+      resetForEmail: user.email,
+    });
+
+    return ok(res, { tempPassword }, `Password reset successfully for ${user.email}.`);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ── Phase 5B: Onboarding Email & Credentials ──────────────────────────────────
+
+async function sendCredentials(req, res, next) {
+  try {
+    const { userId } = req.params;
+    if (!userId) return validationError(res, 'userId is required');
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return notFound(res, 'User not found');
+
+    const crypto = require('crypto');
+    const bcrypt = require('bcrypt');
+    const randomPart = crypto.randomBytes(6).toString('hex');
+    const tempPassword = `Temp@${randomPart}A1!`;
+
+    const hash = await bcrypt.hash(tempPassword, 10);
+    const generatedAt = new Date();
+
+    // 1. Save hashed password and update status to SENDING
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hash,
+        passwordChangedAt: null,
+        mustChangePassword: true,
+        credentialsGeneratedAt: generatedAt,
+        onboardingEmailStatus: 'SENDING',
+      },
+    });
+
+    void logAction(req.user?.id ?? null, 'SEND_CREDENTIALS', AUDIT_ENTITIES.USER, userId, {
+      userId,
+      email: user.email,
+    });
+
+    // 2. Attempt email dispatch
+    const emailResult = await notificationService.notifyOnboardingCredentials(
+      user.email,
+      user.name || user.email.split('@')[0],
+      (process.env.FRONTEND_URL || 'http://localhost:5173') + '/login',
+      tempPassword
+    );
+
+    // 3. Update DB based on email outcome
+    const isManualMode = emailResult.reason === 'RESEND_NOT_CONFIGURED';
+    const newStatus = emailResult.success ? 'SENT' : 'FAILED';
+    
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        onboardingEmailStatus: newStatus,
+        ...(emailResult.success ? { lastEmailSentAt: new Date() } : {}),
+      },
+    });
+
+    // Return the single-use plaintext password to the UI
+    return ok(res, {
+      status: newStatus,
+      emailSent: emailResult.success,
+      isManualMode,
+      error: emailResult.error || emailResult.reason,
+      tempPassword,
+    }, 'Credentials generated and dispatch attempted.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function sendCredentialsBulk(req, res, next) {
+  try {
+    const { userIds } = req.body;
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return validationError(res, 'userIds array is required and must not be empty');
+    }
+
+    void logAction(req.user?.id ?? null, 'BULK_SEND_CREDENTIALS', AUDIT_ENTITIES.USER, null, {
+      count: userIds.length,
+    });
+
+    // We process sequentially or in parallel without aborting on failure
+    const results = await Promise.all(
+      userIds.map(async (userId) => {
+        try {
+          const user = await prisma.user.findUnique({ where: { id: userId } });
+          if (!user) return { userId, status: 'FAILED', error: 'User not found' };
+
+          const crypto = require('crypto');
+          const bcrypt = require('bcrypt');
+          const randomPart = crypto.randomBytes(6).toString('hex');
+          const tempPassword = `Temp@${randomPart}A1!`;
+
+          const hash = await bcrypt.hash(tempPassword, 10);
+          
+          await prisma.user.update({
+            where: { id: userId },
+            data: {
+              password: hash,
+              passwordChangedAt: null,
+              mustChangePassword: true,
+              credentialsGeneratedAt: new Date(),
+              onboardingEmailStatus: 'SENDING',
+            },
+          });
+
+          const emailResult = await notificationService.notifyOnboardingCredentials(
+            user.email,
+            user.name || user.email.split('@')[0],
+            (process.env.FRONTEND_URL || 'http://localhost:5173') + '/login',
+            tempPassword
+          );
+
+          const isManualMode = emailResult.reason === 'RESEND_NOT_CONFIGURED';
+          const newStatus = emailResult.success ? 'SENT' : 'FAILED';
+          
+          await prisma.user.update({
+            where: { id: userId },
+            data: {
+              onboardingEmailStatus: newStatus,
+              ...(emailResult.success ? { lastEmailSentAt: new Date() } : {}),
+            },
+          });
+
+          return {
+            userId,
+            status: newStatus,
+            emailSent: emailResult.success,
+            isManualMode,
+            error: emailResult.error || emailResult.reason,
+            tempPassword,
+          };
+        } catch (err) {
+          return { userId, status: 'FAILED', error: err.message };
+        }
+      })
+    );
+
+    return ok(res, results, 'Bulk credential dispatch completed.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function previewOnboardingEmail(req, res, next) {
+  try {
+    const { renderOnboardingCredentials } = require('../services/email.service');
+    const emailHtml = renderOnboardingCredentials({
+      name: 'Jane Doe',
+      email: 'jane.doe@example.com',
+      loginUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/login',
+      tempPassword: 'Temp@Preview123!'
+    }).html;
+    
+    // Instead of JSON wrapper, just return HTML so it can be loaded in an iframe
+    res.setHeader('Content-Type', 'text/html');
+    res.send(emailHtml);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function logOnboardingAction(req, res, next) {
+  try {
+    const { action, userId, count } = req.body;
+    if (!['COPY_CREDENTIALS', 'EXPORT_CREDENTIALS'].includes(action)) {
+      return validationError(res, 'Invalid onboarding action');
+    }
+
+    void logAction(req.user?.id ?? null, action, AUDIT_ENTITIES.USER, userId || null, {
+      count,
+    });
+    
+    return ok(res, null, 'Action logged');
+  } catch (err) {
+    next(err);
+  }
+}
+

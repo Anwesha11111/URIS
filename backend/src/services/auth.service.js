@@ -219,7 +219,14 @@ async function login({ email, password, ip = '0.0.0.0' }) {
   }
 
   const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role, internId: user.intern?.id ?? null, name: user.name || null },
+    { 
+      id: user.id, 
+      email: user.email, 
+      role: user.role, 
+      internId: user.intern?.id ?? null, 
+      name: user.name || null,
+      mustChangePassword: user.mustChangePassword 
+    },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
   );
@@ -231,6 +238,7 @@ async function login({ email, password, ip = '0.0.0.0' }) {
       name:  user.name || user.email.split('@')[0],  // fallback for legacy rows without a name
       email: user.email,
       role:  user.role.toLowerCase(),
+      mustChangePassword: user.mustChangePassword,
     },
   };
 

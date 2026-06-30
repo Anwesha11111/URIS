@@ -1,0 +1,119 @@
+# Dependency Analysis Report
+
+**Users to delete:** 13
+**Orphaned Interns to delete:** 3
+
+## Dependencies found:
+- **Tasks linked to these interns:** 0
+- **Reviews linked to these interns:** 0
+- **UserTeam records linked to these users:** 0
+- **Chat memberships linked to these users:** 0
+- **Archive records linked to these interns:** 0
+
+## Target Details:
+### Users
+- e2e_intern_1781163422963@test.com (ID: a0054cde-3ac3-4ff4-9fc1-be6b0ed95d24)
+  - Intern ID: ddaf0292-2f91-4c26-b2ee-3a1b5d2ed21a
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1780319805059@test.com (ID: 459d88bc-1490-48c2-9cc9-5226c70950e9)
+  - Intern ID: 277a0d88-a55e-41a4-a739-1791784428f8
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1781159403438@test.com (ID: c18b97c0-4446-49b2-bbe5-39520e370351)
+  - Intern ID: 64d989cc-17e3-4d8f-8496-fabc4b50440f
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- assign-intern-12345@test.local (ID: e8a731cc-c977-4fe7-b894-b7c94afd2354)
+  - Intern ID: 7aa59708-230b-4c01-a210-8316d9e1e284
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1781166062217@test.com (ID: a999d808-a43e-466c-9b5e-087989b7b40c)
+  - Intern ID: dadfa5aa-91e5-4952-addc-60dd764c5109
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1780318887958@test.com (ID: bfbf358f-ac71-47c1-bd95-44cb798eda02)
+  - Intern ID: ba8ab81b-de33-4466-9998-40819c9161ea
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1780319813903@test.com (ID: 1bd52f53-4041-4260-89fb-12ef6810720b)
+  - Intern ID: ca492780-3da5-4a52-b387-0fc920ba17aa
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1781159421392@test.com (ID: 969a84e0-d450-4640-9367-c0bb12125aac)
+  - Intern ID: a9a38b60-4c60-40a6-9d25-4670ceefdaca
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1781165744033@test.com (ID: a73d7c1c-1270-4d80-a518-d8e7988e677a)
+  - Intern ID: 338d5536-851d-4dbe-b6d9-c9b318ad89c1
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1781165751800@test.com (ID: 86d44c8c-ffce-4790-960b-7cd203ee203d)
+  - Intern ID: 8d7a8646-26be-4c76-b027-d2e8230a062c
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1781165626126@test.com (ID: bc2ab631-93a6-465c-b676-5accbde5e5bb)
+  - Intern ID: e29eecf0-0c6c-46fd-8451-47667b811137
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1781165615011@test.com (ID: 4d2d8f05-979a-404e-aa7c-2972ff1a4dd5)
+  - Intern ID: db24d3b3-3ddd-48a9-bfba-b04dfeaee798
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+- e2e_intern_1781165829340@test.com (ID: 7f6a342f-2da5-4f00-95e9-8344bd1d0146)
+  - Intern ID: e0e960e1-6981-4657-b67b-320d1b2d4faf
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+  - Teams: 0
+  - Chats: 0
+
+### Orphaned Interns
+- Intern ID: 221c171f-53a6-4efc-8fa7-68622a5bc0f0
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+- Intern ID: d721cdc1-3e80-4a62-9769-8348f41182a4
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0
+- Intern ID: af91fa22-35d2-44a2-88cc-c3d56558594b
+  - Tasks: 0
+  - Reviews: 0
+  - Archives: 0

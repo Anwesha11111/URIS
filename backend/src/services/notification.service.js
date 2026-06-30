@@ -36,6 +36,14 @@ async function notifyAccountApproved(email, name) {
   });
 }
 
+async function notifyOnboardingCredentials(email, name, loginUrl, tempPassword) {
+  return sendEmail({
+    to: email,
+    templateName: 'onboarding-credentials',
+    templateData: { name, email, loginUrl, tempPassword },
+  });
+}
+
 async function notifyTaskAssigned(email, name, taskTitle) {
   return sendEmail({
     to: email,
@@ -127,4 +135,5 @@ module.exports = {
   notifyOperationalAlert,
   notifyNewChatMessage,
   sendGdocReminders,
+  notifyOnboardingCredentials,
 };

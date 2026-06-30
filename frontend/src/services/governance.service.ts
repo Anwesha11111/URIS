@@ -96,6 +96,10 @@ export interface GovernanceUser {
   createdAt: string
   internId:  string | null
   teams:     string[]
+  onboardingEmailStatus: 'NOT_SENT' | 'SENDING' | 'SENT' | 'FAILED'
+  lastEmailSentAt:       string | null
+  credentialsGeneratedAt: string | null
+  mustChangePassword:    boolean
 }
 
 export interface UserListResponse {
@@ -106,6 +110,45 @@ export interface UserListResponse {
 export function getAllUsers(params?: { status?: string; page?: number; limit?: number }): Promise<UserListResponse> {
   return wrap(api.get('/governance/users', { params }))
 }
+
+export function adminUpdateUser(userId: string, payload: { email?: string; status?: string }): Promise<GovernanceUser> {
+  return wrap(api.patch(`/admin/users/${userId}`, payload))
+}
+
+export function adminResetUserPassword(userId: string): Promise<{ tempPassword: string }> {
+  return wrap(api.post(`/admin/users/${userId}/reset-password`))
+}
+
+// ── Onboarding & Credentials ──────────────────────────────────────────────────
+
+export interface SendCredentialsResult {
+  status: 'NOT_SENT' | 'SENDING' | 'SENT' | 'FAILED'
+  emailSent: boolean
+  isManualMode: boolean
+  error?: string
+  tempPassword?: string
+}
+
+export interface BulkSendCredentialsResult extends SendCredentialsResult {
+  userId: string
+}
+
+export function sendCredentials(userId: string): Promise<SendCredentialsResult> {
+  return wrap(api.post(`/admin/users/${userId}/send-credentials`))
+}
+
+export function sendCredentialsBulk(userIds: string[]): Promise<BulkSendCredentialsResult[]> {
+  return wrap(api.post('/admin/users/bulk-send-credentials', { userIds }))
+}
+
+export function getOnboardingEmailPreview(): Promise<string> {
+  return api.get('/admin/onboarding/preview-email', { responseType: 'text' }).then(res => res.data)
+}
+
+export function logOnboardingAction(action: 'COPY_CREDENTIALS' | 'EXPORT_CREDENTIALS', userId?: string, count?: number): Promise<void> {
+  return wrap(api.post('/admin/onboarding/log-action', { action, userId, count }))
+}
+
 
 // ── Role history ──────────────────────────────────────────────────────────────
 

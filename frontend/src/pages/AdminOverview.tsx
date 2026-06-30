@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, TrendingUp, X, Check, UserCheck, AlertTriangle, Loader2, Clock, ShieldCheck, Trash2, Edit2, Users } from 'lucide-react'
+import { Shield, TrendingUp, X, Check, UserCheck, AlertTriangle, Loader2, Clock, ShieldCheck, Trash2, Edit2, Users, GitBranch } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getAdminOverview, type InternRow } from '../services/dashboard.service'
 import { getAllTasks, type Task } from '../services/tasks.service'
-import { overrideScore, assignTask, getAvailabilityDeadline, setAvailabilityDeadline, getPendingUsers, approveUser, rejectUser, deleteIntern, updateIntern, type AvailabilityDeadline, type PendingUser, type UpdateInternPayload } from '../services/admin.service'
+import { overrideScore, assignTask, getAvailabilityDeadline, setAvailabilityDeadline, getPendingUsers, approveUser, rejectUser, deleteIntern, updateIntern, assignInternTeam, type AvailabilityDeadline, type PendingUser, type UpdateInternPayload } from '../services/admin.service'
+import { listAllTeams, type TeamDetail } from '../services/team.service'
 import { updateTaskStatus } from '../services/tasks.service'
 import { extractErrorMessage } from '../services/error'
 import RoleManagementModal from '../components/RoleManagementModal'
@@ -92,6 +93,15 @@ export default function AdminOverview() {
   const [editForm, setEditForm]               = useState<UpdateInternPayload>({})
   const [editLoading, setEditLoading]         = useState(false)
 
+  // Team assignment panel (CORE_ADMIN only)
+  const [allTeams, setAllTeams]                     = useState<TeamDetail[]>([])
+  const [assigningTeamIntern, setAssigningTeamIntern] = useState<InternRow | null>(null)
+  const [teamAssignMode, setTeamAssignMode]         = useState<'existing' | 'new'>('existing')
+  const [selectedTeamId, setSelectedTeamId]         = useState('')
+  const [newTeamName, setNewTeamName]               = useState('')
+  const [teamAssignLoading, setTeamAssignLoading]   = useState(false)
+  const [teamAssignMsg, setTeamAssignMsg]           = useState<{ ok: boolean; text: string } | null>(null)
+
   useEffect(() => {
     async function load(): Promise<void> {
       try {
@@ -122,6 +132,12 @@ export default function AdminOverview() {
   useEffect(() => {
     getPendingUsers().then(setPendingUsers).catch(() => {})
   }, [])
+
+  // Load all teams for the team-assignment panel (CORE_ADMIN only)
+  useEffect(() => {
+    if (!isCoreAdmin) return
+    listAllTeams().then(setAllTeams).catch(() => {})
+  }, [isCoreAdmin])
 
   // Load admin users for elevation panel (CORE_ADMIN only)
   useEffect(() => {
@@ -753,7 +769,7 @@ export default function AdminOverview() {
 
                         {internMgmtMsg && <FeedbackBanner ok={internMgmtMsg.ok} text={internMgmtMsg.text} />}
 
-                        {/* Edit form */}
+                        {/* ── Edit form ── */}
                         {editingIntern && (
                           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                             className="p-4 rounded-sm space-y-3"
@@ -765,24 +781,59 @@ export default function AdminOverview() {
                                 <X size={13} />
                               </button>
                             </div>
+
+                            {/* Name */}
                             <div>
                               <label className="nav-label text-[0.55rem] text-gold/50 block mb-1">FULL NAME</label>
                               <input type="text" className="uris-input" placeholder={editingIntern.name}
                                 value={editForm.name ?? ''}
                                 onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
                             </div>
+
+                            {/* GDoc URL */}
                             <div>
                               <label className="nav-label text-[0.55rem] text-gold/50 block mb-1">GDOC URL</label>
                               <input type="url" className="uris-input" placeholder="https://docs.google.com/document/d/..."
                                 value={editForm.gdocUrl ?? ''}
                                 onChange={e => setEditForm(f => ({ ...f, gdocUrl: e.target.value }))} />
                             </div>
+
+                            {/* Joining date */}
                             <div>
                               <label className="nav-label text-[0.55rem] text-gold/50 block mb-1">JOINING DATE</label>
                               <input type="date" className="uris-input"
                                 value={editForm.joiningDate ?? ''}
                                 onChange={e => setEditForm(f => ({ ...f, joiningDate: e.target.value }))} />
                             </div>
+
+                            {/* Role (CORE_ADMIN only) — dynamic type toggle */}
+                            {isCoreAdmin && (
+                              <div>
+                                <label className="nav-label text-[0.55rem] text-gold/50 block mb-1">
+                                  ROLE
+                                  <span className="ml-2 text-ice/30 normal-case font-normal">(changes classification)</span>
+                                </label>
+                                <select className="uris-input" value={editForm.role ?? ''}
+                                  onChange={e => setEditForm(f => ({ ...f, role: e.target.value || undefined }))}>
+                                  <option value="">— unchanged —</option>
+                                  <option value="TECHNICAL_INTERN">Technical Intern</option>
+                                  <option value="RESEARCH_INTERN">Research Intern</option>
+                                  <option value="OPERATIONS_INTERN">Operations Intern</option>
+                                  <option value="OPERATIONS_PROGRAM_MANAGER">Program Manager</option>
+                                  <option value="TECHNICAL_LEAD">Technical Lead</option>
+                                  <option value="RESEARCH_LEAD">Research Lead</option>
+                                  <option value="OPERATIONS_LEAD">Operations Lead</option>
+                                  <option value="CORE_ADMIN">Core Admin</option>
+                                  <option value="PAST_EMPLOYEE">Past Employee</option>
+                                </select>
+                                {editForm.role && (
+                                  <p className="font-body text-[0.6rem] text-amber-400/70 mt-1">
+                                    Role change is permanent and logged in role history.
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
                             <motion.button
                               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                               disabled={editLoading}
@@ -810,7 +861,106 @@ export default function AdminOverview() {
                           </motion.div>
                         )}
 
-                        {/* Intern list */}
+                        {/* ── Team assignment panel (CORE_ADMIN only) ── */}
+                        {isCoreAdmin && assigningTeamIntern && (
+                          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                            className="p-4 rounded-sm space-y-3"
+                            style={{ background: 'rgba(96,165,250,0.05)', border: '1px solid rgba(96,165,250,0.2)' }}>
+
+                            <div className="flex items-center justify-between mb-1">
+                              <div>
+                                <p className="nav-label text-[0.55rem]" style={{ color: 'rgba(96,165,250,0.7)' }}>
+                                  ASSIGN TEAM
+                                </p>
+                                <p className="font-body text-xs text-frost/70 mt-0.5">{assigningTeamIntern.name}</p>
+                              </div>
+                              <button onClick={() => {
+                                setAssigningTeamIntern(null)
+                                setSelectedTeamId('')
+                                setNewTeamName('')
+                                setTeamAssignMsg(null)
+                              }} className="text-ice/30 hover:text-frost transition-colors">
+                                <X size={13} />
+                              </button>
+                            </div>
+
+                            {/* Mode toggle: existing vs new */}
+                            <div className="flex rounded-sm overflow-hidden" style={{ border: '1px solid rgba(96,165,250,0.2)' }}>
+                              {(['existing', 'new'] as const).map(mode => (
+                                <button key={mode}
+                                  onClick={() => { setTeamAssignMode(mode); setSelectedTeamId(''); setNewTeamName('') }}
+                                  className="flex-1 py-1.5 nav-label text-[0.5rem] transition-colors"
+                                  style={{
+                                    background: teamAssignMode === mode ? 'rgba(96,165,250,0.15)' : 'transparent',
+                                    color: teamAssignMode === mode ? '#60a5fa' : 'rgba(184,212,240,0.35)',
+                                  }}>
+                                  {mode === 'existing' ? 'EXISTING TEAM' : 'CREATE NEW TEAM'}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Existing team picker */}
+                            {teamAssignMode === 'existing' && (
+                              <div>
+                                <label className="nav-label text-[0.55rem] text-ice/40 block mb-1">SELECT TEAM</label>
+                                <select className="uris-input" value={selectedTeamId}
+                                  onChange={e => setSelectedTeamId(e.target.value)}>
+                                  <option value="">Choose team...</option>
+                                  {allTeams.map(t => (
+                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
+                            {/* New team name input */}
+                            {teamAssignMode === 'new' && (
+                              <div>
+                                <label className="nav-label text-[0.55rem] text-ice/40 block mb-1">NEW TEAM NAME</label>
+                                <input type="text" className="uris-input" placeholder="e.g. Technical"
+                                  value={newTeamName}
+                                  onChange={e => setNewTeamName(e.target.value)} />
+                                <p className="font-body text-[0.6rem] text-ice/30 mt-1">
+                                  Team will be created automatically if it does not already exist.
+                                </p>
+                              </div>
+                            )}
+
+                            {teamAssignMsg && <FeedbackBanner ok={teamAssignMsg.ok} text={teamAssignMsg.text} />}
+
+                            <motion.button
+                              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                              disabled={teamAssignLoading || (teamAssignMode === 'existing' && !selectedTeamId) || (teamAssignMode === 'new' && !newTeamName.trim())}
+                              onClick={async () => {
+                                setTeamAssignLoading(true)
+                                setTeamAssignMsg(null)
+                                try {
+                                  const payload = teamAssignMode === 'existing'
+                                    ? { teamId: selectedTeamId }
+                                    : { teamName: newTeamName.trim() }
+                                  const result = await assignInternTeam(assigningTeamIntern.id, payload)
+                                  setTeamAssignMsg({ ok: true, text: `Assigned to "${result.team.name}" successfully.` })
+                                  // Refresh teams list in case a new one was created
+                                  listAllTeams().then(setAllTeams).catch(() => {})
+                                  setSelectedTeamId('')
+                                  setNewTeamName('')
+                                } catch (err: unknown) {
+                                  setTeamAssignMsg({ ok: false, text: extractErrorMessage(err, 'Team assignment failed.') })
+                                } finally {
+                                  setTeamAssignLoading(false)
+                                }
+                              }}
+                              className="w-full py-2 rounded-sm flex items-center justify-center gap-2 nav-label text-[0.55rem] transition-colors disabled:opacity-40"
+                              style={{ background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.3)', color: '#60a5fa' }}>
+                              {teamAssignLoading
+                                ? <Loader2 size={11} className="animate-spin" />
+                                : <GitBranch size={11} />}
+                              {teamAssignMode === 'existing' ? 'ASSIGN TO TEAM' : 'CREATE & ASSIGN'}
+                            </motion.button>
+                          </motion.div>
+                        )}
+
+                        {/* ── Intern list ── */}
                         {interns.length === 0 ? (
                           <div className="py-8 text-center">
                             <Users size={24} className="text-ice/20 mx-auto mb-3" />
@@ -838,14 +988,51 @@ export default function AdminOverview() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                  {/* Edit */}
                                   <motion.button
                                     whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                    onClick={() => { setEditingIntern(intern); setEditForm({ name: intern.name }); setInternMgmtMsg(null) }}
+                                    onClick={() => {
+                                      setAssigningTeamIntern(null)
+                                      setTeamAssignMsg(null)
+                                      setEditingIntern(intern)
+                                      setEditForm({ name: intern.name })
+                                      setInternMgmtMsg(null)
+                                    }}
                                     className="p-1.5 rounded-sm transition-colors"
                                     style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)' }}
                                     title="Edit intern">
                                     <Edit2 size={11} className="text-gold" />
                                   </motion.button>
+
+                                  {/* Assign team (CORE_ADMIN only) */}
+                                  {isCoreAdmin && (
+                                    <motion.button
+                                      whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                      onClick={() => {
+                                        setEditingIntern(null)
+                                        setEditForm({})
+                                        setInternMgmtMsg(null)
+                                        setTeamAssignMsg(null)
+                                        setSelectedTeamId('')
+                                        setNewTeamName('')
+                                        setTeamAssignMode('existing')
+                                        setAssigningTeamIntern(
+                                          assigningTeamIntern?.id === intern.id ? null : intern
+                                        )
+                                      }}
+                                      className="p-1.5 rounded-sm transition-colors"
+                                      style={{
+                                        background: assigningTeamIntern?.id === intern.id
+                                          ? 'rgba(96,165,250,0.2)'
+                                          : 'rgba(96,165,250,0.08)',
+                                        border: `1px solid ${assigningTeamIntern?.id === intern.id ? 'rgba(96,165,250,0.5)' : 'rgba(96,165,250,0.2)'}`,
+                                      }}
+                                      title="Assign team">
+                                      <GitBranch size={11} style={{ color: '#60a5fa' }} />
+                                    </motion.button>
+                                  )}
+
+                                  {/* Delete */}
                                   <motion.button
                                     whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                                     disabled={deletingId === intern.id}

@@ -4,7 +4,7 @@ import { ChevronRight, Loader2, AlertTriangle, Award, Wifi, WifiOff, Clock, LogI
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getAdminOverview, type InternRow } from '../services/dashboard.service'
-import { finishInternship } from '../services/admin.service'
+import InternshipArchiveModal from '../components/InternshipArchiveModal'
 import { changeUserRole } from '../services/collaboration.service'
 import { extractErrorMessage } from '../services/error'
 
@@ -69,6 +69,7 @@ export default function Team() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
   const [selected, setSelected] = useState<InternRow | null>(null)
+  const [archiveModal, setArchiveModal] = useState<{ internId: string; name: string; mode: 'finish' | 'edit' } | null>(null)
   const [promotingId, setPromotingId] = useState<string | null>(null)
   const [promoteMsg, setPromoteMsg]   = useState<{ id: string; ok: boolean; text: string } | null>(null)
 
@@ -88,14 +89,8 @@ export default function Team() {
     void load()
   }, [])
 
-  const handleFinish = async (internId: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to finish ${name}'s internship? They will be moved to alumni status and lose dashboard access.`)) return
-    try {
-      await finishInternship(internId)
-      await load()
-    } catch (err) {
-      alert(extractErrorMessage(err, 'Failed to finish internship.'))
-    }
+  const handleFinish = (internId: string, name: string) => {
+    setArchiveModal({ internId, name, mode: 'finish' })
   }
 
   const handlePromoteToCoreAdmin = async (intern: InternRow) => {
@@ -298,6 +293,13 @@ export default function Team() {
                       <Award size={10} /> FINISH
                     </motion.button>
 
+                    <motion.button whileTap={{ scale: 0.95 }}
+                      onClick={(e) => { e.stopPropagation(); setArchiveModal({ internId: intern.id, name: intern.name, mode: 'edit' }) }}
+                      className="nav-label text-[0.5rem] px-2 py-1 rounded-sm transition-all flex items-center gap-1"
+                      style={{ background: 'rgba(184,212,240,0.06)', color: 'rgba(184,212,240,0.6)', border: '1px solid rgba(184,212,240,0.12)' }}>
+                      ARCHIVE
+                    </motion.button>
+
                     {/* Quick promote to Core Admin */}
                     <motion.button whileTap={{ scale: 0.95 }}
                       disabled={promotingId === intern.id}
@@ -326,6 +328,16 @@ export default function Team() {
           </div>
         </div>
       </main>
+
+      {archiveModal && (
+        <InternshipArchiveModal
+          internId={archiveModal.internId}
+          internName={archiveModal.name}
+          mode={archiveModal.mode}
+          onClose={() => setArchiveModal(null)}
+          onSaved={() => void load()}
+        />
+      )}
     </div>
   )
 }

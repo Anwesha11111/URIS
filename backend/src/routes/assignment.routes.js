@@ -8,7 +8,7 @@ const { schemas }                  = require('../validation/schemas');
 const { ROLES }   = require('../constants/roles');
 const { PERMISSIONS } = require('../constants/permissions');
 
-// Route guards use requirePermission so delegates (effectiveRole=CORE_ADMIN) pass through
+// Route guards use requirePermission
 router.post('/shortlist',   verifyToken, requirePermission(PERMISSIONS.CAN_ASSIGN_TASKS), validate(schemas.getShortlist), getShortlist);
 router.post('/assign-task', verifyToken, requirePermission(PERMISSIONS.CAN_ASSIGN_TASKS), validate(schemas.assignTask),   assignTask);
 

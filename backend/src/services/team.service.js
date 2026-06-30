@@ -27,8 +27,10 @@ async function createTeam({ name, description = null }) {
   return prisma.team.create({ data: { name, description } });
 }
 
-async function listTeams() {
+async function listTeams(includeArchived = false) {
+  const where = includeArchived ? {} : { status: 'ACTIVE' };
   return prisma.team.findMany({
+    where,
     orderBy: { name: 'asc' },
     include: {
       _count: { select: { members: { where: { leftAt: null } } } },
@@ -61,7 +63,7 @@ async function getTeamById(teamId) {
  * Add a user to a team. Idempotent — if already an active member, returns
  * the existing record without creating a duplicate.
  */
-async function joinTeam({ userId, teamId, role = 'member' }) {
+async function joinTeam({ userId, teamId, role = 'MEMBER' }) {
   // Verify team exists
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team) {
@@ -76,7 +78,7 @@ async function joinTeam({ userId, teamId, role = 'member' }) {
   });
   if (active) return active;   // already a member — idempotent
 
-  return prisma.userTeam.create({ data: { userId, teamId, role } });
+  return prisma.userTeam.create({ data: { userId, teamId, role: role.toUpperCase() } });
 }
 
 /**
@@ -104,7 +106,7 @@ async function leaveTeam({ userId, teamId }) {
  */
 async function getUserTeams(userId) {
   return prisma.userTeam.findMany({
-    where:   { userId, leftAt: null },
+    where:   { userId, leftAt: null, team: { status: 'ACTIVE' } },
     include: { team: true },
     orderBy: { joinedAt: 'asc' },
   });
@@ -119,6 +121,34 @@ async function getUserTeamHistory(userId) {
     where:   { userId },
     include: { team: true },
     orderBy: { joinedAt: 'desc' },
+  });
+}
+
+// ── Admin ──────────────────────────────────────────────────────────────────
+
+async function updateTeam({ teamId, name, description, status }) {
+  const data = {};
+  if (name !== undefined) data.name = name;
+  if (description !== undefined) data.description = description;
+  if (status !== undefined) data.status = status;
+  
+  return prisma.team.update({
+    where: { id: teamId },
+    data,
+  });
+}
+
+async function archiveTeam(teamId) {
+  return prisma.team.update({
+    where: { id: teamId },
+    data: { status: 'ARCHIVED' },
+  });
+}
+
+async function restoreTeam(teamId) {
+  return prisma.team.update({
+    where: { id: teamId },
+    data: { status: 'ACTIVE' },
   });
 }
 
@@ -180,4 +210,7 @@ module.exports = {
   getUserTeams,
   getUserTeamHistory,
   getTeamContribution,
+  updateTeam,
+  archiveTeam,
+  restoreTeam,
 };
