@@ -1464,7 +1464,8 @@ function OnboardingTab({ users, onRefresh }: { users: GovernanceUser[]; onRefres
   // credentials generated (NOT_SENT or MANUAL status).
   const handleGenerateAllPending = async () => {
     const pending = filtered.filter(
-      u => u.onboardingEmailStatus === 'NOT_SENT' || u.onboardingEmailStatus === 'MANUAL'
+      // 'MANUAL' is a display-only label derived in the UI; the actual DB value is always 'NOT_SENT'
+      u => u.onboardingEmailStatus === 'NOT_SENT' || u.onboardingEmailStatus === 'FAILED'
     )
     if (pending.length === 0) {
       alert('No pending users to generate credentials for.')

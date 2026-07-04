@@ -250,21 +250,21 @@ export default function ChatViewPage() {
     setContent('')
     if (chatId) saveDraft(chatId, '')
     emitStopTyping()
-    const attemptSend = async (): Promise<Message> => {
-      const res = await api.post<{ success: boolean; data: Message }>(
+    const attemptSend = async (): Promise<void> => {
+      await api.post<{ success: boolean; data: Message }>(
         `/chat/chats/${chatId}/messages`, { content: text }
       )
-      return res.data.data
     }
     try {
-      let message: Message
       try {
-        message = await attemptSend()
+        await attemptSend()
       } catch {
         await new Promise(resolve => setTimeout(resolve, 800))
-        message = await attemptSend()
+        await attemptSend()
       }
-      setMessages(prev => [...prev, message])
+      // Do NOT manually push to messages here — the socket 'newMessage' event
+      // is broadcast to all participants including the sender, and handleNewMessage
+      // already deduplicates by id. Pushing here too causes the double-display bug.
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     } catch {
       setError('Failed to send message. Your text has been restored.')
