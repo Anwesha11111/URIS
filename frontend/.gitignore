@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# TypeScript build cache — never commit, Render must compile fresh
+*.tsbuildinfo
+node_modules/.tmp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
