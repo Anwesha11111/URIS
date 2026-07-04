@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Shield, CheckCircle, X, Clock, Loader2, AlertTriangle,
   ChevronDown, ChevronUp, Key, Users, TrendingUp, Lock, Edit2, Save, RotateCcw,
-  Activity, ShieldAlert, Radio, Ban, ShieldCheck, Archive,
+  Activity, ShieldAlert, Radio, Ban, ShieldCheck, Archive, Clipboard, ClipboardCheck,
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
@@ -1292,38 +1292,69 @@ function InternshipArchivesTab() {
 }
 
 // ── Onboarding Tab ────────────────────────────────────────────────────────────
+
+/** Read-only: is EMAIL_DELIVERY_MODE=manual active on the frontend side? */
+const IS_MANUAL_MODE = import.meta.env.VITE_MANUAL_ONBOARDING_MODE === 'true'
+
+/** Formats the login URL from VITE_API_URL or falls back to the same origin. */
+const LOGIN_URL = (() => {
+  const api = import.meta.env.VITE_API_URL ?? ''
+  if (!api) return `${window.location.origin}/login`
+  // API is http://localhost:5000 → app is http://localhost:5173
+  return api.replace(':5000', ':5173').replace(/\/+$/, '') + '/login'
+})()
+
+/** Builds the formatted clipboard block for one user. */
+function buildCredentialBlock(email: string, tempPassword: string): string {
+  return [
+    '------------------------',
+    'URIS Login',
+    '',
+    'Login URL:',
+    LOGIN_URL,
+    '',
+    'Email:',
+    email,
+    '',
+    'Temporary Password:',
+    tempPassword,
+    '',
+    'You will be required to change your password after your first login.',
+    '------------------------',
+  ].join('\n')
+}
+
 function OnboardingTab({ users, onRefresh }: { users: GovernanceUser[]; onRefresh: () => void }) {
-  const [filter, setFilter] = useState<'ALL' | 'NOT_SENT' | 'SENDING' | 'SENT' | 'FAILED'>('ALL')
+  const [filter, setFilter] = useState<'ALL' | 'NOT_SENT' | 'SENDING' | 'SENT' | 'FAILED' | 'MANUAL'>('ALL')
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string; manualMode?: boolean } | null>(null)
   const [generatedCreds, setGeneratedCreds] = useState<Record<string, string>>({})
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
-  
-  // Auto-clear credentials after 15 minutes
+  // per-row copy feedback: userId → true for 2 s after copy
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  // Auto-clear credentials after 15 minutes for security
   useEffect(() => {
-    if (Object.keys(generatedCreds).length > 0) {
-      const timer = setTimeout(() => {
-        setGeneratedCreds({})
-        setMsg({ ok: true, text: 'For security reasons, generated passwords have been cleared from memory. Refresh the page.' })
-      }, 15 * 60 * 1000)
-      return () => clearTimeout(timer)
-    }
+    if (Object.keys(generatedCreds).length === 0) return
+    const timer = setTimeout(() => {
+      setGeneratedCreds({})
+      setMsg({ ok: true, text: 'Credentials cleared from memory after 15 minutes. Generate again if needed.' })
+    }, 15 * 60 * 1000)
+    return () => clearTimeout(timer)
   }, [generatedCreds])
 
   const filtered = users.filter(u => {
     if (filter !== 'ALL' && u.onboardingEmailStatus !== filter) return false
     if (search && !u.name?.toLowerCase().includes(search.toLowerCase()) && !u.email.toLowerCase().includes(search.toLowerCase())) return false
-    // Only show active and pending users in the onboarding queue
     if (u.status !== 'active' && u.status !== 'pending') return false
     return true
   })
 
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
+    if (next.has(id)) next.delete(id); else next.add(id)
     setSelectedIds(next)
   }
 
@@ -1332,92 +1363,151 @@ function OnboardingTab({ users, onRefresh }: { users: GovernanceUser[]; onRefres
     else setSelectedIds(new Set(filtered.map(u => u.id)))
   }
 
-  const handleSendCredentials = async (userId: string) => {
+  // ── Per-row generate ──────────────────────────────────────────────────────
+  const handleGenerate = async (userId: string) => {
     setLoading(true); setMsg(null)
     try {
       const res = await sendCredentials(userId)
       if (res.tempPassword) {
         setGeneratedCreds(prev => ({ ...prev, [userId]: res.tempPassword! }))
       }
-      setMsg({ 
-        ok: res.emailSent, 
-        text: res.emailSent ? 'Credentials generated and email sent successfully.' : (res.isManualMode ? 'Manual mode: Credentials generated but Resend is not configured.' : `Failed to send email: ${res.error}`),
-        manualMode: res.isManualMode
-      })
+      if (res.isManualMode) {
+        setMsg({ ok: true, text: 'Manual Delivery Mode — credentials generated. Copy and distribute below.', manualMode: true })
+      } else if (res.emailSent) {
+        setMsg({ ok: true, text: 'Credentials generated and email sent successfully.' })
+      } else {
+        setMsg({ ok: false, text: `Email dispatch failed: ${res.error ?? 'unknown error'}` })
+      }
       onRefresh()
     } catch (err) {
-      setMsg({ ok: false, text: extractErrorMessage(err, 'Failed to send credentials.') })
+      setMsg({ ok: false, text: extractErrorMessage(err, 'Failed to generate credentials.') })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleBulkSend = async () => {
+  // ── Bulk generate (selected) ──────────────────────────────────────────────
+  const handleBulkGenerate = async () => {
     if (selectedIds.size === 0) return
-    if (!confirm(`Are you sure you want to generate and send credentials for ${selectedIds.size} users?`)) return
-    
+    if (!confirm(`Generate credentials for ${selectedIds.size} selected user(s)?`)) return
     setLoading(true); setMsg(null)
     try {
       const results = await sendCredentialsBulk(Array.from(selectedIds))
       const creds: Record<string, string> = {}
-      let sentCount = 0
-      let failedCount = 0
-      let manualMode = false
-      
+      let sentCount = 0; let failedCount = 0; let anyManual = false
       for (const res of results) {
         if (res.tempPassword) creds[res.userId] = res.tempPassword
-        if (res.emailSent) sentCount++
-        else failedCount++
-        if (res.isManualMode) manualMode = true
+        if (res.emailSent) sentCount++; else failedCount++
+        if (res.isManualMode) anyManual = true
       }
-      
       setGeneratedCreds(prev => ({ ...prev, ...creds }))
       setSelectedIds(new Set())
-      
-      if (manualMode) {
-        setMsg({ ok: true, text: `Manual mode: Generated ${Object.keys(creds).length} credentials. Emails were NOT sent.`, manualMode: true })
+      if (anyManual) {
+        setMsg({ ok: true, text: `Manual Delivery Mode — generated ${Object.keys(creds).length} credential(s). Copy and distribute below.`, manualMode: true })
       } else if (failedCount === 0) {
-        setMsg({ ok: true, text: `Successfully generated and sent ${sentCount} credentials.` })
+        setMsg({ ok: true, text: `Generated and sent ${sentCount} credential(s) successfully.` })
       } else {
-        setMsg({ ok: false, text: `Generated credentials, but ${failedCount} emails failed to send. ${sentCount} succeeded.` })
+        setMsg({ ok: false, text: `Generated credentials. ${sentCount} email(s) sent, ${failedCount} failed.` })
       }
-      
       onRefresh()
     } catch (err) {
-      setMsg({ ok: false, text: extractErrorMessage(err, 'Failed to bulk send credentials.') })
+      setMsg({ ok: false, text: extractErrorMessage(err, 'Bulk generate failed.') })
     } finally {
       setLoading(false)
     }
   }
 
   const showPreview = async () => {
+    try { setPreviewHtml(await getOnboardingEmailPreview()) }
+    catch { alert('Failed to load email preview.') }
+  }
+
+  // ── Per-row copy ──────────────────────────────────────────────────────────
+  const copyOneCredential = (userId: string) => {
+    const u   = users.find(x => x.id === userId)
+    const pwd = generatedCreds[userId]
+    if (!u || !pwd) return
+    navigator.clipboard.writeText(buildCredentialBlock(u.email, pwd))
+    void logOnboardingAction('COPY_CREDENTIALS', userId, 1)
+    setCopiedId(userId)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  // ── Copy selected ─────────────────────────────────────────────────────────
+  const copySelectedCredentials = () => {
+    const eligible = Array.from(selectedIds).filter(id => generatedCreds[id])
+    if (eligible.length === 0) { alert('Generate credentials for selected users first.'); return }
+    const text = eligible.map(id => {
+      const u = users.find(x => x.id === id)
+      return buildCredentialBlock(u?.email ?? id, generatedCreds[id])
+    }).join('\n\n')
+    navigator.clipboard.writeText(text)
+    void logOnboardingAction('COPY_CREDENTIALS', undefined, eligible.length)
+    alert(`Copied credentials for ${eligible.length} user(s).`)
+  }
+
+  // ── Copy all pending (NOT_SENT / MANUAL with generated creds) ─────────────
+  const copyAllPendingCredentials = () => {
+    const eligible = Object.entries(generatedCreds)
+    if (eligible.length === 0) { alert('No credentials generated yet.'); return }
+    const text = eligible.map(([id, pwd]) => {
+      const u = users.find(x => x.id === id)
+      return buildCredentialBlock(u?.email ?? id, pwd)
+    }).join('\n\n')
+    navigator.clipboard.writeText(text)
+    void logOnboardingAction('COPY_CREDENTIALS', undefined, eligible.length)
+    alert(`Copied all ${eligible.length} credential block(s) to clipboard.`)
+  }
+
+  // ── Generate All Pending ──────────────────────────────────────────────────
+  // Generates credentials for every active/pending user that has NOT yet had
+  // credentials generated (NOT_SENT or MANUAL status).
+  const handleGenerateAllPending = async () => {
+    const pending = filtered.filter(
+      u => u.onboardingEmailStatus === 'NOT_SENT' || u.onboardingEmailStatus === 'MANUAL'
+    )
+    if (pending.length === 0) {
+      alert('No pending users to generate credentials for.')
+      return
+    }
+    if (!confirm(`Generate credentials for all ${pending.length} pending user(s)?`)) return
+
+    setLoading(true); setMsg(null)
     try {
-      const html = await getOnboardingEmailPreview()
-      setPreviewHtml(html)
+      const results = await sendCredentialsBulk(pending.map(u => u.id))
+      const creds: Record<string, string> = {}
+      let doneCount = 0; let failCount = 0; let anyManual = false
+      for (const res of results) {
+        if (res.tempPassword) { creds[res.userId] = res.tempPassword; doneCount++ }
+        else failCount++
+        if (res.isManualMode) anyManual = true
+      }
+      setGeneratedCreds(prev => ({ ...prev, ...creds }))
+      if (anyManual) {
+        setMsg({ ok: true, text: `Manual Delivery Mode — generated ${doneCount} credential(s). Copy and distribute below.`, manualMode: true })
+      } else if (failCount === 0) {
+        setMsg({ ok: true, text: `Generated and sent ${doneCount} credential(s) successfully.` })
+      } else {
+        setMsg({ ok: false, text: `Generated credentials. ${doneCount} succeeded, ${failCount} failed.` })
+      }
+      onRefresh()
     } catch (err) {
-      alert('Failed to load email preview')
+      setMsg({ ok: false, text: extractErrorMessage(err, 'Generate all pending failed.') })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const copyCredsToClipboard = () => {
-    const text = Object.entries(generatedCreds).map(([id, pwd]) => {
-      const user = users.find(u => u.id === id)
-      return `${user?.email || id}: ${pwd}`
-    }).join('\n')
-    navigator.clipboard.writeText(text)
-    void logOnboardingAction('COPY_CREDENTIALS', undefined, Object.keys(generatedCreds).length)
-    alert('Copied to clipboard!')
-  }
-
+  // ── Export CSV ────────────────────────────────────────────────────────────
   const exportCredsCsv = () => {
-    const header = 'Email,Name,TemporaryPassword\n'
+    const header = 'Email,Name,TemporaryPassword,LoginURL\n'
     const rows = Object.entries(generatedCreds).map(([id, pwd]) => {
-      const user = users.find(u => u.id === id)
-      return `${user?.email || ''},${user?.name || ''},${pwd}`
+      const u = users.find(x => x.id === id)
+      return `${u?.email ?? ''},${u?.name ?? ''},${pwd},${LOGIN_URL}`
     }).join('\n')
     const blob = new Blob([header + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
     a.href = url; a.download = 'onboarding_credentials.csv'; a.click()
     URL.revokeObjectURL(url)
     void logOnboardingAction('EXPORT_CREDENTIALS', undefined, Object.keys(generatedCreds).length)
@@ -1427,9 +1517,27 @@ function OnboardingTab({ users, onRefresh }: { users: GovernanceUser[]; onRefres
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-navy-900/50 p-4 rounded-sm border border-ice/5">
+
+      {/* ── Manual Delivery Mode persistent banner ── */}
+      {IS_MANUAL_MODE && (
+        <div className="flex items-start gap-3 p-4 rounded-sm"
+          style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
+          <AlertTriangle size={15} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="nav-label text-[0.6rem] text-amber-400 mb-0.5">MANUAL DELIVERY MODE ENABLED</p>
+            <p className="font-body text-xs text-amber-400/70">
+              Resend DNS is not yet configured. Emails will NOT be sent.
+              Generate credentials below, then use <strong>Copy Credentials</strong> per row
+              or <strong>Copy All</strong> to distribute them directly.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toolbar ── */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-navy-900/50 p-4 rounded-sm border border-ice/5">
         <div className="flex flex-wrap items-center gap-2">
-          {(['ALL', 'NOT_SENT', 'SENDING', 'SENT', 'FAILED'] as const).map(s => (
+          {(['ALL', 'NOT_SENT', 'SENDING', 'SENT', 'FAILED', 'MANUAL'] as const).map(s => (
             <button key={s} onClick={() => setFilter(s)}
               className="px-3 py-1.5 rounded-sm nav-label text-[0.55rem] transition-all"
               style={{
@@ -1441,55 +1549,137 @@ function OnboardingTab({ users, onRefresh }: { users: GovernanceUser[]; onRefres
             </button>
           ))}
           <div className="w-px h-6 bg-ice/10 mx-2" />
-          <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder="Search..." value={search}
+            onChange={e => setSearch(e.target.value)}
             className="uris-input text-xs px-2 py-1.5 w-48" />
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={showPreview} className="btn-ghost py-1.5 px-3 text-[0.6rem] flex items-center gap-2">
-            PREVIEW EMAIL
+        <div className="flex flex-wrap items-center gap-2">
+          {!IS_MANUAL_MODE && (
+            <button onClick={showPreview}
+              className="btn-ghost py-1.5 px-3 text-[0.6rem] flex items-center gap-1.5">
+              PREVIEW EMAIL
+            </button>
+          )}
+          <button onClick={copySelectedCredentials}
+            disabled={selectedIds.size === 0}
+            className="btn-ghost py-1.5 px-3 text-[0.6rem] flex items-center gap-1.5 disabled:opacity-40">
+            <Clipboard size={11} />
+            COPY SELECTED ({selectedIds.size})
           </button>
-          <button onClick={handleBulkSend} disabled={loading || selectedIds.size === 0}
-            className="btn-gold py-1.5 px-3 text-[0.6rem] flex items-center gap-2 disabled:opacity-50">
-            {loading ? <Loader2 size={12} className="animate-spin" /> : <Key size={12} />}
-            BULK SEND ({selectedIds.size})
+          <button onClick={copyAllPendingCredentials}
+            disabled={!hasCreds}
+            className="btn-ghost py-1.5 px-3 text-[0.6rem] flex items-center gap-1.5 disabled:opacity-40">
+            <Clipboard size={11} />
+            COPY ALL PENDING
+          </button>
+          {IS_MANUAL_MODE && (
+            <button onClick={handleGenerateAllPending}
+              disabled={loading}
+              className="btn-ghost py-1.5 px-3 text-[0.6rem] flex items-center gap-1.5 disabled:opacity-50"
+              style={{ border: '1px solid rgba(201,168,76,0.25)', color: GOLD }}>
+              {loading ? <Loader2 size={11} className="animate-spin" /> : <Key size={11} />}
+              GENERATE ALL PENDING
+            </button>
+          )}
+          <button onClick={handleBulkGenerate}
+            disabled={loading || selectedIds.size === 0}
+            className="btn-gold py-1.5 px-3 text-[0.6rem] flex items-center gap-1.5 disabled:opacity-50">
+            {loading ? <Loader2 size={11} className="animate-spin" /> : <Key size={11} />}
+            {IS_MANUAL_MODE ? 'GENERATE SELECTED' : 'BULK SEND'} ({selectedIds.size})
           </button>
         </div>
       </div>
 
+      {/* ── Action feedback banner ── */}
       {msg && (
-        <div className={`p-4 rounded-sm flex flex-col gap-2 ${msg.manualMode ? 'bg-amber-500/10 border border-amber-500/20' : (msg.ok ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20')}`}>
+        <div className={`p-4 rounded-sm flex flex-col gap-1.5 ${
+          msg.manualMode
+            ? 'bg-amber-500/10 border border-amber-500/20'
+            : msg.ok
+              ? 'bg-green-500/10 border border-green-500/20'
+              : 'bg-red-500/10 border border-red-500/20'
+        }`}>
           <div className="flex items-center gap-2">
-            {msg.manualMode ? <AlertTriangle size={16} className="text-amber-400" /> : (msg.ok ? <CheckCircle size={16} className="text-green-400" /> : <X size={16} className="text-red-400" />)}
-            <p className={`font-body text-sm ${msg.manualMode ? 'text-amber-400' : (msg.ok ? 'text-green-400' : 'text-red-400')}`}>{msg.text}</p>
+            {msg.manualMode
+              ? <AlertTriangle size={14} className="text-amber-400 flex-shrink-0" />
+              : msg.ok
+                ? <CheckCircle size={14} className="text-green-400 flex-shrink-0" />
+                : <X size={14} className="text-red-400 flex-shrink-0" />}
+            <p className={`font-body text-sm ${
+              msg.manualMode ? 'text-amber-400' : msg.ok ? 'text-green-400' : 'text-red-400'
+            }`}>{msg.text}</p>
           </div>
           {msg.manualMode && (
-            <p className="font-body text-xs text-amber-400/80 mt-1">
-              Emails could not be dispatched. You must securely copy or export the credentials below and distribute them to users manually.
+            <p className="font-body text-xs text-amber-400/60 pl-6">
+              Use the per-row <strong>Copy</strong> buttons or <strong>Copy All Pending</strong> above
+              to distribute credentials directly to each user.
             </p>
           )}
         </div>
       )}
 
+      {/* ── Generated credentials panel ── */}
       {hasCreds && (
-        <div className="bg-navy-800/80 border border-ice/20 rounded-sm p-4 animate-in fade-in slide-in-from-top-4 duration-300 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-amber-500 to-red-500" />
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-sm p-4 relative overflow-hidden"
+          style={{ background: 'rgba(13,15,28,0.9)', border: '1px solid rgba(245,158,11,0.25)' }}>
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-amber-500/0 via-amber-500 to-amber-500/0" />
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="font-display font-black text-lg text-white">Temporary Credentials</h3>
-              <p className="font-body text-xs text-ice/60">These plain-text passwords are not stored in the database and will be cleared from memory in 15 minutes.</p>
+              <p className="nav-label text-[0.6rem] text-amber-400 mb-0.5">TEMPORARY CREDENTIALS</p>
+              <p className="font-body text-xs text-ice/40">
+                Not stored in the database. Cleared automatically after 15 minutes.
+              </p>
             </div>
             <div className="flex gap-2">
-              <button onClick={copyCredsToClipboard} className="btn-ghost py-1.5 px-3 text-xs">COPY ALL</button>
-              <button onClick={exportCredsCsv} className="btn-gold py-1.5 px-3 text-xs">EXPORT CSV</button>
+              <button onClick={copyAllPendingCredentials}
+                className="btn-ghost py-1.5 px-3 text-[0.55rem] flex items-center gap-1.5">
+                <Clipboard size={11} />
+                COPY ALL
+              </button>
+              <button onClick={exportCredsCsv}
+                className="btn-gold py-1.5 px-3 text-[0.55rem] flex items-center gap-1.5">
+                EXPORT CSV
+              </button>
             </div>
           </div>
-          <div className="max-h-64 overflow-y-auto pr-2 space-y-2">
+
+          {/* Pilot temp password notice */}
+          {IS_MANUAL_MODE && (
+            <div className="mb-3 px-3 py-2 rounded-sm flex items-center gap-2"
+              style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.15)' }}>
+              <Key size={11} className="text-gold flex-shrink-0" />
+              <p className="font-body text-xs text-gold/70">
+                Temporary Password for all users:&nbsp;
+                <code className="font-mono text-gold select-all">Stemonef@2026!</code>
+              </p>
+            </div>
+          )}
+
+          <div className="max-h-64 overflow-y-auto pr-1 space-y-1.5">
             {Object.entries(generatedCreds).map(([id, pwd]) => {
-              const u = users.find(u => u.id === id)
+              const u = users.find(x => x.id === id)
+              const copied = copiedId === id
               return (
-                <div key={id} className="flex items-center justify-between bg-navy-900 p-2 rounded-sm border border-ice/5">
-                  <div className="font-mono text-xs text-ice/80">{u?.email}</div>
-                  <div className="font-mono text-sm text-green-400 select-all">{pwd}</div>
+                <div key={id}
+                  className="flex items-center justify-between px-3 py-2 rounded-sm"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-xs text-ice/70 truncate">{u?.email ?? id}</p>
+                    <p className="font-mono text-sm text-amber-300 select-all mt-0.5">{pwd}</p>
+                  </div>
+                  <button
+                    onClick={() => copyOneCredential(id)}
+                    title="Copy formatted credential block"
+                    className="ml-3 flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-sm transition-colors nav-label text-[0.48rem]"
+                    style={{
+                      background: copied ? 'rgba(74,222,128,0.12)' : 'rgba(201,168,76,0.08)',
+                      border: `1px solid ${copied ? 'rgba(74,222,128,0.3)' : 'rgba(201,168,76,0.2)'}`,
+                      color: copied ? '#4ade80' : GOLD,
+                    }}>
+                    {copied
+                      ? <><ClipboardCheck size={11} />COPIED</>
+                      : <><Clipboard size={11} />COPY</>}
+                  </button>
                 </div>
               )
             })}
@@ -1497,65 +1687,135 @@ function OnboardingTab({ users, onRefresh }: { users: GovernanceUser[]; onRefres
         </div>
       )}
 
+      {/* ── User table ── */}
       <div className="glass-card rounded-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="uris-table w-full">
-            <thead><tr>
-              <th className="w-8 text-center"><input type="checkbox" onChange={selectAll} checked={selectedIds.size === filtered.length && filtered.length > 0} className="uris-checkbox" /></th>
-              <th className="text-left">Name / Email</th>
-              <th className="text-center">Role</th>
-              <th className="text-center">Status</th>
-              <th className="text-center">Email Status</th>
-              <th className="text-center">Generated</th>
-              <th className="text-center">Actions</th>
-            </tr></thead>
+            <thead>
+              <tr>
+                <th className="w-8 text-center">
+                  <input type="checkbox" className="uris-checkbox"
+                    onChange={selectAll}
+                    checked={selectedIds.size === filtered.length && filtered.length > 0} />
+                </th>
+                <th className="text-left">Name / Email</th>
+                <th className="text-center">Role</th>
+                <th className="text-center">Status</th>
+                <th className="text-center">Delivery</th>
+                <th className="text-center">Generated</th>
+                <th className="text-center">Actions</th>
+              </tr>
+            </thead>
             <tbody>
-              {filtered.map(u => (
-                <tr key={u.id} className={selectedIds.has(u.id) ? 'bg-gold/5' : ''}>
-                  <td className="text-center"><input type="checkbox" checked={selectedIds.has(u.id)} onChange={() => toggleSelect(u.id)} className="uris-checkbox" /></td>
-                  <td>
-                    <p className="font-body text-sm text-frost/80">{u.name || '—'}</p>
-                    <p className="font-mono text-xs text-ice/40">{u.email}</p>
-                  </td>
-                  <td className="text-center"><RoleBadge role={u.role.toLowerCase()} /></td>
-                  <td className="text-center"><StatusBadge status={u.status} /></td>
-                  <td className="text-center">
-                    <span className="nav-label text-[0.5rem] px-2 py-0.5 rounded-full"
-                      style={{ 
-                        background: u.onboardingEmailStatus === 'SENT' ? 'rgba(74,222,128,0.1)' : u.onboardingEmailStatus === 'FAILED' ? 'rgba(248,113,113,0.1)' : 'rgba(184,212,240,0.05)', 
-                        color: u.onboardingEmailStatus === 'SENT' ? GREEN : u.onboardingEmailStatus === 'FAILED' ? RED : ICE_DIM 
-                      }}>
-                      {u.onboardingEmailStatus.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="text-center font-mono text-xs text-ice/40">
-                    {u.credentialsGeneratedAt ? new Date(u.credentialsGeneratedAt).toLocaleDateString('en-GB') : '—'}
-                  </td>
-                  <td className="text-center">
-                    <button onClick={() => handleSendCredentials(u.id)} disabled={loading}
-                      className="nav-label text-[0.48rem] px-2 py-1 rounded-sm transition-colors disabled:opacity-50"
-                      style={{ background: 'rgba(201,168,76,0.1)', color: GOLD, border: '1px solid rgba(201,168,76,0.2)' }}>
-                      GENERATE
-                    </button>
+              {filtered.map(u => {
+                const hasCred = Boolean(generatedCreds[u.id])
+                const isCopied = copiedId === u.id
+                // Derive display label — MANUAL replaces FAILED/SENDING when in manual mode
+                const rawStatus = u.onboardingEmailStatus as string
+                const displayStatus = IS_MANUAL_MODE && (rawStatus === 'FAILED' || rawStatus === 'SENDING' || rawStatus === 'NOT_SENT')
+                  ? 'MANUAL'
+                  : rawStatus
+                const statusColor =
+                  displayStatus === 'SENT'    ? GREEN  :
+                  displayStatus === 'FAILED'  ? RED    :
+                  displayStatus === 'MANUAL'  ? AMBER  :
+                  displayStatus === 'SENDING' ? BLUE   : ICE_DIM
+                const statusBg =
+                  displayStatus === 'SENT'    ? 'rgba(74,222,128,0.08)'   :
+                  displayStatus === 'FAILED'  ? 'rgba(248,113,113,0.08)'  :
+                  displayStatus === 'MANUAL'  ? 'rgba(245,158,11,0.08)'   :
+                  displayStatus === 'SENDING' ? 'rgba(96,165,250,0.08)'   : 'rgba(184,212,240,0.04)'
+
+                return (
+                  <tr key={u.id} className={selectedIds.has(u.id) ? 'bg-gold/5' : ''}>
+                    <td className="text-center">
+                      <input type="checkbox" className="uris-checkbox"
+                        checked={selectedIds.has(u.id)}
+                        onChange={() => toggleSelect(u.id)} />
+                    </td>
+                    <td>
+                      <p className="font-body text-sm text-frost/80">{u.name || '—'}</p>
+                      <p className="font-mono text-xs text-ice/40">{u.email}</p>
+                    </td>
+                    <td className="text-center"><RoleBadge role={u.role.toLowerCase()} /></td>
+                    <td className="text-center"><StatusBadge status={u.status} /></td>
+                    <td className="text-center">
+                      <span className="nav-label text-[0.5rem] px-2 py-0.5 rounded-full"
+                        style={{ background: statusBg, color: statusColor }}>
+                        {displayStatus.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="text-center font-mono text-xs text-ice/40">
+                      {u.credentialsGeneratedAt
+                        ? new Date(u.credentialsGeneratedAt).toLocaleDateString('en-GB')
+                        : '—'}
+                    </td>
+                    <td className="text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        {/* Credentials ready indicator */}
+                        {hasCred && (
+                          <span className="nav-label text-[0.45rem] px-1.5 py-0.5 rounded-full flex items-center gap-1"
+                            style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.2)' }}>
+                            <ClipboardCheck size={9} />
+                            CREDENTIALS READY
+                          </span>
+                        )}
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* Generate button */}
+                          <button
+                            onClick={() => handleGenerate(u.id)}
+                            disabled={loading}
+                            className="nav-label text-[0.48rem] px-2 py-1 rounded-sm transition-colors disabled:opacity-50"
+                            style={{ background: 'rgba(201,168,76,0.1)', color: GOLD, border: '1px solid rgba(201,168,76,0.2)' }}>
+                            {hasCred ? 'REGEN' : 'GENERATE'}
+                          </button>
+                          {/* Per-row copy — only visible once credential is generated */}
+                          {hasCred && (
+                            <button
+                              onClick={() => copyOneCredential(u.id)}
+                              className="nav-label text-[0.48rem] px-2 py-1 rounded-sm transition-colors flex items-center gap-1"
+                              style={{
+                                background: isCopied ? 'rgba(74,222,128,0.12)' : 'rgba(96,165,250,0.08)',
+                                color:      isCopied ? '#4ade80' : BLUE,
+                                border:     `1px solid ${isCopied ? 'rgba(74,222,128,0.3)' : 'rgba(96,165,250,0.2)'}`,
+                              }}>
+                              {isCopied
+                                ? <><ClipboardCheck size={10} />COPIED</>
+                                : <><Clipboard size={10} />COPY</>}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center py-10 text-ice/40 font-body text-sm">
+                    No users match the current filter.
                   </td>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-8 text-ice/50 font-body text-sm">No users found for this filter.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* ── Email preview modal (email mode only) ── */}
       {previewHtml && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/90 backdrop-blur-sm">
-          <div className="w-full max-w-4xl h-[80vh] flex flex-col bg-white rounded-sm overflow-hidden relative">
-            <div className="flex items-center justify-between p-3 bg-navy-900 border-b border-ice/20">
-              <h3 className="font-display text-white text-sm">Email Preview</h3>
-              <button onClick={() => setPreviewHtml(null)} className="text-ice/60 hover:text-white"><X size={16} /></button>
+          <div className="w-full max-w-4xl h-[80vh] flex flex-col rounded-sm overflow-hidden"
+            style={{ background: '#0d0f1c', border: '1px solid rgba(201,168,76,0.2)' }}>
+            <div className="flex items-center justify-between px-4 py-3"
+              style={{ borderBottom: '1px solid rgba(201,168,76,0.1)' }}>
+              <p className="nav-label text-[0.6rem] text-gold/60">EMAIL PREVIEW</p>
+              <button onClick={() => setPreviewHtml(null)}
+                className="text-ice/30 hover:text-frost transition-colors">
+                <X size={15} />
+              </button>
             </div>
-            <iframe srcDoc={previewHtml} className="w-full flex-1 border-none" title="Email Preview" />
+            <iframe srcDoc={previewHtml} className="w-full flex-1 border-none bg-white" title="Email Preview" />
           </div>
         </div>
       )}

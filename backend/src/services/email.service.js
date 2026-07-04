@@ -357,6 +357,27 @@ const TEMPLATES = {
   'onboarding-credentials': renderOnboardingCredentials,
 };
 
+// ── Manual delivery mode ──────────────────────────────────────────────────────
+
+/**
+ * Returns true when EMAIL_DELIVERY_MODE=manual is set in the environment.
+ *
+ * In manual mode the system:
+ *  - Skips all Resend calls completely (even if RESEND_API_KEY is present)
+ *  - Uses the fixed pilot temp password instead of a random one
+ *  - Sets onboardingEmailStatus to 'MANUAL' in the database
+ *  - Returns the plaintext credential to the UI for clipboard distribution
+ *
+ * Switching back to email mode:
+ *  - Set EMAIL_DELIVERY_MODE=email (or remove the variable)
+ *  - No other code changes required — all Resend paths remain intact
+ *
+ * @returns {boolean}
+ */
+function isManualDeliveryMode() {
+  return (process.env.EMAIL_DELIVERY_MODE ?? '').toLowerCase().trim() === 'manual';
+}
+
 // ── Main send function ────────────────────────────────────────────────────────
 
 /**
@@ -369,6 +390,12 @@ const TEMPLATES = {
  * @param {object}  [opts.templateData] - Data passed to the template renderer
  */
 async function sendEmail({ to, templateName, templateData = {} }) {
+  // Guard: manual delivery mode — skip Resend regardless of key presence
+  if (isManualDeliveryMode()) {
+    logger.info({ to, templateName }, 'EMAIL_DELIVERY_MODE=manual — skipping Resend dispatch');
+    return { success: false, reason: 'MANUAL_DELIVERY_MODE' };
+  }
+
   // Guard: Resend not configured
   if (!process.env.RESEND_API_KEY) {
     logger.warn({ to, templateName }, 'RESEND_API_KEY not set — skipping email dispatch');
@@ -402,4 +429,4 @@ async function sendEmail({ to, templateName, templateData = {} }) {
   }
 }
 
-module.exports = { sendEmail };
+module.exports = { sendEmail, isManualDeliveryMode };
