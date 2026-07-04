@@ -5,11 +5,12 @@ import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { changePassword } from '../services/password.service'
 import { extractErrorMessage } from '../services/error'
-import { useAuthStore, selectIsAdmin } from '../store/authStore'
+import { useAuthStore, selectIsAdmin, selectUser } from '../store/authStore'
 import api from '../services/api'
 
 export default function Settings() {
   const isAdmin = useAuthStore(selectIsAdmin)
+  const user    = useAuthStore(selectUser)
 
   // ── Password change state ──────────────────────────────────────────────────
   const [currentPassword, setCurrentPassword] = useState('')
