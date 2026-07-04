@@ -99,7 +99,9 @@ app.use(cors({
 // ── Security headers ──────────────────────────────────────────────────────────
 // helmet sets X-Content-Type-Options, X-Frame-Options, HSTS, CSP, and more.
 // Must come before any route handlers.
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 // ── Global API rate limiter ───────────────────────────────────────────────────
 // Applied to all routes except /health (probes must never be throttled).

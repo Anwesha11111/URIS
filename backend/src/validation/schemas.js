@@ -751,11 +751,11 @@ const createGroupChat = Joi.object({
     }),
     participantIds: Joi.array()
       .items(uuid)
-      .min(2)
+      .min(1)
       .max(50)
       .required()
       .messages({
-        'array.min':    'Group chat must have at least 2 participants',
+        'array.min':    'Group chat must have at least 1 participant',
         'array.max':    'Group chat must not exceed 50 participants',
         'any.required': 'participantIds is required',
       }),

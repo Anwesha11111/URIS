@@ -564,8 +564,8 @@ async function createGroupChat(req, res, next) {
       return validationError(res, 'Group name is required');
     }
 
-    if (!participantIds || !Array.isArray(participantIds) || participantIds.length < 2) {
-      return validationError(res, 'Group chat must have at least 2 participants');
+    if (!participantIds || !Array.isArray(participantIds) || participantIds.length < 1) {
+      return validationError(res, 'Group chat must have at least 1 participant');
     }
 
     // Deduplicate and exclude self — current user is added automatically
