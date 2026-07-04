@@ -10,9 +10,27 @@ const configStore = require('../services/configStore');
 const { getCapacityLabel } = require('../services/capacityEngine');
 const { getRpiWindowStart } = require('../services/performanceEngine');
 const notificationService = require('../services/notification.service');
+const { isManualDeliveryMode } = require('../services/email.service');
 // LOW-1: imported lazily below to avoid a circular-require at startup.
 // realtimeEngine depends on prisma; importing it at the top of admin.controller
 // is safe but lazy import avoids any future circular issue if the dep graph grows.
+
+// ── Phase 5C: Pilot temp password ─────────────────────────────────────────────
+// Read from DEFAULT_TEMP_PASSWORD in .env — never hardcoded.
+// Must satisfy password.service strength rules: ≥8 chars, ≥2 capitals, ≥1 special.
+// Only used when EMAIL_DELIVERY_MODE=manual.
+// When mode switches to "email", this constant is ignored entirely —
+// each sendCredentials call generates its own unique random password.
+function getPilotTempPassword() {
+  const val = process.env.DEFAULT_TEMP_PASSWORD;
+  if (!val || val.trim() === '') {
+    throw new Error(
+      'DEFAULT_TEMP_PASSWORD is not set in .env. ' +
+      'This value is required when EMAIL_DELIVERY_MODE=manual.'
+    );
+  }
+  return val.trim();
+}
 
 
 // Default deadline: Monday at 11:00 AM
@@ -954,29 +972,40 @@ async function resetUserPassword(req, res, next) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return notFound(res, 'User not found');
 
-    const crypto = require('crypto');
     const bcrypt = require('bcrypt');
-    const randomPart = crypto.randomBytes(6).toString('hex');
-    const tempPassword = `Temp@${randomPart}A1!`;
+
+    // Phase 5C: fixed pilot password in manual mode, random otherwise
+    const manualMode  = isManualDeliveryMode();
+    const tempPassword = manualMode
+      ? getPilotTempPassword()
+      : (() => {
+          const crypto = require('crypto');
+          return `Temp@${crypto.randomBytes(6).toString('hex')}A1!`;
+        })();
 
     const hash = await bcrypt.hash(tempPassword, 10);
 
     await prisma.user.update({
       where: { id: userId },
-      data: { 
-        password: hash, 
-        passwordChangedAt: null, 
+      data: {
+        password: hash,
+        passwordChangedAt: null,
         mustChangePassword: true,
-        onboardingEmailStatus: 'NOT_SENT'
+        // Keep status in sync: manual mode → MANUAL, email mode → NOT_SENT
+        onboardingEmailStatus: manualMode ? 'MANUAL' : 'NOT_SENT',
       },
     });
 
     void logAction(req.user?.id ?? null, 'ADMIN_RESET_PASSWORD', AUDIT_ENTITIES.USER, userId, {
       userId,
       resetForEmail: user.email,
+      manualMode,
     });
 
-    return ok(res, { tempPassword }, `Password reset successfully for ${user.email}.`);
+    return ok(res, {
+      tempPassword,
+      isManualMode: manualMode,
+    }, `Password reset successfully for ${user.email}.`);
   } catch (err) {
     next(err);
   }
@@ -992,15 +1021,51 @@ async function sendCredentials(req, res, next) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return notFound(res, 'User not found');
 
-    const crypto = require('crypto');
     const bcrypt = require('bcrypt');
-    const randomPart = crypto.randomBytes(6).toString('hex');
-    const tempPassword = `Temp@${randomPart}A1!`;
+    const manualMode = isManualDeliveryMode();
 
-    const hash = await bcrypt.hash(tempPassword, 10);
+    // Phase 5C: read pilot password from DEFAULT_TEMP_PASSWORD env var in manual mode,
+    // generate unique random password in email mode.
+    const tempPassword = manualMode
+      ? getPilotTempPassword()
+      : (() => {
+          const crypto = require('crypto');
+          return `Temp@${crypto.randomBytes(6).toString('hex')}A1!`;
+        })();
+
+    const hash        = await bcrypt.hash(tempPassword, 10);
     const generatedAt = new Date();
 
-    // 1. Save hashed password and update status to SENDING
+    if (manualMode) {
+      // ── Manual delivery path ───────────────────────────────────────────────
+      // Skip Resend entirely. Save hash, mark MANUAL, return plaintext to UI.
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          password: hash,
+          passwordChangedAt: null,
+          mustChangePassword: true,
+          credentialsGeneratedAt: generatedAt,
+          onboardingEmailStatus: 'MANUAL',
+        },
+      });
+
+      void logAction(req.user?.id ?? null, 'SEND_CREDENTIALS', AUDIT_ENTITIES.USER, userId, {
+        userId,
+        email:      user.email,
+        manualMode: true,
+      });
+
+      return ok(res, {
+        status:       'MANUAL',
+        emailSent:    false,
+        isManualMode: true,
+        tempPassword,
+      }, 'Credentials generated. Manual delivery mode — copy and distribute directly.');
+    }
+
+    // ── Email delivery path ────────────────────────────────────────────────────
+    // 1. Save hashed password, set status to SENDING
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -1014,10 +1079,11 @@ async function sendCredentials(req, res, next) {
 
     void logAction(req.user?.id ?? null, 'SEND_CREDENTIALS', AUDIT_ENTITIES.USER, userId, {
       userId,
-      email: user.email,
+      email:      user.email,
+      manualMode: false,
     });
 
-    // 2. Attempt email dispatch
+    // 2. Attempt Resend dispatch
     const emailResult = await notificationService.notifyOnboardingCredentials(
       user.email,
       user.name || user.email.split('@')[0],
@@ -1025,10 +1091,8 @@ async function sendCredentials(req, res, next) {
       tempPassword
     );
 
-    // 3. Update DB based on email outcome
-    const isManualMode = emailResult.reason === 'RESEND_NOT_CONFIGURED';
+    // 3. Persist outcome
     const newStatus = emailResult.success ? 'SENT' : 'FAILED';
-    
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -1037,12 +1101,11 @@ async function sendCredentials(req, res, next) {
       },
     });
 
-    // Return the single-use plaintext password to the UI
     return ok(res, {
-      status: newStatus,
-      emailSent: emailResult.success,
-      isManualMode,
-      error: emailResult.error || emailResult.reason,
+      status:       newStatus,
+      emailSent:    emailResult.success,
+      isManualMode: false,
+      error:        emailResult.error || emailResult.reason,
       tempPassword,
     }, 'Credentials generated and dispatch attempted.');
   } catch (err) {
@@ -1057,24 +1120,55 @@ async function sendCredentialsBulk(req, res, next) {
       return validationError(res, 'userIds array is required and must not be empty');
     }
 
+    const manualMode = isManualDeliveryMode();
+
     void logAction(req.user?.id ?? null, 'BULK_SEND_CREDENTIALS', AUDIT_ENTITIES.USER, null, {
       count: userIds.length,
+      manualMode,
     });
 
-    // We process sequentially or in parallel without aborting on failure
     const results = await Promise.all(
       userIds.map(async (userId) => {
         try {
           const user = await prisma.user.findUnique({ where: { id: userId } });
           if (!user) return { userId, status: 'FAILED', error: 'User not found' };
 
-          const crypto = require('crypto');
           const bcrypt = require('bcrypt');
-          const randomPart = crypto.randomBytes(6).toString('hex');
-          const tempPassword = `Temp@${randomPart}A1!`;
+
+          // Phase 5C: read pilot password from DEFAULT_TEMP_PASSWORD env var in manual mode,
+          // generate unique random password in email mode.
+          const tempPassword = manualMode
+            ? getPilotTempPassword()
+            : (() => {
+                const crypto = require('crypto');
+                return `Temp@${crypto.randomBytes(6).toString('hex')}A1!`;
+              })();
 
           const hash = await bcrypt.hash(tempPassword, 10);
-          
+
+          if (manualMode) {
+            // ── Manual delivery path ─────────────────────────────────────────
+            await prisma.user.update({
+              where: { id: userId },
+              data: {
+                password: hash,
+                passwordChangedAt: null,
+                mustChangePassword: true,
+                credentialsGeneratedAt: new Date(),
+                onboardingEmailStatus: 'MANUAL',
+              },
+            });
+
+            return {
+              userId,
+              status:       'MANUAL',
+              emailSent:    false,
+              isManualMode: true,
+              tempPassword,
+            };
+          }
+
+          // ── Email delivery path ──────────────────────────────────────────
           await prisma.user.update({
             where: { id: userId },
             data: {
@@ -1093,9 +1187,7 @@ async function sendCredentialsBulk(req, res, next) {
             tempPassword
           );
 
-          const isManualMode = emailResult.reason === 'RESEND_NOT_CONFIGURED';
           const newStatus = emailResult.success ? 'SENT' : 'FAILED';
-          
           await prisma.user.update({
             where: { id: userId },
             data: {
@@ -1106,10 +1198,10 @@ async function sendCredentialsBulk(req, res, next) {
 
           return {
             userId,
-            status: newStatus,
-            emailSent: emailResult.success,
-            isManualMode,
-            error: emailResult.error || emailResult.reason,
+            status:       newStatus,
+            emailSent:    emailResult.success,
+            isManualMode: false,
+            error:        emailResult.error || emailResult.reason,
             tempPassword,
           };
         } catch (err) {
