@@ -96,7 +96,7 @@ export interface GovernanceUser {
   createdAt: string
   internId:  string | null
   teams:     string[]
-  onboardingEmailStatus: 'NOT_SENT' | 'SENDING' | 'SENT' | 'FAILED'
+  onboardingEmailStatus: 'NOT_SENT' | 'SENDING' | 'SENT' | 'FAILED' | 'MANUAL'
   lastEmailSentAt:       string | null
   credentialsGeneratedAt: string | null
   mustChangePassword:    boolean
@@ -122,7 +122,7 @@ export function adminResetUserPassword(userId: string): Promise<{ tempPassword: 
 // ── Onboarding & Credentials ──────────────────────────────────────────────────
 
 export interface SendCredentialsResult {
-  status: 'NOT_SENT' | 'SENDING' | 'SENT' | 'FAILED'
+  status: 'NOT_SENT' | 'SENDING' | 'SENT' | 'FAILED' | 'MANUAL'
   emailSent: boolean
   isManualMode: boolean
   error?: string
