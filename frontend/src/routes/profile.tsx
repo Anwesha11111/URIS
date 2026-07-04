@@ -95,12 +95,22 @@ export default function ProfilePage() {
       return
     }
 
-    if (!/[A-Z]{2,}/.test(newPassword)) {
-      setError('New password must have at least 2 uppercase letters')
+    if (!/[A-Z]/.test(newPassword)) {
+      setError('New password must have at least 1 uppercase letter')
       return
     }
 
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+    if (!/[a-z]/.test(newPassword)) {
+      setError('New password must have at least 1 lowercase letter')
+      return
+    }
+
+    if (!/[0-9]/.test(newPassword)) {
+      setError('New password must have at least 1 number')
+      return
+    }
+
+    if (!/[!@#$%^&*()\-_=+\[\]{};:'",.<>/?\\|`~]/.test(newPassword)) {
       setError('New password must have at least 1 special character')
       return
     }
@@ -257,7 +267,7 @@ export default function ProfilePage() {
                         />
                         {newPassword && (
                           <p className="text-[0.5rem] text-ice/40 mt-1">
-                            Requirements: 8+ chars, 2+ caps, 1+ special
+                            Requirements: 8+ chars, 1 uppercase, 1 lowercase, 1 number, 1 special
                           </p>
                         )}
                       </div>

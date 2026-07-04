@@ -181,10 +181,13 @@ async function checkAndAutoBlockIP(ip) {
 }
 
 async function login({ email, password, ip = '0.0.0.0' }) {
+  // Normalize email to prevent failed logins due to autofill trailing spaces or case differences
+  const normalizedEmail = email ? email.trim().toLowerCase() : '';
+
   // Also fetch the linked Intern record id so it can be embedded in the JWT.
   // The realtimeEngine uses internId to place interns in their personal socket room.
-  const user = await prisma.user.findUnique({
-    where: { email },
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
     include: { intern: { select: { id: true } } },
   });
 

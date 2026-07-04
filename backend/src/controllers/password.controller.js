@@ -7,7 +7,7 @@ async function changePassword(req, res, next) {
   try {
     const { currentPassword, newPassword } = req.body;
     const result = await passwordService.changePassword(req.user.id, { currentPassword, newPassword });
-    return ok(res, { emailSent: result.emailSent }, 'Password changed successfully.');
+    return ok(res, { emailSent: result.emailSent, token: result.token }, 'Password changed successfully.');
   } catch (err) {
     next(err);
   }

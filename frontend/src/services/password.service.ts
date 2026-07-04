@@ -12,9 +12,9 @@ export interface ResetPasswordPayload {
   confirmPassword: string
 }
 
-export async function changePassword(data: ChangePasswordPayload): Promise<{ emailSent: boolean }> {
+export async function changePassword(data: ChangePasswordPayload): Promise<{ emailSent: boolean, token: string }> {
   const res = await api.post('/auth/change-password', data)
-  return res.data.data as { emailSent: boolean }
+  return res.data.data as { emailSent: boolean, token: string }
 }
 
 export async function forgotPassword(email: string): Promise<void> {

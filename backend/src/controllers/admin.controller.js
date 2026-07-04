@@ -17,7 +17,8 @@ const { isManualDeliveryMode } = require('../services/email.service');
 
 // ── Phase 5C: Pilot temp password ─────────────────────────────────────────────
 // Read from DEFAULT_TEMP_PASSWORD in .env — never hardcoded.
-// Must satisfy password.service strength rules: ≥8 chars, ≥2 capitals, ≥1 special.
+// Must satisfy password.service strength rules:
+//   ≥8 chars, ≥1 uppercase, ≥1 lowercase, ≥1 digit, ≥1 special character.
 // Only used when EMAIL_DELIVERY_MODE=manual.
 // When mode switches to "email", this constant is ignored entirely —
 // each sendCredentials call generates its own unique random password.

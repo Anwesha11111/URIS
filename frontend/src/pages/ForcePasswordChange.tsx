@@ -37,10 +37,10 @@ export default function ForcePasswordChange() {
     setLoading(true)
     setError('')
     try {
-      await changePassword({ currentPassword, newPassword, confirmPassword })
+      const result = await changePassword({ currentPassword, newPassword, confirmPassword })
       setSuccess(true)
-      if (user) {
-        setUser({ ...user, mustChangePassword: false })
+      if (user && result.token) {
+        useAuthStore.getState().login(result.token, { ...user, mustChangePassword: false })
       }
       setTimeout(() => navigate('/dashboard'), 2000)
     } catch (err: unknown) {
@@ -121,7 +121,7 @@ export default function ForcePasswordChange() {
                     <input
                       type={showNew ? 'text' : 'password'}
                       className="uris-input pr-10"
-                      placeholder="Min. 8 characters (2 uppercase, 1 special)"
+                      placeholder="Min. 8 characters, 1 uppercase, 1 number, 1 special"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       minLength={8}

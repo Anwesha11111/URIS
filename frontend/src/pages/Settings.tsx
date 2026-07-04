@@ -69,6 +69,9 @@ export default function Settings() {
       const result = await changePassword({ currentPassword, newPassword, confirmPassword })
       setSuccess(true)
       if (result && result.emailSent === false) setEmailNotice(true)
+      if (result && result.token && user) {
+        useAuthStore.getState().login(result.token, { ...user, mustChangePassword: false })
+      }
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')

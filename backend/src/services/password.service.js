@@ -26,32 +26,46 @@ function validatePasswordLength(password) {
 function validatePasswordStrength(password) {
   const errors = [];
 
-  // Check minimum length
+  // Must be at least 8 characters
   if (password.length < 8) {
     errors.push('Password must be at least 8 characters long.');
   }
 
-  // Check for at least 2 capital letters
-  const capitalLetters = (password.match(/[A-Z]/g) || []).length;
-  if (capitalLetters < 2) {
-    errors.push('Password must contain at least 2 capital letters.');
+  // At least 1 uppercase letter
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter.');
   }
 
-  // Check for at least 1 special character
-  const specialChars = (password.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/) || []).length;
-  if (specialChars < 1) {
-    errors.push('Password must contain at least 1 special character.');
+  // At least 1 lowercase letter
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter.');
+  }
+
+  // At least 1 digit
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number.');
+  }
+
+  // At least 1 special character
+  if (!/[!@#$%^&*()\-_=+\[\]{};:'",.<>/?\\|`~]/.test(password)) {
+    errors.push('Password must contain at least one special character.');
   }
 
   if (errors.length > 0) {
-    const err = new Error(errors.join(' '));
+    const err = new Error(
+      'Password must be at least 8 characters long and include at least one uppercase letter, ' +
+      'one lowercase letter, one number, and one special character.'
+    );
     err.status = 422;
     throw err;
   }
 }
 
 async function changePassword(userId, { currentPassword, newPassword }) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({ 
+    where: { id: userId },
+    include: { intern: { select: { id: true } } },
+  });
   if (!user) {
     const err = new Error('User not found.');
     err.status = 404;
@@ -86,7 +100,23 @@ async function changePassword(userId, { currentPassword, newPassword }) {
   void logAction(userId, AUDIT_ACTIONS.PASSWORD_CHANGED, AUDIT_ENTITIES.USER, userId, {});
 
   const emailResult = await notificationService.notifyPasswordChanged(user.email, user.name);
-  return { success: true, emailSent: emailResult.success === true };
+  
+  // Issue a fresh token with the new iat timestamp so the session isn't invalidated
+  const jwt = require('jsonwebtoken');
+  const token = jwt.sign(
+    { 
+      id: user.id, 
+      email: user.email, 
+      role: user.role, 
+      internId: user.intern?.id ?? null, 
+      name: user.name || null,
+      mustChangePassword: false 
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
+  );
+
+  return { success: true, emailSent: emailResult.success === true, token };
 }
 
 async function requestPasswordReset(email, role, leadEmail) {

@@ -114,7 +114,7 @@ export default function ResetPassword() {
                     <input
                       type={showNew ? 'text' : 'password'}
                       className="uris-input pr-10"
-                      placeholder="Min. 8 characters"
+                      placeholder="Min. 8 characters, 1 uppercase, 1 number, 1 special"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       minLength={8}

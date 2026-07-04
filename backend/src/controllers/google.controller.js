@@ -142,24 +142,68 @@ async function getWorklogStatus(req, res, next) {
 
 /**
  * GET /google/calendar
- * Returns busy slots and upcoming events from the user's Google Calendar.
+ * Returns busy slots and upcoming events from the user's Google Calendar
+ * merged with their declared internal URIS Availability.
  */
 async function getCalendarData(req, res, next) {
   try {
     const userId = req.user.id;
-    const connected = await googleService.isConnected(userId);
+    const prisma = require('../utils/prisma');
 
-    if (!connected) {
-      return ok(res, { connected: false, busySlots: [], events: [] }, 'Google not connected.');
+    let googleBusySlots = [];
+    let events = [];
+
+    const connected = await googleService.isConnected(userId);
+    if (connected) {
+      const days = parseInt(req.query.days) || 7;
+      const [fetchedBusy, fetchedEvents] = await Promise.all([
+        googleService.getCalendarBusySlots(userId, days),
+        googleService.getUpcomingEvents(userId, 10),
+      ]);
+      googleBusySlots = fetchedBusy;
+      events = fetchedEvents;
     }
 
-    const days = parseInt(req.query.days) || 7;
-    const [busySlots, events] = await Promise.all([
-      googleService.getCalendarBusySlots(userId, days),
-      googleService.getUpcomingEvents(userId, 10),
-    ]);
+    // Fetch internal URIS availability (busyBlocks) 
+    // and map them to synthetic busy slots so the frontend correctly 
+    // counts them in the calendar widget.
+    let urisBusySlots = [];
+    const intern = await prisma.intern.findUnique({ where: { userId } });
+    
+    if (intern) {
+      // Determine the current week's Monday 00:00 UTC
+      const d = new Date();
+      d.setUTCHours(0, 0, 0, 0);
+      const day = d.getUTCDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      d.setUTCDate(d.getUTCDate() + diff);
+      const weekStart = d;
 
-    return ok(res, { connected: true, busySlots, events }, 'Calendar data.');
+      const slot = await prisma.availabilitySlot.findUnique({
+        where: { internId_weekStart: { internId: intern.id, weekStart } }
+      });
+
+      if (slot && slot.busyBlocks && Array.isArray(slot.busyBlocks)) {
+        urisBusySlots = slot.busyBlocks.map(block => ({
+          // Synthetic timestamps so the frontend counts them as distinct busy periods
+          start: weekStart.toISOString(),
+          end: weekStart.toISOString(),
+        }));
+      }
+    }
+
+    const mergedBusySlots = [...googleBusySlots, ...urisBusySlots];
+
+    // If the user has URIS availability but no Google connection, we tell the widget 
+    // we are connected so it actually renders the internal availability count
+    // instead of hiding it behind the "Connect Google" message.
+    if (!connected && urisBusySlots.length === 0) {
+      return ok(res, { connected: false, busySlots: [], events: [] }, 'Google not connected.');
+    }
+    
+    const displayAsConnected = connected || urisBusySlots.length > 0;
+
+    return ok(res, { connected: displayAsConnected, busySlots: mergedBusySlots, events }, 'Calendar data.');
   } catch (err) {
     next(err);
   }
