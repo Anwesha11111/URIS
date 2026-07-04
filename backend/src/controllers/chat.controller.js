@@ -571,28 +571,42 @@ async function createGroupChat(req, res, next) {
     // Deduplicate and exclude self — current user is added automatically
     const otherParticipantIds = [...new Set(participantIds.filter(id => id !== req.user.id))];
 
-    // Verify the creator is friends with every participant they are adding (BUG-H3 fix).
-    // A user should not be able to silently add someone who has not connected with them.
-    const friendships = await prisma.friendRequest.findMany({
-      where: {
-        status: 'ACCEPTED',
-        OR: [
-          { senderId: req.user.id, receiverId: { in: otherParticipantIds } },
-          { senderId: { in: otherParticipantIds }, receiverId: req.user.id },
-        ],
-      },
-      select: { senderId: true, receiverId: true },
-    });
+    const { ROLES } = require('../constants/roles');
+    const ADMIN_ROLES = new Set([
+      ROLES.CORE_ADMIN,
+      ROLES.TECHNICAL_LEAD,
+      ROLES.OPERATIONS_LEAD,
+      ROLES.RESEARCH_LEAD,
+      ROLES.OPERATIONS_PROGRAM_MANAGER,
+      ROLES.OBSERVER_TEAM_LEAD,
+      ROLES.COLLABORATOR_LEAD,
+    ]);
 
-    // Build the set of user IDs the creator is actually friends with
-    const friendIds = new Set(
-      friendships.map(f => f.senderId === req.user.id ? f.receiverId : f.senderId)
-    );
+    const isAdmin = ADMIN_ROLES.has(req.user.role);
 
-    const nonFriends = otherParticipantIds.filter(id => !friendIds.has(id));
-    if (nonFriends.length > 0) {
-      return validationError(res, 'You can only add friends to a group chat');
+    if (!isAdmin) {
+      // Interns and non-admin roles: can only add friends to a group (BUG-H3).
+      const friendships = await prisma.friendRequest.findMany({
+        where: {
+          status: 'ACCEPTED',
+          OR: [
+            { senderId: req.user.id, receiverId: { in: otherParticipantIds } },
+            { senderId: { in: otherParticipantIds }, receiverId: req.user.id },
+          ],
+        },
+        select: { senderId: true, receiverId: true },
+      });
+
+      const friendIds = new Set(
+        friendships.map(f => f.senderId === req.user.id ? f.receiverId : f.senderId)
+      );
+
+      const nonFriends = otherParticipantIds.filter(id => !friendIds.has(id));
+      if (nonFriends.length > 0) {
+        return validationError(res, 'You can only add friends to a group chat');
+      }
     }
+    // Admins and leads: skip friendship check — they can group any active users.
 
     const allParticipantIds = [...otherParticipantIds, req.user.id];
 
