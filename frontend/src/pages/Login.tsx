@@ -26,7 +26,18 @@ export default function Login() {
       login(token, user as Parameters<typeof login>[1])
       navigate('/dashboard')
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, 'Invalid credentials. Please try again.'))
+      const msg = extractErrorMessage(err, '')
+      // Surface a specific, readable message depending on what the server returned.
+      // The backend returns 401 for wrong credentials, 403 for pending/alumni.
+      if (msg.toLowerCase().includes('pending')) {
+        setError('Your account is pending approval. Please wait for a Core Admin to approve your access.')
+      } else if (msg.toLowerCase().includes('concluded') || msg.toLowerCase().includes('alumni')) {
+        setError('Your internship has concluded. You no longer have access to the internal dashboard.')
+      } else if (msg.toLowerCase().includes('invalid') || msg === '') {
+        setError('Incorrect email or password. Please check your credentials and try again.')
+      } else {
+        setError(msg)
+      }
     } finally {
       setLoading(false)
     }
@@ -71,14 +82,14 @@ export default function Login() {
             <div>
               <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">EMAIL ADDRESS</label>
               <input type="email" className="uris-input" placeholder="you@company.com"
-                value={email} onChange={e => { setEmail(e.target.value); setError(''); }}
+                value={email} onChange={e => setEmail(e.target.value)}
                 disabled={loading} required />
             </div>
             <div>
               <label className="nav-label text-[0.6rem] text-gold/60 block mb-2">PASSWORD</label>
               <div className="relative">
                 <input type={showPw ? 'text' : 'password'} className="uris-input pr-10" placeholder="••••••••"
-                  value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+                  value={password} onChange={e => setPassword(e.target.value)}
                   disabled={loading} required />
                 <button type="button" onClick={() => setShowPw(!showPw)} disabled={loading}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-ice/30 hover:text-gold transition-colors">
@@ -88,11 +99,16 @@ export default function Login() {
             </div>
 
             {error && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="font-body text-sm text-red-400/80 text-center py-2 rounded-sm"
-                style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
-                {error}
-              </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-sm p-3"
+                style={{ background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.35)' }}>
+                <p className="font-body text-sm text-red-400 text-center leading-relaxed">{error}</p>
+                <p className="font-body text-xs text-red-400/50 text-center mt-1">
+                  Check your email address and password, then try again.
+                </p>
+              </motion.div>
             )}
 
             <motion.button type="submit" disabled={loading || !email.trim() || !password}
