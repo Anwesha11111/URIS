@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+ <head><script>window["__codeletBootstrap__"]=JSON.parse('{"A":"A","B":"20260715-05-d05fd84"}');</script><script src="/_sdk/f432b76fb310b513.telemetry_sdk.js" integrity="sha512-9FJQ55EKmmqhyyik8BhrMVfm0+iYYfb8uOlRsjtkxJMEI97qOVEI4PnHohDjQAtvAep0IOEpdQ64eki0sz62ug=="></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STEAMI Landing</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: #0a0a0a; color: #ffffff; }
+        .eyebrow { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #888; font-weight: 500; }
+        .pill-btn { border-radius: 9999px; padding: 14px 28px; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .pill-primary { background: #fff; color: #000; }
+        .pill-primary:hover { background: #f0f0f0; }
+        .pill-ghost { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(12px); }
+        .pill-ghost:hover { background: rgba(255,255,255,0.14); }
+        .pill-black { background: #000; color: #fff; }
+        .pill-black:hover { background: #1a1a1a; }
+        .pill-white-outline { background: transparent; color: #000; border: 1px solid #ccc; }
+        .section-dark { background: #0a0a0a; }
+        .section-light { background: #f5f4f0; }
+        .card-radius { border-radius: 24px; }
+        .hero-section { position: relative; min-height: calc(100 * min(var(--vh,1vh),1vh)); display: flex; flex-direction: column; }
+        .hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(2px) saturate(0.6); opacity: 0.45; }
+        .dashboard-mock { background: #0d0d0d; border-radius: 20px; border: 1px solid rgba(255,255,255,0.06); overflow: hidden; }
+        .glass-tile { background: rgba(20,20,20,0.7); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; padding: 24px 32px; }
+        .feature-panel { background: linear-gradient(135deg, #111 0%, #1a1a1a 100%); border-radius: 20px; position: relative; overflow: hidden; min-height: 360px; }
+        .feature-panel::before { content:''; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(255,255,255,0.02) 40px, rgba(255,255,255,0.02) 41px); }
+        .solutions-bg { position: relative; overflow: hidden; }
+        .solutions-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: saturate(0.5); }
+        .stat-card { background: #fff; border-radius: 16px; padding: 24px 32px; color: #000; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .pricing-card { border-radius: 24px; padding: 40px 32px; display: flex; flex-direction: column; }
+        .pricing-light { background: #f5f4f0; color: #000; }
+        .pricing-dark { background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+  <script src="/_sdk/0e8f359d3c23f6d5.editing_sdk.js" integrity="sha512-CBLuYm/olmgyMedTtPRFeqCRZcSWUh6/39ewyXAbnr1dsVHBACzZ59KGJZXvuWNHOHixfWegfuMN9JzmLEDIoA=="></script>
+  <script src="/_sdk/e3937a0574eb2d69.data_sdk.js" type="text/javascript" integrity="sha512-xbp/ACqEQy1aDxYMtXTrR3y5MUbzxuggRR/9sD48Gl4VhLMMCiAHsxMaFV6DTdeBpR6ymF+t2zhPKYkWM3+Jfw=="></script>
+  <script src="/_sdk/9432170dbd2ae0df.resizing_sdk.js" type="text/javascript" integrity="sha512-FeT+58sb1f9ejWPWFjCbJvTT+SDwGV+ngrHUnlO7TWEOoqwOLj6p256kO3vOL7DIWl1cIgrobiof8v2bOigwPg=="></script>
+ </head>
+ <body data-template-id="__page-root" class="w-full"><!-- NAVBAR -->
+  <nav class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 lg:px-16" style="height:96px;"><span data-template-id="nav-wordmark" class="canva-text font-bold text-2xl text-white"></span>
+   <div class="hidden md:flex items-center gap-10"><a data-template-id="nav-link-1" class="canva-link text-white/80 text-[15px] hover:text-white transition cursor-pointer"></a> <a data-template-id="nav-link-2" class="canva-link text-white/80 text-[15px] hover:text-white transition cursor-pointer"></a> <a data-template-id="nav-link-3" class="canva-link text-white/80 text-[15px] hover:text-white transition cursor-pointer"></a> <a data-template-id="nav-link-4" class="canva-link text-white/80 text-[15px] hover:text-white transition cursor-pointer"></a>
+   </div><button data-template-id="nav-cta" class="canva-button pill-btn pill-black text-sm"> <span>Get Started</span>
+    <svg width="16" height="16" viewbox="0 0 16 16" fill="none">
+     <circle cx="8" cy="8" r="7" stroke="white" stroke-width="1.5" /><path d="M6 5l3 3-3 3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+    </svg></button>
+  </nav><!-- HERO -->
+  <section class="hero-section w-full"><img data-template-id="hero-bg-img" class="canva-image hero-bg" loading="lazy">
+   <div class="relative z-10 flex-1 flex flex-col justify-end p-8 lg:p-16 pb-16 lg:pb-24">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+     <div>
+      <h1 data-template-id="hero-headline" class="canva-text font-bold leading-none mb-4" style="font-size:clamp(48px,6vw,72px);"></h1>
+      <p data-template-id="hero-subtext" class="canva-text text-white/60 text-base max-w-md"></p>
+     </div>
+     <p data-template-id="hero-tagline" class="canva-text text-white/50 text-sm text-right"></p>
+    </div>
+    <div class="flex flex-wrap gap-4 mt-8"><button data-template-id="hero-cta-primary" class="canva-button pill-btn pill-primary"></button> <button data-template-id="hero-cta-secondary" class="canva-button pill-btn pill-ghost"></button>
+    </div>
+   </div>
+  </section><!-- PRODUCT SECTION -->
+  <section class="section-dark w-full py-24 px-8 lg:px-16"><span data-template-id="product-eyebrow" class="canva-text eyebrow"></span>
+   <h2 data-template-id="product-headline" class="canva-text font-bold text-white mt-4 leading-tight max-w-2xl" style="font-size:clamp(32px,4vw,48px);"></h2>
+   <p data-template-id="product-body" class="canva-text text-[#888] mt-6 max-w-[450px] leading-relaxed"></p>
+   <div class="flex flex-wrap gap-4 mt-8"><button data-template-id="product-cta-primary" class="canva-button pill-btn pill-primary"></button> <button data-template-id="product-cta-secondary" class="canva-button pill-btn pill-ghost"></button>
+   </div><!-- Dashboard Mockup -->
+   <div class="dashboard-mock mt-16 p-6 lg:p-8">
+    <div class="flex flex-col lg:flex-row gap-6"><!-- Sidebar -->
+     <div class="hidden lg:flex flex-col gap-4 w-48 border-r border-white/5 pr-6">
+      <div class="w-8 h-8 rounded-lg bg-white/10 mb-4"></div>
+      <div class="h-3 w-24 bg-white/10 rounded"></div>
+      <div class="h-3 w-20 bg-white/5 rounded"></div>
+      <div class="h-3 w-28 bg-white/5 rounded"></div>
+      <div class="h-3 w-16 bg-white/5 rounded"></div>
+     </div><!-- Main -->
+     <div class="flex-1">
+      <div class="flex items-baseline gap-3 mb-6"><span data-template-id="dash-balance" class="canva-text text-white font-bold text-4xl"></span> <span data-template-id="dash-gain" class="canva-tag text-[#22c55e] text-sm font-medium"></span>
+      </div><!-- Chart -->
+      <div class="h-40 w-full relative mb-6">
+       <svg class="w-full h-full" viewbox="0 0 600 160" preserveaspectratio="none"><path d="M0 120 Q50 100 100 110 T200 80 T300 90 T400 50 T500 60 T600 30" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" /> <path d="M0 120 Q50 100 100 110 T200 80 T300 90 T400 50 T500 60 T600 30" fill="none" stroke="white" stroke-width="2" opacity="0.6" />
+       </svg>
+      </div><!-- Secondary panel -->
+      <div class="bg-white/5 rounded-2xl p-4 flex items-center justify-between">
+       <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-white/10"></div>
+        <div>
+         <div class="text-white text-sm font-medium">
+          Portfolio Value
+         </div>
+         <div class="text-white/50 text-xs">
+          Updated today
+         </div>
+        </div>
+       </div><span class="text-[#ef4444] text-sm font-medium">-0.8%</span>
+      </div>
+     </div>
+    </div>
+   </div>
+  </section><!-- LOGO STRIP -->
+  <section class="w-full grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
+   <div data-template-id="logo-1" class="canva-panel glass-tile">
+    <span class="text-white font-bold text-sm tracking-wider opacity-70">STRIPE</span>
+   </div>
+   <div data-template-id="logo-2" class="canva-panel glass-tile">
+    <span class="text-white font-bold text-sm tracking-wider opacity-70">NOTION</span>
+   </div>
+   <div data-template-id="logo-3" class="canva-panel glass-tile">
+    <span class="text-white font-bold text-sm tracking-wider opacity-70">FIGMA</span>
+   </div>
+   <div data-template-id="logo-4" class="canva-panel glass-tile">
+    <span class="text-white font-bold text-sm tracking-wider opacity-70">SLACK</span>
+   </div>
+   <div data-template-id="logo-5" class="canva-panel glass-tile">
+    <span class="text-white font-bold text-sm tracking-wider opacity-70">LINEAR</span>
+   </div>
+   <div data-template-id="logo-6" class="canva-panel glass-tile">
+    <span class="text-white font-bold text-sm tracking-wider opacity-70">VERCEL</span>
+   </div>
+  </section><!-- FEATURE BLOCKS -->
+  <section class="section-light w-full py-24 px-8 lg:px-16"><!-- Feature 1 -->
+   <div class="flex flex-col lg:flex-row gap-8 mb-16">
+    <div class="flex-1 flex flex-col justify-center"><span data-template-id="feat1-eyebrow" class="canva-text eyebrow"></span>
+     <h3 data-template-id="feat1-headline" class="canva-text font-bold mt-4 leading-tight" style="font-size:clamp(28px,3vw,40px);"></h3>
+     <p data-template-id="feat1-body" class="canva-text mt-4 leading-relaxed max-w-md"></p><button data-template-id="feat1-cta" class="canva-button pill-btn pill-black mt-6 self-start"></button>
+    </div>
+    <div class="flex-1 feature-panel flex items-end justify-end p-8"><span class="text-white/20 font-bold text-6xl">01</span>
+    </div>
+   </div><!-- Feature 2 -->
+   <div class="flex flex-col lg:flex-row-reverse gap-8">
+    <div class="flex-1 flex flex-col justify-center"><span data-template-id="feat2-eyebrow" class="canva-text eyebrow"></span>
+     <h3 data-template-id="feat2-headline" class="canva-text font-bold mt-4 leading-tight" style="font-size:clamp(28px,3vw,40px);"></h3>
+     <p data-template-id="feat2-body" class="canva-text mt-4 leading-relaxed max-w-md"></p><button data-template-id="feat2-cta" class="canva-button pill-btn pill-black mt-6 self-start"></button>
+    </div>
+    <div class="flex-1 feature-panel flex items-end justify-start p-8"><span class="text-white/20 font-bold text-6xl">02</span>
+    </div>
+   </div>
+  </section><!-- SOLUTIONS -->
+  <section class="solutions-bg w-full py-24 px-8 lg:px-16"><img data-template-id="solutions-bg-img" class="canva-image solutions-bg-img" loading="lazy">
+   <div class="relative z-10"><span data-template-id="solutions-eyebrow" class="canva-text eyebrow"></span>
+    <h2 data-template-id="solutions-headline" class="canva-text font-bold text-white mt-4 leading-tight max-w-xl" style="font-size:clamp(32px,4vw,48px);"></h2>
+    <div class="grid md:grid-cols-2 gap-8 mt-16">
+     <div>
+      <h4 data-template-id="sol1-title" class="canva-text text-white font-bold text-xl mb-2"></h4>
+      <p data-template-id="sol1-body" class="canva-text text-white/60 text-sm leading-relaxed"></p>
+     </div>
+     <div class="bg-[#0d0d0d] rounded-2xl p-5 flex items-center gap-4">
+      <div class="w-12 h-6 bg-white/20 rounded-full relative">
+       <div class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+      </div><span class="text-white/60 text-sm">Auto-rebalance</span>
+     </div>
+     <div>
+      <h4 data-template-id="sol2-title" class="canva-text text-white font-bold text-xl mb-2"></h4>
+      <p data-template-id="sol2-body" class="canva-text text-white/60 text-sm leading-relaxed"></p>
+     </div>
+     <div class="bg-[#0d0d0d] rounded-2xl p-5 flex items-center gap-4">
+      <div class="w-full h-2 bg-white/10 rounded-full">
+       <div class="h-2 bg-white/40 rounded-full" style="width:65%"></div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </section><!-- BENEFITS -->
+  <section class="w-full py-24 px-8 lg:px-16 relative overflow-hidden"><img data-template-id="benefits-bg-img" class="canva-image absolute inset-0 w-full h-full object-cover opacity-20 filter saturate-50" loading="lazy">
+   <div class="relative z-10 flex flex-col lg:flex-row lg:items-center gap-12">
+    <div class="flex-1"><span data-template-id="benefits-eyebrow" class="canva-text eyebrow"></span>
+     <h2 data-template-id="benefits-line1" class="canva-text font-bold text-white mt-4" style="font-size:clamp(32px,4vw,44px);"></h2>
+     <h2 data-template-id="benefits-line2" class="canva-text font-bold text-white" style="font-size:clamp(32px,4vw,44px);"></h2>
+     <h2 data-template-id="benefits-line3" class="canva-text font-bold text-white" style="font-size:clamp(32px,4vw,44px);"></h2>
+    </div>
+    <div class="flex flex-col gap-4">
+     <div class="stat-card"><span data-template-id="stat1-value" class="canva-text font-bold text-4xl text-black"></span>
+      <p data-template-id="stat1-label" class="canva-text text-black/60 text-sm mt-1"></p>
+     </div>
+     <div class="stat-card"><span data-template-id="stat2-value" class="canva-text font-bold text-2xl text-black"></span>
+      <p data-template-id="stat2-label" class="canva-text text-black/60 text-sm mt-1"></p>
+     </div>
+    </div>
+   </div>
+  </section><!-- PRICING -->
+  <section class="section-dark w-full py-24 px-8 lg:px-16">
+   <div class="text-center mb-16"><span data-template-id="pricing-eyebrow" class="canva-text eyebrow"></span>
+    <h2 data-template-id="pricing-headline" class="canva-text font-bold text-white mt-4" style="font-size:clamp(32px,4vw,48px);"></h2>
+   </div>
+   <div class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto"><!-- Starter -->
+    <div data-template-id="pricing-card-1" class="canva-card pricing-card pricing-light">
+     <h3 data-template-id="price1-name" class="canva-text font-bold text-2xl"></h3>
+     <p data-template-id="price1-desc" class="canva-text text-black/50 text-sm mt-1"></p>
+     <hr class="my-6 border-black/10"><span data-template-id="price1-amount" class="canva-text font-bold" style="font-size:48px;"></span>
+     <ul class="mt-6 space-y-3 text-sm text-black/70 flex-1">
+      <li>◆ Up to 3 projects</li>
+      <li>◆ Basic analytics</li>
+      <li>◆ Email support</li>
+      <li>◆ 1 team member</li>
+     </ul><button data-template-id="price1-cta" class="canva-button pill-btn pill-black mt-8 w-full justify-center"></button>
+    </div><!-- Pro -->
+    <div data-template-id="pricing-card-2" class="canva-card pricing-card pricing-dark">
+     <h3 data-template-id="price2-name" class="canva-text font-bold text-2xl"></h3>
+     <p data-template-id="price2-desc" class="canva-text text-white/50 text-sm mt-1"></p>
+     <hr class="my-6 border-white/10"><span data-template-id="price2-amount" class="canva-text font-bold" style="font-size:48px;"></span>
+     <ul class="mt-6 space-y-3 text-sm text-white/70 flex-1">
+      <li>◆ Unlimited projects</li>
+      <li>◆ Advanced analytics</li>
+      <li>◆ Priority support</li>
+      <li>◆ 10 team members</li>
+     </ul><button data-template-id="price2-cta" class="canva-button pill-btn pill-primary mt-8 w-full justify-center"></button>
+    </div><!-- Enterprise -->
+    <div data-template-id="pricing-card-3" class="canva-card pricing-card pricing-light">
+     <h3 data-template-id="price3-name" class="canva-text font-bold text-2xl"></h3>
+     <p data-template-id="price3-desc" class="canva-text text-black/50 text-sm mt-1"></p>
+     <hr class="my-6 border-black/10"><span data-template-id="price3-amount" class="canva-text font-bold" style="font-size:48px;"></span>
+     <ul class="mt-6 space-y-3 text-sm text-black/70 flex-1">
+      <li>◆ Custom integrations</li>
+      <li>◆ Dedicated account mgr</li>
+      <li>◆ SLA guarantee</li>
+      <li>◆ Unlimited members</li>
+     </ul><button data-template-id="price3-cta" class="canva-button pill-btn pill-black mt-8 w-full justify-center"></button>
+    </div>
+   </div>
+  </section><!-- FINAL CTA + FOOTER -->
+  <section class="solutions-bg w-full py-24 px-8 lg:px-16"><img data-template-id="footer-bg-img" class="canva-image solutions-bg-img" loading="lazy">
+   <div class="relative z-10 text-center mb-16">
+    <h2 data-template-id="final-headline" class="canva-text font-bold text-white leading-tight" style="font-size:clamp(36px,5vw,56px);"></h2>
+    <div class="flex flex-wrap justify-center gap-4 mt-8"><button data-template-id="final-cta-primary" class="canva-button pill-btn pill-primary"></button> <button data-template-id="final-cta-secondary" class="canva-button pill-btn pill-ghost"></button>
+    </div>
+   </div>
+   <footer class="relative z-10 border-t border-white/10 pt-12 mt-12 flex flex-col md:flex-row justify-between gap-8">
+    <div><span data-template-id="footer-wordmark" class="canva-text text-white font-bold text-xl"></span>
+     <p data-template-id="footer-email" class="canva-text text-white/50 text-sm mt-2"></p>
+    </div>
+    <div class="flex gap-16">
+     <div>
+      <h5 data-template-id="footer-col1-title" class="canva-text text-white font-bold text-sm mb-3"></h5>
+      <div class="space-y-2 text-[15px] leading-7">
+       <p data-template-id="footer-col1-link1" class="canva-text text-white/60"></p>
+       <p data-template-id="footer-col1-link2" class="canva-text text-white/60"></p>
+       <p data-template-id="footer-col1-link3" class="canva-text text-white/60"></p>
+      </div>
+     </div>
+     <div>
+      <h5 data-template-id="footer-col2-title" class="canva-text text-white font-bold text-sm mb-3"></h5>
+      <div class="space-y-2 text-[15px] leading-7">
+       <p data-template-id="footer-col2-link1" class="canva-text text-white/60"></p>
+       <p data-template-id="footer-col2-link2" class="canva-text text-white/60"></p>
+       <p data-template-id="footer-col2-link3" class="canva-text text-white/60"></p>
+      </div>
+     </div>
+    </div>
+   </footer>
+  </section>
+  <script>
+    lucide.createIcons();
+</script>
+ </body>
+</html>
