@@ -57,7 +57,11 @@ function toPayload(form: InternshipArchiveRecord): InternshipArchivePayload {
 }
 
 export default function InternshipArchiveModal({ internId, internName, mode, onClose, onSaved }: Props) {
-  const canViewInternalNotes = usePermission()(PERMISSIONS.CAN_FINISH_INTERNSHIP)
+  // Internal notes are gated by CAN_VIEW_NOTES — only roles with that permission
+  // (core_admin, operations_lead, operations_program_manager and peers) can see them.
+  // Previously this used CAN_FINISH_INTERNSHIP which excluded technical_lead,
+  // research_lead, observer_team_lead, and collaborator_lead incorrectly.
+  const canViewInternalNotes = usePermission()(PERMISSIONS.CAN_VIEW_NOTES)
   const [form, setForm] = useState<InternshipArchiveRecord | null>(null)
   const [categories, setCategories] = useState<WorkCategoryGroups | null>(null)
   const [loading, setLoading] = useState(true)
@@ -123,13 +127,16 @@ export default function InternshipArchiveModal({ internId, internName, mode, onC
         const result = await finishInternshipWithArchive(internId, payload)
         setForm(prev => prev ? { ...prev, ...result, isExisting: true } : prev)
         setSuccess('Internship completed and archive saved.')
+        onSaved?.()
+        setTimeout(onClose, 1500)
       } else {
         const result = await saveInternshipArchive(internId, payload)
         setForm(prev => prev ? { ...prev, ...result, isExisting: true } : prev)
         setSuccess('Archive record saved.')
+        onSaved?.()
+        // Stay open after edit-mode save so the admin can see the generated QR
+        // and use the REGENERATE QR button without reopening the modal.
       }
-      onSaved?.()
-      setTimeout(onClose, 1200)
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to save archive.'))
     } finally {
@@ -287,7 +294,9 @@ export default function InternshipArchiveModal({ internId, internName, mode, onC
                   </div>
                 )}
 
-                {form.verificationId && (
+                {/* QR regenerate button — visible once archive has been saved (verificationId exists).
+                    If no archive record yet, prompt the admin to save first. */}
+                {form.verificationId ? (
                   <motion.button type="button" whileTap={{ scale: 0.98 }}
                     disabled={regeneratingQr}
                     onClick={() => void handleRegenerateQr()}
@@ -296,6 +305,11 @@ export default function InternshipArchiveModal({ internId, internName, mode, onC
                     {regeneratingQr ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                     REGENERATE QR
                   </motion.button>
+                ) : (
+                  <p className="mt-3 nav-label text-[0.48rem] px-3 py-2 rounded-sm"
+                    style={{ background: 'rgba(201,168,76,0.05)', color: 'rgba(201,168,76,0.5)', border: '1px solid rgba(201,168,76,0.12)' }}>
+                    Save the archive record first — a verification ID and QR code will be generated automatically on first save.
+                  </p>
                 )}
               </section>
 

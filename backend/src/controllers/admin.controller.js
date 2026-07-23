@@ -566,7 +566,7 @@ async function updateUserHandler(req, res, next) {
   }
 }
 
-module.exports = { overrideScore, updateTaskStatus, getAdminOverview, getPendingUsers, approveUser, getAvailabilityDeadline, setAvailabilityDeadline, getFormReminderUrl, setFormReminderUrl, finishInternship, blockIP, unblockIP, listBlockedIPs, getLoginLogs, changeUserRole, getAllUsers, deleteIntern, updateIntern, rejectUser, updateUserHandler, assignInternTeam, resetUserPassword, sendCredentials, sendCredentialsBulk, previewOnboardingEmail, logOnboardingAction };
+module.exports = { overrideScore, updateTaskStatus, getAdminOverview, getPendingUsers, approveUser, getAvailabilityDeadline, setAvailabilityDeadline, getFormReminderUrl, setFormReminderUrl, finishInternship, blockIP, unblockIP, listBlockedIPs, getLoginLogs, changeUserRole, getAllUsers, deleteIntern, updateIntern, rejectUser, updateUserHandler, assignInternTeam, resetUserPassword, sendCredentials, sendCredentialsBulk, previewOnboardingEmail, logOnboardingAction, getInternProfile };
 
 // ── Assign intern to a team (create team if needed) ───────────────────────────
 //
@@ -870,6 +870,111 @@ async function deleteIntern(req, res, next) {
     });
 
     return ok(res, null, `Intern ${intern.user?.name || intern.user?.email} deleted successfully`);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ── Get single intern profile (for admin view) ────────────────────────────────
+
+async function getInternProfile(req, res, next) {
+  try {
+    const { internId } = req.params;
+    if (!internId) return validationError(res, 'internId is required');
+
+    const intern = await prisma.intern.findUnique({
+      where: { id: internId },
+      include: {
+        user: {
+          select: {
+            id:                true,
+            name:              true,
+            email:             true,
+            role:              true,
+            status:            true,
+            profilePictureUrl: true,
+            dateOfBirth:       true,
+            joiningDate:       true,
+            createdAt:         true,
+          },
+        },
+        credibility: true,
+        reviews: {
+          where:   { createdAt: { gte: getRpiWindowStart() } },
+          select:  { quality: true, timeliness: true, initiative: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take:    10,
+        },
+        tasks: {
+          select: { id: true, title: true, status: true, complexity: true, progressPct: true, deadline: true },
+          orderBy: { createdAt: 'desc' },
+          take:    20,
+        },
+        scoreHistory: {
+          where:   { type: 'capacity' },
+          orderBy: { createdAt: 'desc' },
+          take:    1,
+        },
+        internshipArchive: {
+          select: {
+            id:               true,
+            status:           true,
+            verificationId:   true,
+            internshipRole:   true,
+            internshipEndDate: true,
+            completedAt:      true,
+          },
+        },
+      },
+    });
+
+    if (!intern) return notFound(res, 'Intern not found');
+
+    const latestCapacity = intern.scoreHistory[0];
+    const capacityScore  = latestCapacity ? Math.round(latestCapacity.score) : 0;
+
+    const rpi = intern.reviews.length > 0
+      ? parseFloat(
+          (
+            intern.reviews.reduce((sum, r) => sum + (r.quality + r.timeliness + r.initiative) / 3, 0)
+            / intern.reviews.length
+            * 20
+          ).toFixed(1)
+        )
+      : 0;
+
+    const credibilityScore = intern.credibility
+      ? Math.round(intern.credibility.score * 100)
+      : 0;
+
+    const activeTasks    = intern.tasks.filter(t => t.status === 'active');
+    const completedTasks = intern.tasks.filter(t => t.status === 'completed');
+    const tli = activeTasks.reduce(
+      (sum, t) => sum + t.complexity * (1 - t.progressPct / 100),
+      0
+    );
+
+    return ok(res, {
+      internId:         intern.id,
+      userId:           intern.userId,
+      name:             intern.user?.name  || intern.user?.email?.split('@')[0] || internId,
+      email:            intern.user?.email ?? null,
+      role:             intern.user?.role  ?? null,
+      status:           intern.user?.status ?? null,
+      profilePictureUrl: intern.user?.profilePictureUrl ?? null,
+      dateOfBirth:      intern.user?.dateOfBirth ?? null,
+      joiningDate:      intern.user?.joiningDate ?? null,
+      createdAt:        intern.user?.createdAt   ?? null,
+      gdocUrl:          intern.gdocUrl ?? null,
+      capacityScore,
+      rpi,
+      credibilityScore,
+      tli:              parseFloat(tli.toFixed(2)),
+      activeTasks:      activeTasks.length,
+      completedTasks:   completedTasks.length,
+      recentTasks:      intern.tasks,
+      internshipArchive: intern.internshipArchive ?? null,
+    }, 'Intern profile retrieved');
   } catch (err) {
     next(err);
   }

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronRight, Loader2, AlertTriangle, Award, Wifi, WifiOff, Clock, LogIn, LogOut, ShieldCheck, X, Check } from 'lucide-react'
+import { ChevronRight, Loader2, AlertTriangle, Award, Wifi, WifiOff, Clock, LogIn, LogOut, ShieldCheck, User, X, Check } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getAdminOverview, type InternRow } from '../services/dashboard.service'
 import InternshipArchiveModal from '../components/InternshipArchiveModal'
+import InternProfileModal from '../components/InternProfileModal'
 import { changeUserRole } from '../services/collaboration.service'
 import { extractErrorMessage } from '../services/error'
 
@@ -70,6 +71,7 @@ export default function Team() {
   const [error, setError]     = useState('')
   const [selected, setSelected] = useState<InternRow | null>(null)
   const [archiveModal, setArchiveModal] = useState<{ internId: string; name: string; mode: 'finish' | 'edit' } | null>(null)
+  const [profileModal, setProfileModal] = useState<{ internId: string; name: string } | null>(null)
   const [promotingId, setPromotingId] = useState<string | null>(null)
   const [promoteMsg, setPromoteMsg]   = useState<{ id: string; ok: boolean; text: string } | null>(null)
 
@@ -287,6 +289,13 @@ export default function Team() {
                   <div className="flex items-center justify-between pt-3 gap-2"
                     style={{ borderTop: '1px solid rgba(201,168,76,0.08)' }}>
                     <motion.button whileTap={{ scale: 0.95 }}
+                      onClick={(e) => { e.stopPropagation(); setProfileModal({ internId: intern.id, name: intern.name }) }}
+                      className="nav-label text-[0.5rem] px-2 py-1 rounded-sm transition-all flex items-center gap-1"
+                      style={{ background: 'rgba(201,168,76,0.08)', color: '#c9a84c', border: '1px solid rgba(201,168,76,0.2)' }}>
+                      <User size={10} /> PROFILE
+                    </motion.button>
+
+                    <motion.button whileTap={{ scale: 0.95 }}
                       onClick={(e) => { e.stopPropagation(); handleFinish(intern.id, intern.name) }}
                       className="nav-label text-[0.5rem] px-2 py-1 rounded-sm transition-all flex items-center gap-1"
                       style={{ background: 'rgba(201,168,76,0.1)', color: '#c9a84c', border: '1px solid rgba(201,168,76,0.2)' }}>
@@ -336,6 +345,14 @@ export default function Team() {
           mode={archiveModal.mode}
           onClose={() => setArchiveModal(null)}
           onSaved={() => void load()}
+        />
+      )}
+
+      {profileModal && (
+        <InternProfileModal
+          internId={profileModal.internId}
+          internName={profileModal.name}
+          onClose={() => setProfileModal(null)}
         />
       )}
     </div>

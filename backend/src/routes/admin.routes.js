@@ -27,6 +27,7 @@ const {
   sendCredentialsBulk,
   previewOnboardingEmail,
   logOnboardingAction,
+  getInternProfile,
 } = require('../controllers/admin.controller');
 const {
   getPrefill,
@@ -70,6 +71,7 @@ router.put('/internship-archive/:internId', verifyToken, requireRole(...ADMIN_RO
 router.post('/internship-archive/:internId/regenerate-qr', verifyToken, requireRole(...ADMIN_ROLES), regenerateQr);
 router.delete('/interns/:internId',     verifyToken, requireRole(ROLES.CORE_ADMIN),                                   deleteIntern);
 router.patch('/interns/:internId',      verifyToken, requireRole(...ADMIN_ROLES),                                     updateIntern);
+router.get('/interns/:internId/profile', verifyToken, requireRole(...ADMIN_ROLES),                                    getInternProfile);
 router.patch('/interns/:internId/team', verifyToken, requireRole(ROLES.CORE_ADMIN), validate(schemas.assignInternTeam), assignInternTeam);
 
 // ── Phase 2: Security & Governance (also exposed via /operational) ────────────

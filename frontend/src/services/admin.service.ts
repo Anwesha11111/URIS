@@ -107,6 +107,51 @@ export async function getIntegrationStatus(): Promise<IntegrationAudit> {
   return res.json()
 }
 
+// ── Intern Profile ────────────────────────────────────────────────────────────
+
+export interface InternProfileData {
+  internId:          string
+  userId:            string | null
+  name:              string
+  email:             string | null
+  role:              string | null
+  status:            string | null
+  profilePictureUrl: string | null
+  dateOfBirth:       string | null
+  joiningDate:       string | null
+  createdAt:         string | null
+  gdocUrl:           string | null
+  capacityScore:     number
+  rpi:               number
+  credibilityScore:  number
+  tli:               number
+  activeTasks:       number
+  completedTasks:    number
+  recentTasks: Array<{
+    id:          string
+    title:       string
+    status:      string
+    complexity:  number
+    progressPct: number
+    deadline:    string | null
+  }>
+  internshipArchive: {
+    id:               string
+    status:           string
+    verificationId:   string | null
+    internshipRole:   string
+    internshipEndDate: string | null
+    completedAt:      string | null
+  } | null
+}
+
+export async function getInternProfile(internId: string): Promise<InternProfileData> {
+  const res = await api.get<{ success: boolean; data: InternProfileData }>(
+    `/admin/interns/${internId}/profile`,
+  )
+  return res.data.data
+}
+
 // ── Intern Management ─────────────────────────────────────────────────────────
 
 export interface UpdateInternPayload {

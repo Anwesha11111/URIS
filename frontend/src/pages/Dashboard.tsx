@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BarChart3, Users, AlertTriangle, CheckCircle2, TrendingUp, Clock, ChevronRight, Star, MessageSquare, ClipboardList, UserCheck, X, Check, Loader2 } from 'lucide-react'
+import { BarChart3, Users, AlertTriangle, CheckCircle2, TrendingUp, Clock, ChevronRight, Star, MessageSquare, ClipboardList, UserCheck, User, X, Check, Loader2 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Starfield from '../components/Starfield'
 import { getAdminOverview, type AdminOverview, type InternRow } from '../services/dashboard.service'
@@ -10,6 +10,7 @@ import { getPendingUsers, approveUser, rejectUser, type PendingUser } from '../s
 import { extractErrorMessage } from '../services/error'
 import { useAuthStore } from '../store/authStore'
 import InternDashboard from './InternDashboard'
+import InternProfileModal from '../components/InternProfileModal'
 
 function BandDot({ score }: { score: number }) {
   const isNegative = score < 0
@@ -85,6 +86,9 @@ function AdminCommandDashboard() {
 
   // Per-intern row — expanded action panel (internId or null = collapsed)
   const [expandedInternId, setExpandedInternId] = useState<string | null>(null)
+
+  // Intern profile modal
+  const [profileModal, setProfileModal] = useState<{ internId: string; name: string } | null>(null)
 
   // Assign shortcut state — pre-fills the internId in AdminOverview assign tab
   // We navigate to /admin with a pre-selected intern via query param
@@ -433,6 +437,12 @@ function AdminCommandDashboard() {
                                       style={{ background: 'rgba(201,168,76,0.04)', borderBottom: '1px solid rgba(201,168,76,0.08)' }}>
                                       <p className="nav-label text-[0.48rem] text-gold/40 mr-1">{intern.name.toUpperCase()}</p>
 
+                                      <button onClick={() => setProfileModal({ internId: intern.id, name: intern.name })}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm nav-label text-[0.5rem] transition-colors hover:border-ice/30"
+                                        style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', color: '#c9a84c' }}>
+                                        <User size={10} />VIEW PROFILE
+                                      </button>
+
                                       <button onClick={() => nav(`/tasks?internId=${intern.id}`)}
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm nav-label text-[0.5rem] transition-colors hover:border-ice/30"
                                         style={{ background: 'rgba(184,212,240,0.06)', border: '1px solid rgba(184,212,240,0.15)', color: 'rgba(184,212,240,0.7)' }}>
@@ -602,6 +612,14 @@ function AdminCommandDashboard() {
           </div>
         </div>
       </main>
+
+      {profileModal && (
+        <InternProfileModal
+          internId={profileModal.internId}
+          internName={profileModal.name}
+          onClose={() => setProfileModal(null)}
+        />
+      )}
     </div>
   )
 }
